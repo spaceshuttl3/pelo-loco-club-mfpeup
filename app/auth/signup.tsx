@@ -43,11 +43,37 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       await signUp(email, password, name, phone);
-      Alert.alert('Success', 'Account created successfully! Please sign in.');
-      router.replace('/auth/login');
+      
+      // Show success message with email confirmation reminder
+      Alert.alert(
+        'Check Your Email! 📧',
+        'We sent you a confirmation email. Please click the link in the email to verify your account before signing in.\n\nIf you don\'t see it, check your spam folder.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/auth/login')
+          }
+        ]
+      );
     } catch (error: any) {
       console.error('Signup error:', error);
-      Alert.alert('Signup Failed', error.message || 'Could not create account');
+      
+      // Handle specific error cases
+      let errorMessage = 'Could not create account';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.message?.includes('already registered')) {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      }
+      
+      if (error.message?.includes('invalid email')) {
+        errorMessage = 'Please enter a valid email address.';
+      }
+      
+      Alert.alert('Signup Failed', errorMessage);
     } finally {
       setLoading(false);
     }

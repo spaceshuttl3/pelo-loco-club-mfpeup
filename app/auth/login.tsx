@@ -33,7 +33,23 @@ export default function LoginScreen() {
       console.log('Login successful');
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      
+      // Handle specific error cases
+      let errorMessage = 'Invalid credentials';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Please confirm your email address before signing in. Check your inbox for the confirmation link.';
+      }
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      }
+      
+      Alert.alert('Login Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -94,13 +110,6 @@ export default function LoginScreen() {
                 </Text>
               </Text>
             </TouchableOpacity>
-
-            <View style={{ marginTop: 40, padding: 16, backgroundColor: colors.card, borderRadius: 8 }}>
-              <Text style={[commonStyles.textSecondary, { fontSize: 12, textAlign: 'center' }]}>
-                ⚠️ To use this app, you need to enable Supabase by pressing the Supabase button
-                and connecting to a project. Update the credentials in lib/supabase.ts
-              </Text>
-            </View>
           </View>
         </View>
       </ScrollView>
