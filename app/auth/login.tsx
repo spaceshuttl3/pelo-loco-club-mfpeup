@@ -31,25 +31,30 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
       console.log('Login successful');
+      // Navigation will be handled automatically by the auth state change
     } catch (error: any) {
       console.error('Login error:', error);
       
       // Handle specific error cases
+      let errorTitle = 'Login Failed';
       let errorMessage = 'Invalid credentials';
       
       if (error.message) {
-        errorMessage = error.message;
+        // Check for specific error messages
+        if (error.message.includes('Email not confirmed')) {
+          errorTitle = 'Email Not Verified';
+          errorMessage = 'Please check your email and click the verification link before signing in.\n\nIf you don\'t see the email, check your spam folder.';
+        } else if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (error.message.includes('Email link is invalid or has expired')) {
+          errorTitle = 'Verification Link Expired';
+          errorMessage = 'Your verification link has expired. Please sign up again to receive a new verification email.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
-      if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Please confirm your email address before signing in. Check your inbox for the confirmation link.';
-      }
-      
-      if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please try again.';
-      }
-      
-      Alert.alert('Login Failed', errorMessage);
+      Alert.alert(errorTitle, errorMessage);
     } finally {
       setLoading(false);
     }
@@ -78,6 +83,7 @@ export default function LoginScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              editable={!loading}
             />
 
             <TextInput
@@ -87,6 +93,7 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              editable={!loading}
             />
 
             <TouchableOpacity
@@ -102,6 +109,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={{ marginTop: 20, alignItems: 'center' }}
               onPress={() => router.push('/auth/signup')}
+              disabled={loading}
             >
               <Text style={commonStyles.textSecondary}>
                 Don&apos;t have an account?{' '}

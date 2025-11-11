@@ -51,18 +51,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching user profile for:', userId);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      
+      // Retry logic for profile fetching (in case trigger hasn't completed yet)
+      let retries = 3;
+      let data = null;
+      let error = null;
+
+      while (retries > 0 && !data) {
+        const result = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        data = result.data;
+        error = result.error;
+
+        if (error && error.code === 'PGRST116') {
+          // Profile doesn't exist yet, wait and retry
+          console.log(`Profile not found, retrying... (${retries} attempts left)`);
+          retries--;
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          }
+        } else {
+          break;
+        }
+      }
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        // If user profile doesn't exist yet, that's okay during signup
+        
+        // If profile still doesn't exist after retries, this is an error
         if (error.code === 'PGRST116') {
-          console.log('User profile not found yet - this is normal during signup');
+          console.error('User profile was not created. This should not happen with the trigger in place.');
         }
+        
         setLoading(false);
         return;
       }
@@ -94,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, name: string, phone: string, role: UserRole = 'customer') => {
     console.log('Attempting to sign up:', email);
     
-    // Step 1: Create auth user with email confirmation redirect
+    // Create auth user with metadata that will be used by the trigger
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -113,36 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw authError;
     }
 
-    console.log('Auth user created:', authData);
-
-    // Step 2: Create user profile in users table
-    // This will only work if the user is authenticated (after email confirmation)
-    // or if we have proper RLS policies
-    if (authData.user) {
-      console.log('Creating user profile for:', authData.user.id);
-      
-      // We need to use the service role or wait for email confirmation
-      // For now, we'll attempt to insert and handle the error gracefully
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([
-          {
-            id: authData.user.id,
-            name,
-            email,
-            phone,
-            role,
-          },
-        ]);
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Don't throw here - the profile will be created after email confirmation
-        // via a database trigger or the user can retry login
-      } else {
-        console.log('User profile created successfully');
-      }
-    }
+    console.log('Auth user created successfully:', authData);
+    
+    // The database trigger will automatically create the user profile
+    // No need to manually insert into the users table
   };
 
   const signOut = async () => {
