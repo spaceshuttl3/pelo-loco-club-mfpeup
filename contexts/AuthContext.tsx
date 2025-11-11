@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Fetching user profile for:', userId);
       
       // Retry logic for profile fetching (in case trigger hasn't completed yet)
-      let retries = 3;
+      let retries = 5;
       let data = null;
       let error = null;
 
@@ -67,12 +67,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data = result.data;
         error = result.error;
 
-        if (error && error.code === 'PGRST116') {
-          // Profile doesn't exist yet, wait and retry
-          console.log(`Profile not found, retrying... (${retries} attempts left)`);
-          retries--;
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        if (error) {
+          // Check for specific error codes
+          if (error.code === 'PGRST116') {
+            // Profile doesn't exist yet, wait and retry
+            console.log(`Profile not found, retrying... (${retries} attempts left)`);
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            }
+          } else if (error.code === '42P17') {
+            // Infinite recursion error - this should not happen anymore
+            console.error('Infinite recursion detected in RLS policy. Please check database policies.');
+            setLoading(false);
+            return;
+          } else {
+            // Other errors
+            console.error('Error fetching user profile:', error);
+            break;
           }
         } else {
           break;
@@ -80,11 +92,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error fetching user profile after retries:', error);
         
-        // If profile still doesn't exist after retries, this is an error
+        // If profile still doesn't exist after retries
         if (error.code === 'PGRST116') {
-          console.error('User profile was not created. This should not happen with the trigger in place.');
+          console.error('User profile was not created. The database trigger may not be working correctly.');
         }
         
         setLoading(false);
@@ -116,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string, phone: string, role: UserRole = 'customer') => {
-    console.log('Attempting to sign up:', email);
+    console.log('Attempting to sign up:', email, 'with role:', role);
     
     // Create auth user with metadata that will be used by the trigger
     const { data: authData, error: authError } = await supabase.auth.signUp({
