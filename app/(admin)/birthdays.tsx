@@ -57,10 +57,11 @@ export default function BirthdaysScreen() {
         return;
       }
 
+      console.log('Raw birthday data:', data?.length || 0);
+
       // Calculate days until birthday (ignoring year)
       const today = new Date();
-      const currentMonth = today.getMonth();
-      const currentDay = today.getDate();
+      today.setHours(0, 0, 0, 0);
       
       const birthdaysWithDays = data?.map(user => {
         const birthday = new Date(user.birthday);
@@ -68,14 +69,17 @@ export default function BirthdaysScreen() {
         const birthDay = birthday.getDate();
         
         // Create birthday for this year
-        const thisYearBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
+        let thisYearBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
+        thisYearBirthday.setHours(0, 0, 0, 0);
         
         // If birthday has passed this year, use next year
         if (thisYearBirthday < today) {
-          thisYearBirthday.setFullYear(today.getFullYear() + 1);
+          thisYearBirthday = new Date(today.getFullYear() + 1, birthMonth, birthDay);
         }
         
         const daysUntil = Math.ceil((thisYearBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        console.log(`User: ${user.name}, Birthday: ${birthMonth + 1}/${birthDay}, Days until: ${daysUntil}`);
         
         return {
           ...user,
@@ -194,7 +198,7 @@ export default function BirthdaysScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }

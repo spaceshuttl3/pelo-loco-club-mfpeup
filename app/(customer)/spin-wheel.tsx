@@ -54,6 +54,7 @@ export default function SpinWheelScreen() {
         return;
       }
 
+      console.log('Coupons fetched:', data?.length || 0);
       setCoupons(data || []);
     } catch (error) {
       console.error('Error in fetchCoupons:', error);
@@ -108,23 +109,36 @@ export default function SpinWheelScreen() {
 
     setRedeeming(true);
     try {
+      console.log('Searching for coupon code:', couponCode.toUpperCase().trim());
+      
       // Check if coupon exists and is valid
       const { data: couponData, error: fetchError } = await supabase
         .from('coupons')
         .select('*')
-        .eq('coupon_code', couponCode.toUpperCase())
+        .eq('coupon_code', couponCode.toUpperCase().trim())
         .eq('user_id', user?.id)
-        .eq('status', 'active')
         .single();
 
+      console.log('Coupon search result:', couponData);
+      console.log('Coupon search error:', fetchError);
+
       if (fetchError || !couponData) {
-        Alert.alert('Error', 'Invalid or expired coupon code');
+        Alert.alert('Error', 'Invalid coupon code or coupon does not belong to you');
+        return;
+      }
+
+      // Check if already used
+      if (couponData.status === 'used') {
+        Alert.alert('Error', 'This coupon has already been used');
         return;
       }
 
       // Check if coupon is expired
       const expirationDate = new Date(couponData.expiration_date);
-      if (expirationDate < new Date()) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (expirationDate < today) {
         Alert.alert('Error', 'This coupon has expired');
         return;
       }
@@ -199,7 +213,7 @@ export default function SpinWheelScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
         <TouchableOpacity
           style={[buttonStyles.primary, { marginBottom: 24 }]}
           onPress={() => setRedeemModalVisible(true)}

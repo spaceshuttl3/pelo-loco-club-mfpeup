@@ -11,7 +11,9 @@ import {
   TextInput,
   Modal,
   Switch,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { supabase } from '@/lib/supabase';
@@ -49,6 +51,8 @@ export default function CouponsScreen() {
   const [couponText, setCouponText] = useState('');
   const [discountValue, setDiscountValue] = useState('');
   const [isSpinWheel, setIsSpinWheel] = useState(false);
+  const [expirationDate, setExpirationDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -174,9 +178,6 @@ export default function CouponsScreen() {
 
     setSaving(true);
     try {
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 30);
-
       const coupons = selectedUsers.map(userId => ({
         user_id: userId,
         config_id: selectedConfig.id,
@@ -207,6 +208,7 @@ export default function CouponsScreen() {
               setSendModalVisible(false);
               setSelectedConfig(null);
               setSelectedUsers([]);
+              setExpirationDate(new Date());
             },
           },
         ]
@@ -276,7 +278,7 @@ export default function CouponsScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -337,6 +339,9 @@ export default function CouponsScreen() {
                       console.log('Send to users button pressed for config:', config.id);
                       setSelectedConfig(config);
                       setSelectedUsers([]);
+                      const defaultExpiration = new Date();
+                      defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+                      setExpirationDate(defaultExpiration);
                       setSendModalVisible(true);
                     }}
                     activeOpacity={0.7}
@@ -454,6 +459,32 @@ export default function CouponsScreen() {
               </View>
             )}
 
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Expiration Date</Text>
+              <Text style={[commonStyles.text, { color: colors.primary }]}>
+                {expirationDate.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={expirationDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    setExpirationDate(selectedDate);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
+            )}
+
             {users.length === 0 ? (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>
@@ -525,6 +556,7 @@ export default function CouponsScreen() {
                   setSendModalVisible(false);
                   setSelectedConfig(null);
                   setSelectedUsers([]);
+                  setExpirationDate(new Date());
                 }}
                 disabled={saving}
                 activeOpacity={0.7}

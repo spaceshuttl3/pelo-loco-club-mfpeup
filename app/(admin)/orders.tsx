@@ -61,15 +61,20 @@ export default function OrdersScreen() {
 
   const updateOrderStatus = async (id: string, paymentStatus: string) => {
     try {
+      console.log('Updating order status:', id, paymentStatus);
+      
       const { error } = await supabase
         .from('orders')
         .update({ payment_status: paymentStatus })
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating order:', error);
+        throw error;
+      }
       
-      fetchOrders();
       Alert.alert('Success', `Order marked as ${paymentStatus}`);
+      fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
       Alert.alert('Error', 'Failed to update order');
@@ -79,7 +84,7 @@ export default function OrdersScreen() {
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
       'Delete Order',
-      `Are you sure you want to delete this order?`,
+      `Are you sure you want to delete order #${order.id.substring(0, 8)}?`,
       [
         {
           text: 'Cancel',
@@ -90,18 +95,23 @@ export default function OrdersScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Deleting order:', order.id);
+              
               const { error } = await supabase
                 .from('orders')
                 .delete()
                 .eq('id', order.id);
 
-              if (error) throw error;
+              if (error) {
+                console.error('Error deleting order:', error);
+                throw error;
+              }
               
-              Alert.alert('Success', 'Order deleted');
+              Alert.alert('Success', 'Order deleted successfully');
               fetchOrders();
             } catch (error) {
               console.error('Error deleting order:', error);
-              Alert.alert('Error', 'Failed to delete order');
+              Alert.alert('Error', 'Failed to delete order. Please check your permissions.');
             }
           },
         },
@@ -132,7 +142,7 @@ export default function OrdersScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -280,6 +290,23 @@ export default function OrdersScreen() {
                 <Text style={commonStyles.textSecondary}>
                   Date: {new Date(order.created_at).toLocaleDateString()}
                 </Text>
+
+                <TouchableOpacity
+                  style={{
+                    marginTop: 12,
+                    backgroundColor: colors.card,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.error,
+                  }}
+                  onPress={() => handleDeleteOrder(order)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                    Delete Order
+                  </Text>
+                </TouchableOpacity>
               </View>
             ))}
           </>

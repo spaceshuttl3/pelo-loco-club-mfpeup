@@ -12,7 +12,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useTheme } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -39,12 +39,13 @@ export default function FloatingTabBar({
   tabs,
   containerWidth = Dimensions.get('window').width - 40,
   borderRadius = 25,
-  bottomMargin = 20,
+  bottomMargin = 10,
 }: FloatingTabBarProps) {
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
   const activeIndex = useSharedValue(0);
+  const insets = useSafeAreaInsets();
 
   const handleTabPress = (route: string) => {
     console.log('FloatingTabBar - Tab pressed:', route);
@@ -80,18 +81,18 @@ export default function FloatingTabBar({
   });
 
   return (
-    <SafeAreaView
-      edges={['bottom']}
+    <View
       style={[
         styles.container,
         {
-          bottom: bottomMargin,
+          bottom: Math.max(insets.bottom, bottomMargin),
+          paddingBottom: Platform.OS === 'ios' ? 0 : 0,
         },
       ]}
       pointerEvents="box-none"
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 90 : 0}
+        intensity={Platform.OS === 'ios' ? 80 : 0}
         tint={theme.dark ? 'dark' : 'light'}
         style={[
           styles.tabBar,
@@ -99,10 +100,10 @@ export default function FloatingTabBar({
             width: containerWidth,
             borderRadius,
             backgroundColor: Platform.OS === 'ios' 
-              ? 'rgba(26, 26, 26, 0.75)' 
-              : 'rgba(26, 26, 26, 0.95)',
+              ? 'rgba(18, 18, 18, 0.85)' 
+              : 'rgba(18, 18, 18, 0.95)',
             borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
           },
         ]}
       >
@@ -112,7 +113,7 @@ export default function FloatingTabBar({
             indicatorStyle,
             {
               backgroundColor: colors.primary,
-              borderRadius: borderRadius - 5,
+              borderRadius: borderRadius - 8,
             },
           ]}
           pointerEvents="none"
@@ -129,13 +130,14 @@ export default function FloatingTabBar({
               <IconSymbol
                 name={tab.icon as any}
                 size={24}
-                color={isActive ? colors.text : colors.textSecondary}
+                color={isActive ? '#FFFFFF' : colors.textSecondary}
               />
               <Text
                 style={[
                   styles.label,
                   {
-                    color: isActive ? colors.text : colors.textSecondary,
+                    color: isActive ? '#FFFFFF' : colors.textSecondary,
+                    fontWeight: isActive ? '700' : '500',
                   },
                 ]}
               >
@@ -145,7 +147,7 @@ export default function FloatingTabBar({
           );
         })}
       </BlurView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -160,34 +162,33 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 10,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 15,
   },
   indicator: {
     position: 'absolute',
-    height: '80%',
-    top: '10%',
-    left: 4,
+    height: '75%',
+    top: '12.5%',
+    left: 6,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     zIndex: 2,
   },
   label: {
     fontSize: 11,
     marginTop: 4,
-    fontWeight: '600',
   },
 });
