@@ -109,27 +109,34 @@ export default function SpinWheelScreen() {
 
     setRedeeming(true);
     try {
-      console.log('Searching for coupon code:', couponCode.toUpperCase().trim());
+      const searchCode = couponCode.toUpperCase().trim();
+      console.log('Searching for coupon code:', searchCode);
       
-      // Check if coupon exists and is valid
+      // Use ilike for case-insensitive search
       const { data: couponData, error: fetchError } = await supabase
         .from('coupons')
         .select('*')
-        .eq('coupon_code', couponCode.toUpperCase().trim())
+        .ilike('coupon_code', searchCode)
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       console.log('Coupon search result:', couponData);
       console.log('Coupon search error:', fetchError);
 
-      if (fetchError || !couponData) {
-        Alert.alert('Error', 'Invalid coupon code or coupon does not belong to you');
+      if (fetchError) {
+        console.error('Database error:', fetchError);
+        Alert.alert('Error', 'Could not search for coupon. Please try again.');
+        return;
+      }
+
+      if (!couponData) {
+        Alert.alert('Invalid Coupon', 'This coupon code does not exist or does not belong to you.');
         return;
       }
 
       // Check if already used
       if (couponData.status === 'used') {
-        Alert.alert('Error', 'This coupon has already been used');
+        Alert.alert('Already Used', 'This coupon has already been redeemed.');
         return;
       }
 
@@ -139,7 +146,7 @@ export default function SpinWheelScreen() {
       today.setHours(0, 0, 0, 0);
       
       if (expirationDate < today) {
-        Alert.alert('Error', 'This coupon has expired');
+        Alert.alert('Expired', 'This coupon has expired.');
         return;
       }
 
@@ -151,7 +158,7 @@ export default function SpinWheelScreen() {
 
       if (updateError) {
         console.error('Error redeeming coupon:', updateError);
-        Alert.alert('Error', 'Could not redeem coupon');
+        Alert.alert('Error', 'Could not redeem coupon. Please try again.');
         return;
       }
 
@@ -171,7 +178,7 @@ export default function SpinWheelScreen() {
       );
     } catch (error) {
       console.error('Error in handleRedeemByCode:', error);
-      Alert.alert('Error', 'Could not redeem coupon');
+      Alert.alert('Error', 'Could not redeem coupon. Please try again.');
     } finally {
       setRedeeming(false);
     }
@@ -239,7 +246,7 @@ export default function SpinWheelScreen() {
           </View>
         ) : (
           activeCoupons.map((coupon) => (
-            <View key={coupon.id} style={[commonStyles.card, { backgroundColor: colors.primary }]}>
+            <View key={coupon.id} style={[commonStyles.card, { backgroundColor: colors.primary, marginBottom: 16 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <View
                   style={{
@@ -287,7 +294,7 @@ export default function SpinWheelScreen() {
             </Text>
 
             {usedCoupons.map((coupon) => (
-              <View key={coupon.id} style={[commonStyles.card, { opacity: 0.5 }]}>
+              <View key={coupon.id} style={[commonStyles.card, { opacity: 0.5, marginBottom: 12 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View
                     style={{

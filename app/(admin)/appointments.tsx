@@ -35,6 +35,11 @@ export default function ManageAppointmentsScreen() {
     try {
       console.log('Fetching appointments...');
       
+      // Get all appointments with date >= today (not filtering by time)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayString = today.toISOString().split('T')[0];
+      
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -42,6 +47,7 @@ export default function ManageAppointmentsScreen() {
           user:users!appointments_user_id_fkey(id, name, email, phone),
           barber:barbers!appointments_barber_id_fkey(id, name)
         `)
+        .gte('date', todayString)
         .order('date', { ascending: true })
         .order('time', { ascending: true });
 
@@ -170,12 +176,13 @@ export default function ManageAppointmentsScreen() {
     );
   }
 
+  // Show all future appointments (admin can see everything)
   const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'booked' && new Date(apt.date) >= new Date()
+    (apt) => apt.status === 'booked'
   );
 
   const pastAppointments = appointments.filter(
-    (apt) => apt.status !== 'booked' || new Date(apt.date) < new Date()
+    (apt) => apt.status !== 'booked'
   );
 
   return (
@@ -190,7 +197,7 @@ export default function ManageAppointmentsScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -208,7 +215,7 @@ export default function ManageAppointmentsScreen() {
           </View>
         ) : (
           upcomingAppointments.map((appointment) => (
-            <View key={appointment.id} style={commonStyles.card}>
+            <View key={appointment.id} style={[commonStyles.card, { marginBottom: 16 }]}>
               <View style={[commonStyles.row, { marginBottom: 12 }]}>
                 <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
                   {appointment.service}
@@ -293,7 +300,7 @@ export default function ManageAppointmentsScreen() {
                   onPress={() => handleEditAppointment(appointment)}
                 >
                   <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                    Edit
+                    Reschedule
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -324,7 +331,7 @@ export default function ManageAppointmentsScreen() {
             </Text>
 
             {pastAppointments.map((appointment) => (
-              <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7 }]}>
+              <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
                 <View style={[commonStyles.row, { marginBottom: 8 }]}>
                   <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
                     {appointment.service}
@@ -365,7 +372,7 @@ export default function ManageAppointmentsScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={[commonStyles.card, { width: '90%' }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Edit Appointment
+              Reschedule Appointment
             </Text>
 
             {selectedAppointment && (

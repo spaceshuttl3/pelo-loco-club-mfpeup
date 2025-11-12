@@ -36,14 +36,30 @@ interface User {
   role: string;
 }
 
+interface Coupon {
+  id: string;
+  user_id: string;
+  coupon_type: string;
+  discount_value: number;
+  expiration_date: string;
+  status: string;
+  coupon_code: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+}
+
 export default function CouponsScreen() {
   const router = useRouter();
   const [configs, setConfigs] = useState<CouponConfig[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [issuedCoupons, setIssuedCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [sendModalVisible, setSendModalVisible] = useState(false);
+  const [viewCouponsModalVisible, setViewCouponsModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<CouponConfig | null>(null);
   const [selectedConfig, setSelectedConfig] = useState<CouponConfig | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -61,7 +77,7 @@ export default function CouponsScreen() {
 
   const fetchData = async () => {
     try {
-      console.log('Fetching coupon configs and users...');
+      console.log('Fetching coupon configs, users, and issued coupons...');
       
       // Fetch coupon configs
       const { data: configsData, error: configsError } = await supabase
@@ -90,6 +106,22 @@ export default function CouponsScreen() {
         const customerUsers = usersData?.filter(u => u.role === 'customer') || [];
         console.log('Customer users filtered:', customerUsers.length);
         setUsers(customerUsers);
+      }
+
+      // Fetch issued coupons
+      const { data: couponsData, error: couponsError } = await supabase
+        .from('coupons')
+        .select(`
+          *,
+          user:users!coupons_user_id_fkey(name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (couponsError) {
+        console.error('Error fetching issued coupons:', couponsError);
+      } else {
+        console.log('Issued coupons fetched:', couponsData?.length || 0);
+        setIssuedCoupons(couponsData || []);
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
@@ -166,6 +198,80 @@ export default function CouponsScreen() {
     }
   };
 
+  const handleDeleteConfig = (config: CouponConfig) => {
+    Alert.alert(
+      'Delete Coupon Config',
+      `Are you sure you want to delete "${config.coupon_text}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('admin_coupon_config')
+                .delete()
+                .eq('id', config.id);
+
+              if (error) {
+                console.error('Error deleting config:', error);
+                Alert.alert('Error', 'Could not delete coupon config');
+                return;
+              }
+
+              Alert.alert('Success', 'Coupon config deleted successfully');
+              fetchData();
+            } catch (error) {
+              console.error('Error in handleDeleteConfig:', error);
+              Alert.alert('Error', 'Could not delete coupon config');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteCoupon = (coupon: Coupon) => {
+    Alert.alert(
+      'Delete Coupon',
+      `Are you sure you want to delete this coupon for ${coupon.user?.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('coupons')
+                .delete()
+                .eq('id', coupon.id);
+
+              if (error) {
+                console.error('Error deleting coupon:', error);
+                Alert.alert('Error', 'Could not delete coupon');
+                return;
+              }
+
+              Alert.alert('Success', 'Coupon deleted successfully');
+              fetchData();
+            } catch (error) {
+              console.error('Error in handleDeleteCoupon:', error);
+              Alert.alert('Error', 'Could not delete coupon');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSendCoupons = async () => {
     console.log('SendCoupons - Button pressed');
     
@@ -209,6 +315,7 @@ export default function CouponsScreen() {
               setSelectedConfig(null);
               setSelectedUsers([]);
               setExpirationDate(new Date());
+              fetchData();
             },
           },
         ]
@@ -261,19 +368,30 @@ export default function CouponsScreen() {
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Coupons</Text>
-        <TouchableOpacity
-          onPress={() => {
-            console.log('Add coupon button pressed');
-            setEditingConfig(null);
-            setCouponText('');
-            setDiscountValue('');
-            setIsSpinWheel(false);
-            setModalVisible(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => {
+              console.log('View issued coupons button pressed');
+              setViewCouponsModalVisible(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <IconSymbol name="list.bullet" size={28} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              console.log('Add coupon button pressed');
+              setEditingConfig(null);
+              setCouponText('');
+              setDiscountValue('');
+              setIsSpinWheel(false);
+              setModalVisible(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -332,7 +450,7 @@ export default function CouponsScreen() {
               </View>
 
               <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                   <TouchableOpacity
                     style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
                     onPress={() => {
@@ -363,6 +481,13 @@ export default function CouponsScreen() {
                     <IconSymbol name="pencil" size={20} color={colors.text} />
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 10 }]}
+                  onPress={() => handleDeleteConfig(config)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={buttonStyles.text}>Delete Config</Text>
+                </TouchableOpacity>
               </View>
             </View>
           ))
@@ -564,6 +689,83 @@ export default function CouponsScreen() {
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* View Issued Coupons Modal */}
+      <Modal
+        visible={viewCouponsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setViewCouponsModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
+            <View style={[commonStyles.row, { marginBottom: 16 }]}>
+              <Text style={[commonStyles.subtitle, { flex: 1 }]}>
+                Issued Coupons ({issuedCoupons.length})
+              </Text>
+              <TouchableOpacity
+                onPress={() => setViewCouponsModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="xmark.circle.fill" size={28} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 500 }}>
+              {issuedCoupons.length === 0 ? (
+                <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+                  <Text style={commonStyles.textSecondary}>
+                    No coupons issued yet
+                  </Text>
+                </View>
+              ) : (
+                issuedCoupons.map((coupon) => (
+                  <View key={coupon.id} style={[commonStyles.card, { marginBottom: 12 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                          {coupon.coupon_type}
+                        </Text>
+                        <Text style={commonStyles.textSecondary}>
+                          {coupon.user?.name} - {coupon.user?.email}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                          backgroundColor: coupon.status === 'active' ? colors.primary : colors.card,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          {coupon.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={commonStyles.textSecondary}>
+                      Code: {coupon.coupon_code}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Discount: {coupon.discount_value}%
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
+                    </Text>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 8, marginTop: 8 }]}
+                      onPress={() => handleDeleteCoupon(coupon)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
