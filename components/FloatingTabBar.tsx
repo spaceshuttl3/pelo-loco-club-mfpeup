@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { BlurView } from 'expo-blur';
+import { GlassView } from 'expo-glass-effect';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useTheme } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -85,67 +85,121 @@ export default function FloatingTabBar({
       style={[
         styles.container,
         {
-          bottom: Math.max(insets.bottom + 10, bottomMargin),
+          bottom: Math.max(insets.bottom, bottomMargin),
+          paddingBottom: insets.bottom > 0 ? 0 : 10,
         },
       ]}
       pointerEvents="box-none"
     >
-      <BlurView
-        intensity={Platform.OS === 'ios' ? 100 : 0}
-        tint={theme.dark ? 'dark' : 'light'}
-        style={[
-          styles.tabBar,
-          {
-            width: containerWidth,
-            borderRadius,
-            backgroundColor: Platform.OS === 'ios' 
-              ? 'rgba(18, 18, 18, 0.7)' 
-              : 'rgba(18, 18, 18, 0.95)',
-            borderWidth: 1.5,
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-          },
-        ]}
-      >
-        <Animated.View
+      {Platform.OS === 'ios' ? (
+        <GlassView
+          glassEffectStyle="regular"
+          tintColor="rgba(18, 18, 18, 0.7)"
           style={[
-            styles.indicator,
-            indicatorStyle,
+            styles.tabBar,
             {
-              backgroundColor: colors.primary,
-              borderRadius: borderRadius - 10,
+              width: containerWidth,
+              borderRadius,
+              borderWidth: 1.5,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              overflow: 'hidden',
             },
           ]}
-          pointerEvents="none"
-        />
-        {tabs.map((tab, index) => {
-          const isActive = pathname.includes(tab.name);
-          return (
-            <TouchableOpacity
-              key={tab.name}
-              style={styles.tab}
-              onPress={() => handleTabPress(tab.route)}
-              activeOpacity={0.7}
-            >
-              <IconSymbol
-                name={tab.icon as any}
-                size={26}
-                color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
-              />
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
-                    fontWeight: isActive ? '700' : '500',
-                  },
-                ]}
+        >
+          <Animated.View
+            style={[
+              styles.indicator,
+              indicatorStyle,
+              {
+                backgroundColor: colors.primary,
+                borderRadius: borderRadius - 10,
+              },
+            ]}
+            pointerEvents="none"
+          />
+          {tabs.map((tab) => {
+            const isActive = pathname.includes(tab.name);
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                style={styles.tab}
+                onPress={() => handleTabPress(tab.route)}
+                activeOpacity={0.7}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </BlurView>
+                <IconSymbol
+                  name={tab.icon as any}
+                  size={26}
+                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                />
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
+                      fontWeight: isActive ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </GlassView>
+      ) : (
+        <View
+          style={[
+            styles.tabBar,
+            {
+              width: containerWidth,
+              borderRadius,
+              backgroundColor: 'rgba(18, 18, 18, 0.95)',
+              borderWidth: 1.5,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.indicator,
+              indicatorStyle,
+              {
+                backgroundColor: colors.primary,
+                borderRadius: borderRadius - 10,
+              },
+            ]}
+            pointerEvents="none"
+          />
+          {tabs.map((tab) => {
+            const isActive = pathname.includes(tab.name);
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                style={styles.tab}
+                onPress={() => handleTabPress(tab.route)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol
+                  name={tab.icon as any}
+                  size={26}
+                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                />
+                <Text
+                  style={[
+                    styles.label,
+                    {
+                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
+                      fontWeight: isActive ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -163,7 +217,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 8,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

@@ -19,6 +19,13 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
+interface ExistingAppointment {
+  id: string;
+  date: string;
+  time: string;
+  service: string;
+}
+
 export default function ManageAppointmentsScreen() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -30,12 +37,13 @@ export default function ManageAppointmentsScreen() {
   const [editTime, setEditTime] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
   const fetchAppointments = async () => {
     try {
       console.log('Fetching appointments...');
       
-      // Get all appointments with date >= today (not filtering by time)
+      // Get today's date at midnight
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayString = today.toISOString().split('T')[0];
@@ -67,9 +75,39 @@ export default function ManageAppointmentsScreen() {
     }
   };
 
+  const fetchExistingAppointmentsForDate = async (barberId: string, date: Date) => {
+    try {
+      const selectedDate = date.toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, date, time, service')
+        .eq('barber_id', barberId)
+        .eq('date', selectedDate)
+        .eq('status', 'booked')
+        .neq('id', selectedAppointment?.id || ''); // Exclude current appointment
+
+      if (error) {
+        console.error('Error fetching existing appointments:', error);
+        return;
+      }
+
+      console.log('Existing appointments for conflict check:', data?.length || 0);
+      setExistingAppointments(data || []);
+    } catch (error) {
+      console.error('Error in fetchExistingAppointmentsForDate:', error);
+    }
+  };
+
   useEffect(() => {
     fetchAppointments();
   }, []);
+
+  useEffect(() => {
+    if (selectedAppointment && editDate) {
+      fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
+    }
+  }, [editDate, selectedAppointment]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -129,11 +167,68 @@ export default function ManageAppointmentsScreen() {
     setSelectedAppointment(appointment);
     setEditDate(new Date(appointment.date));
     setEditTime(appointment.time);
+    setExistingAppointments([]);
     setEditModalVisible(true);
+  };
+
+  const isTimeSlotAvailable = (timeSlot: string): boolean => {
+    if (!selectedAppointment) return true;
+
+    const serviceName = selectedAppointment.service;
+    const serviceDuration = getServiceDuration(serviceName);
+
+    // Check if this time slot conflicts with any existing appointment
+    for (const appointment of existingAppointments) {
+      const appointmentTime = appointment.time;
+      const appointmentDuration = getServiceDuration(appointment.service);
+
+      // Convert times to minutes for easier comparison
+      const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+
+      const [aptHour, aptMinute] = appointmentTime.split(':').map(Number);
+      const aptTimeInMinutes = aptHour * 60 + aptMinute;
+
+      // Check if the new appointment would overlap with existing appointment
+      const newAppointmentEnd = slotTimeInMinutes + serviceDuration;
+      const existingAppointmentEnd = aptTimeInMinutes + appointmentDuration;
+
+      // Check for overlap
+      if (
+        (slotTimeInMinutes >= aptTimeInMinutes && slotTimeInMinutes < existingAppointmentEnd) ||
+        (newAppointmentEnd > aptTimeInMinutes && newAppointmentEnd <= existingAppointmentEnd) ||
+        (slotTimeInMinutes <= aptTimeInMinutes && newAppointmentEnd >= existingAppointmentEnd)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const getServiceDuration = (serviceName: string): number => {
+    const serviceDurations: { [key: string]: number } = {
+      'Haircut': 30,
+      'Beard Trim': 15,
+      'Haircut + Beard': 45,
+      'Hair Coloring': 60,
+      'Kids Haircut': 20,
+    };
+    return serviceDurations[serviceName] || 30;
   };
 
   const handleUpdateAppointment = async () => {
     if (!selectedAppointment) return;
+
+    // Check if the selected time slot is available
+    if (!isTimeSlotAvailable(editTime)) {
+      Alert.alert(
+        'Time Slot Unavailable',
+        'This time slot conflicts with another appointment. Please select a different time.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
 
     setUpdating(true);
     try {
@@ -150,6 +245,7 @@ export default function ManageAppointmentsScreen() {
       Alert.alert('Success', 'Appointment updated successfully');
       setEditModalVisible(false);
       setSelectedAppointment(null);
+      setExistingAppointments([]);
       fetchAppointments();
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -176,13 +272,31 @@ export default function ManageAppointmentsScreen() {
     );
   }
 
-  // Show all future appointments (admin can see everything)
-  const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'booked'
-  );
+  // Filter to show only future appointments (including today's future appointments)
+  const now = new Date();
+  const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayString = now.toISOString().split('T')[0];
+
+  const upcomingAppointments = appointments.filter((apt) => {
+    if (apt.status !== 'booked') return false;
+    
+    const aptDate = apt.date;
+    
+    // If appointment is in the future (not today), include it
+    if (aptDate > todayString) return true;
+    
+    // If appointment is today, check if the time is in the future
+    if (aptDate === todayString) {
+      const [aptHour, aptMinute] = apt.time.split(':').map(Number);
+      const aptTimeInMinutes = aptHour * 60 + aptMinute;
+      return aptTimeInMinutes > currentTimeInMinutes;
+    }
+    
+    return false;
+  });
 
   const pastAppointments = appointments.filter(
-    (apt) => apt.status !== 'booked'
+    (apt) => !upcomingAppointments.includes(apt)
   );
 
   return (
@@ -370,7 +484,7 @@ export default function ManageAppointmentsScreen() {
         onRequestClose={() => setEditModalVisible(false)}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
+          <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
               Reschedule Appointment
             </Text>
@@ -418,30 +532,43 @@ export default function ManageAppointmentsScreen() {
             <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
               Select New Time
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 16 }}>
-              {generateTimeSlots().map((slot) => (
-                <TouchableOpacity
-                  key={slot}
-                  style={[
-                    {
-                      margin: 4,
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 8,
-                      backgroundColor: editTime === slot ? colors.primary : colors.card,
-                      borderWidth: 1,
-                      borderColor: editTime === slot ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => setEditTime(slot)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 14 }]}>
-                    {slot}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+                {generateTimeSlots().map((slot) => {
+                  const isAvailable = isTimeSlotAvailable(slot);
+                  return (
+                    <TouchableOpacity
+                      key={slot}
+                      style={[
+                        {
+                          margin: 4,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          backgroundColor: !isAvailable ? colors.border : (editTime === slot ? colors.primary : colors.card),
+                          borderWidth: 1,
+                          borderColor: !isAvailable ? colors.border : (editTime === slot ? colors.primary : colors.border),
+                          opacity: !isAvailable ? 0.5 : 1,
+                        },
+                      ]}
+                      onPress={() => {
+                        if (isAvailable) {
+                          setEditTime(slot);
+                        } else {
+                          Alert.alert('Unavailable', 'This time slot conflicts with another appointment');
+                        }
+                      }}
+                      disabled={!isAvailable}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                        {slot}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
@@ -459,6 +586,7 @@ export default function ManageAppointmentsScreen() {
                 onPress={() => {
                   setEditModalVisible(false);
                   setSelectedAppointment(null);
+                  setExistingAppointments([]);
                 }}
                 disabled={updating}
                 activeOpacity={0.7}
