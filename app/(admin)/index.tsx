@@ -119,6 +119,7 @@ export default function AdminDashboardScreen() {
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 24 }}>
           <TouchableOpacity
+            key="appointments-button"
             style={{ width: '50%', padding: 6 }}
             onPress={() => router.push('/(admin)/appointments')}
           >
@@ -131,6 +132,7 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            key="products-button"
             style={{ width: '50%', padding: 6 }}
             onPress={() => router.push('/(admin)/products')}
           >
@@ -143,6 +145,7 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            key="birthdays-button"
             style={{ width: '50%', padding: 6 }}
             onPress={() => router.push('/(admin)/birthdays' as any)}
           >
@@ -155,6 +158,7 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            key="coupons-button"
             style={{ width: '50%', padding: 6 }}
             onPress={() => router.push('/(admin)/coupons' as any)}
           >
@@ -167,6 +171,7 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            key="notifications-button"
             style={{ width: '50%', padding: 6 }}
             onPress={() => router.push('/(admin)/notifications' as any)}
           >
@@ -179,6 +184,7 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            key="signout-button"
             style={{ width: '50%', padding: 6 }}
             onPress={handleSignOut}
           >
@@ -233,7 +239,7 @@ export default function AdminDashboardScreen() {
               Upcoming Birthdays ({upcomingBirthdays.length})
             </Text>
             {upcomingBirthdays.slice(0, 3).map((birthday, index) => (
-              <View key={`birthday-${index}`} style={[commonStyles.card, { marginBottom: 12 }]}>
+              <View key={`birthday-${birthday.id || index}`} style={[commonStyles.card, { marginBottom: 12 }]}>
                 <View style={commonStyles.row}>
                   <IconSymbol name="gift.fill" size={24} color={colors.primary} />
                   <View style={{ flex: 1, marginLeft: 12 }}>

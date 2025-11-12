@@ -34,18 +34,21 @@ export default function NotificationsScreen() {
 
   const quickNotifications = [
     {
+      id: 'discount-15',
       title: '15% Off Today!',
       message: 'Get 15% off on all beard products today only!',
       icon: 'tag.fill',
       color: colors.accent,
     },
     {
+      id: 'book-appointment',
       title: 'Book Your Appointment',
       message: 'Haven&apos;t seen you in a while! Book your next cut today.',
       icon: 'calendar',
       color: colors.primary,
     },
     {
+      id: 'new-products',
       title: 'New Products Available',
       message: 'Check out our new premium grooming products!',
       icon: 'bag.fill',
@@ -91,9 +94,9 @@ export default function NotificationsScreen() {
           Quick Notifications
         </Text>
 
-        {quickNotifications.map((notification, index) => (
+        {quickNotifications.map((notification) => (
           <TouchableOpacity
-            key={index}
+            key={notification.id}
             style={commonStyles.card}
             onPress={() => {
               setNotificationTitle(notification.title);
