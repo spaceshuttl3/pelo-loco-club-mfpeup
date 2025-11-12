@@ -35,6 +35,13 @@ interface AdminUser {
   role: string;
 }
 
+interface ExistingAppointment {
+  id: string;
+  date: string;
+  time: string;
+  service: string;
+}
+
 export default function BookAppointmentScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -50,6 +57,7 @@ export default function BookAppointmentScreen() {
   const [loading, setLoading] = useState(false);
   const [loadingBarbers, setLoadingBarbers] = useState(true);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
   useEffect(() => {
     fetchBarbers();
@@ -59,6 +67,7 @@ export default function BookAppointmentScreen() {
   useEffect(() => {
     if (selectedBarber && date) {
       generateTimeSlots();
+      fetchExistingAppointments();
     }
   }, [selectedBarber, date]);
 
@@ -107,6 +116,29 @@ export default function BookAppointmentScreen() {
     }
   };
 
+  const fetchExistingAppointments = async () => {
+    try {
+      const selectedDate = date.toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id, date, time, service')
+        .eq('barber_id', selectedBarber)
+        .eq('date', selectedDate)
+        .eq('status', 'booked');
+
+      if (error) {
+        console.error('Error fetching existing appointments:', error);
+        return;
+      }
+
+      console.log('Existing appointments:', data?.length || 0);
+      setExistingAppointments(data || []);
+    } catch (error) {
+      console.error('Error in fetchExistingAppointments:', error);
+    }
+  };
+
   const generateTimeSlots = () => {
     const selectedBarberData = barbers.find(b => b.id === selectedBarber);
     if (!selectedBarberData) return;
@@ -121,6 +153,44 @@ export default function BookAppointmentScreen() {
     }
 
     setAvailableTimeSlots(slots);
+  };
+
+  const isTimeSlotAvailable = (timeSlot: string): boolean => {
+    if (!selectedService) return true;
+
+    const service = SERVICES.find(s => s.id === selectedService);
+    if (!service) return true;
+
+    const serviceDuration = service.duration;
+
+    // Check if this time slot conflicts with any existing appointment
+    for (const appointment of existingAppointments) {
+      const appointmentTime = appointment.time;
+      const appointmentService = SERVICES.find(s => s.name === appointment.service);
+      const appointmentDuration = appointmentService?.duration || 30;
+
+      // Convert times to minutes for easier comparison
+      const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+
+      const [aptHour, aptMinute] = appointmentTime.split(':').map(Number);
+      const aptTimeInMinutes = aptHour * 60 + aptMinute;
+
+      // Check if the new appointment would overlap with existing appointment
+      const newAppointmentEnd = slotTimeInMinutes + serviceDuration;
+      const existingAppointmentEnd = aptTimeInMinutes + appointmentDuration;
+
+      // Check for overlap
+      if (
+        (slotTimeInMinutes >= aptTimeInMinutes && slotTimeInMinutes < existingAppointmentEnd) ||
+        (newAppointmentEnd > aptTimeInMinutes && newAppointmentEnd <= existingAppointmentEnd) ||
+        (slotTimeInMinutes <= aptTimeInMinutes && newAppointmentEnd >= existingAppointmentEnd)
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleBookAppointment = async () => {
@@ -154,6 +224,14 @@ export default function BookAppointmentScreen() {
       return;
     }
 
+    const selectedTimeSlot = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    
+    // Check if the selected time slot is available
+    if (!isTimeSlotAvailable(selectedTimeSlot)) {
+      Alert.alert('Error', 'This time slot is not available. Please select another time.');
+      return;
+    }
+
     setLoading(true);
     try {
       const service = SERVICES.find(s => s.id === selectedService);
@@ -165,7 +243,7 @@ export default function BookAppointmentScreen() {
           barber_id: selectedBarber,
           service: service?.name,
           date: date.toISOString().split('T')[0],
-          time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+          time: selectedTimeSlot,
           status: 'booked',
           payment_mode: paymentMode,
           payment_status: paymentMode === 'online' ? 'paid' : 'pending',
@@ -339,6 +417,7 @@ export default function BookAppointmentScreen() {
               const slotTime = new Date();
               slotTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
               const isSelected = time.getHours() === slotTime.getHours() && time.getMinutes() === slotTime.getMinutes();
+              const isAvailable = isTimeSlotAvailable(slot);
               
               return (
                 <TouchableOpacity
@@ -349,15 +428,21 @@ export default function BookAppointmentScreen() {
                       paddingVertical: 12,
                       paddingHorizontal: 16,
                       borderRadius: 8,
-                      backgroundColor: isSelected ? colors.primary : colors.card,
+                      backgroundColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.card),
                       borderWidth: 1,
-                      borderColor: isSelected ? colors.primary : colors.border,
+                      borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
+                      opacity: !isAvailable ? 0.5 : 1,
                     },
                   ]}
                   onPress={() => {
-                    console.log('Time slot selected:', slot);
-                    setTime(slotTime);
+                    if (isAvailable) {
+                      console.log('Time slot selected:', slot);
+                      setTime(slotTime);
+                    } else {
+                      Alert.alert('Unavailable', 'This time slot is already booked');
+                    }
                   }}
+                  disabled={!isAvailable}
                   activeOpacity={0.7}
                 >
                   <Text style={[commonStyles.text, { fontSize: 14 }]}>

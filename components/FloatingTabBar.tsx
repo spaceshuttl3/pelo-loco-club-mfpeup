@@ -91,14 +91,18 @@ export default function FloatingTabBar({
       pointerEvents="box-none"
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 80 : 0}
+        intensity={Platform.OS === 'ios' ? 90 : 0}
         tint={theme.dark ? 'dark' : 'light'}
         style={[
           styles.tabBar,
           {
             width: containerWidth,
             borderRadius,
-            backgroundColor: Platform.OS === 'ios' ? 'rgba(26, 26, 26, 0.8)' : colors.card,
+            backgroundColor: Platform.OS === 'ios' 
+              ? 'rgba(26, 26, 26, 0.75)' 
+              : 'rgba(26, 26, 26, 0.95)',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
           },
         ]}
       >
@@ -162,11 +166,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
   indicator: {
     position: 'absolute',

@@ -13,6 +13,8 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 
 interface Coupon {
@@ -29,6 +31,9 @@ export default function SpinWheelScreen() {
   const { user } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [redeemModalVisible, setRedeemModalVisible] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -95,6 +100,69 @@ export default function SpinWheelScreen() {
     );
   };
 
+  const handleRedeemByCode = async () => {
+    if (!couponCode.trim()) {
+      Alert.alert('Error', 'Please enter a coupon code');
+      return;
+    }
+
+    setRedeeming(true);
+    try {
+      // Check if coupon exists and is valid
+      const { data: couponData, error: fetchError } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('coupon_code', couponCode.toUpperCase())
+        .eq('user_id', user?.id)
+        .eq('status', 'active')
+        .single();
+
+      if (fetchError || !couponData) {
+        Alert.alert('Error', 'Invalid or expired coupon code');
+        return;
+      }
+
+      // Check if coupon is expired
+      const expirationDate = new Date(couponData.expiration_date);
+      if (expirationDate < new Date()) {
+        Alert.alert('Error', 'This coupon has expired');
+        return;
+      }
+
+      // Mark coupon as used
+      const { error: updateError } = await supabase
+        .from('coupons')
+        .update({ status: 'used' })
+        .eq('id', couponData.id);
+
+      if (updateError) {
+        console.error('Error redeeming coupon:', updateError);
+        Alert.alert('Error', 'Could not redeem coupon');
+        return;
+      }
+
+      Alert.alert(
+        'Success!',
+        `Coupon redeemed: ${couponData.coupon_type} (${couponData.discount_value}% off)`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setRedeemModalVisible(false);
+              setCouponCode('');
+              fetchCoupons();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error in handleRedeemByCode:', error);
+      Alert.alert('Error', 'Could not redeem coupon');
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
@@ -120,10 +188,27 @@ export default function SpinWheelScreen() {
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>My Coupons</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity
+          onPress={() => {
+            console.log('Redeem coupon button pressed');
+            setRedeemModalVisible(true);
+          }}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+        <TouchableOpacity
+          style={[buttonStyles.primary, { marginBottom: 24 }]}
+          onPress={() => setRedeemModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="ticket.fill" size={20} color={colors.text} style={{ marginRight: 8 }} />
+          <Text style={buttonStyles.text}>Redeem Coupon Code</Text>
+        </TouchableOpacity>
+
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Active Coupons ({activeCoupons.length})
         </Text>
@@ -219,6 +304,62 @@ export default function SpinWheelScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Redeem Coupon Modal */}
+      <Modal
+        visible={redeemModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setRedeemModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Redeem Coupon Code
+            </Text>
+
+            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16 }]}>
+              <Text style={[commonStyles.text, { textAlign: 'center' }]}>
+                Enter your coupon code below to redeem your discount
+              </Text>
+            </View>
+
+            <TextInput
+              style={[commonStyles.input, { textTransform: 'uppercase' }]}
+              placeholder="Enter Coupon Code"
+              placeholderTextColor={colors.textSecondary}
+              value={couponCode}
+              onChangeText={(text) => setCouponCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1 }]}
+                onPress={handleRedeemByCode}
+                disabled={redeeming}
+                activeOpacity={0.7}
+              >
+                <Text style={buttonStyles.text}>
+                  {redeeming ? 'Redeeming...' : 'Redeem'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                onPress={() => {
+                  setRedeemModalVisible(false);
+                  setCouponCode('');
+                }}
+                disabled={redeeming}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

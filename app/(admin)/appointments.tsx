@@ -8,25 +8,33 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Appointment } from '@/types';
-import { commonStyles, colors } from '@/styles/commonStyles';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function ManageAppointmentsScreen() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [editDate, setEditDate] = useState(new Date());
+  const [editTime, setEditTime] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const fetchAppointments = async () => {
     try {
       console.log('Fetching appointments...');
       
-      // Fetch appointments with user details and barber details
       const { data, error } = await supabase
         .from('appointments')
         .select(`
@@ -76,6 +84,82 @@ export default function ManageAppointmentsScreen() {
       console.error('Error updating appointment:', error);
       Alert.alert('Error', 'Failed to update appointment');
     }
+  };
+
+  const handleDeleteAppointment = (appointment: Appointment) => {
+    Alert.alert(
+      'Delete Appointment',
+      `Are you sure you want to delete this appointment for ${appointment.user?.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('appointments')
+                .delete()
+                .eq('id', appointment.id);
+
+              if (error) throw error;
+              
+              Alert.alert('Success', 'Appointment deleted');
+              fetchAppointments();
+            } catch (error) {
+              console.error('Error deleting appointment:', error);
+              Alert.alert('Error', 'Failed to delete appointment');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setEditDate(new Date(appointment.date));
+    setEditTime(appointment.time);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          date: editDate.toISOString().split('T')[0],
+          time: editTime,
+        })
+        .eq('id', selectedAppointment.id);
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Appointment updated successfully');
+      setEditModalVisible(false);
+      setSelectedAppointment(null);
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      Alert.alert('Error', 'Failed to update appointment');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const generateTimeSlots = () => {
+    const slots: string[] = [];
+    for (let hour = 9; hour < 18; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+    return slots;
   };
 
   if (loading) {
@@ -164,7 +248,7 @@ export default function ManageAppointmentsScreen() {
                 </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                 <TouchableOpacity
                   style={{
                     flex: 1,
@@ -191,6 +275,41 @@ export default function ManageAppointmentsScreen() {
                 >
                   <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                     Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                  onPress={() => handleEditAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.error,
+                  }}
+                  onPress={() => handleDeleteAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                    Delete
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -235,6 +354,114 @@ export default function ManageAppointmentsScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Edit Appointment Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Edit Appointment
+            </Text>
+
+            {selectedAppointment && (
+              <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                  {selectedAppointment.service}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Customer: {selectedAppointment.user?.name}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Select New Date
+            </Text>
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="calendar" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
+                {editDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={editDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    setEditDate(selectedDate);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
+            )}
+
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Select New Time
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 16 }}>
+              {generateTimeSlots().map((slot) => (
+                <TouchableOpacity
+                  key={slot}
+                  style={[
+                    {
+                      margin: 4,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      backgroundColor: editTime === slot ? colors.primary : colors.card,
+                      borderWidth: 1,
+                      borderColor: editTime === slot ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => setEditTime(slot)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                    {slot}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1 }]}
+                onPress={handleUpdateAppointment}
+                disabled={updating}
+                activeOpacity={0.7}
+              >
+                <Text style={buttonStyles.text}>
+                  {updating ? 'Updating...' : 'Update'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setSelectedAppointment(null);
+                }}
+                disabled={updating}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

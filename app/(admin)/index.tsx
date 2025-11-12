@@ -116,9 +116,17 @@ export default function AdminDashboardScreen() {
       count: todayAppointments.length,
     },
     {
+      id: 'orders',
+      title: 'Orders',
+      icon: 'bag.fill',
+      color: colors.accent,
+      route: '/(admin)/orders',
+      count: pendingOrders.length,
+    },
+    {
       id: 'products',
       title: 'Products',
-      icon: 'bag.fill',
+      icon: 'cube.fill',
       color: colors.secondary,
       route: '/(admin)/products',
     },
@@ -262,7 +270,11 @@ export default function AdminDashboardScreen() {
             </Text>
 
             {pendingOrders.map((order) => (
-              <View key={order.id} style={commonStyles.card}>
+              <TouchableOpacity
+                key={order.id}
+                style={commonStyles.card}
+                onPress={() => router.push('/(admin)/orders' as any)}
+              >
                 <View style={[commonStyles.row, { marginBottom: 8 }]}>
                   <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
                     Order #{order.id.substring(0, 8)}
@@ -277,7 +289,7 @@ export default function AdminDashboardScreen() {
                 <Text style={commonStyles.textSecondary}>
                   Status: Pending Payment
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </>
         )}
