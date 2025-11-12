@@ -1,156 +1,198 @@
 
-import React, { useState } from 'react';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '@/lib/supabase';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Alert,
-  Animated,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { useRouter } from 'expo-router';
 
-const WHEEL_REWARDS = [
-  { type: '5% Off', value: 5, color: colors.primary },
-  { type: '10% Off', value: 10, color: colors.secondary },
-  { type: 'Free Sample', value: 0, color: colors.accent },
-  { type: 'No Win', value: 0, color: colors.textSecondary },
-  { type: '15% Off', value: 15, color: colors.primary },
-  { type: 'Free Beard Trim', value: 15, color: colors.secondary },
-];
+interface Coupon {
+  id: string;
+  coupon_type: string;
+  discount_value: number;
+  expiration_date: string;
+  status: string;
+  coupon_code: string;
+}
 
 export default function SpinWheelScreen() {
   const { user } = useAuth();
-  const [spinning, setSpinning] = useState(false);
-  const [spinValue] = useState(new Animated.Value(0));
-  const [canSpin, setCanSpin] = useState(true);
+  const router = useRouter();
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [redeeming, setRedeeming] = useState(false);
 
-  const handleSpin = async () => {
-    if (!canSpin || spinning) return;
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
 
-    setSpinning(true);
-    setCanSpin(false);
+  const fetchCoupons = async () => {
+    if (!user) return;
 
-    // Animate the spin
-    Animated.timing(spinValue, {
-      toValue: 1,
-      duration: 3000,
-      useNativeDriver: true,
-    }).start();
+    try {
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
 
-    // Randomly select a reward
-    const randomIndex = Math.floor(Math.random() * WHEEL_REWARDS.length);
-    const reward = WHEEL_REWARDS[randomIndex];
-
-    setTimeout(async () => {
-      setSpinning(false);
-      spinValue.setValue(0);
-
-      if (reward.type !== 'No Win') {
-        // Save coupon to database
-        try {
-          const expirationDate = new Date();
-          expirationDate.setDate(expirationDate.getDate() + 30);
-
-          await supabase.from('coupons').insert([
-            {
-              user_id: user?.id,
-              coupon_type: reward.type,
-              discount_value: reward.value,
-              expiration_date: expirationDate.toISOString(),
-              status: 'active',
-            },
-          ]);
-
-          Alert.alert(
-            '🎉 Congratulations!',
-            `You won: ${reward.type}!\n\nYour coupon has been added to your profile.`
-          );
-        } catch (error) {
-          console.error('Error saving coupon:', error);
-          Alert.alert('Error', 'Failed to save your coupon. Please try again.');
-        }
-      } else {
-        Alert.alert('😔 Better Luck Next Time', 'Try again tomorrow!');
+      if (error) {
+        console.error('Error fetching coupons:', error);
+        return;
       }
-    }, 3000);
+
+      setCoupons(data || []);
+    } catch (error) {
+      console.error('Error in fetchCoupons:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '1800deg'],
-  });
+  const handleRedeemCoupon = async (coupon: Coupon) => {
+    Alert.alert(
+      'Redeem Coupon',
+      `Redeem ${coupon.discount_value}% off coupon?\n\nShow this code to the barber: ${coupon.coupon_code}`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Mark as Used',
+          onPress: async () => {
+            setRedeeming(true);
+            try {
+              const { error } = await supabase
+                .from('coupons')
+                .update({ status: 'used' })
+                .eq('id', coupon.id);
+
+              if (error) {
+                console.error('Error redeeming coupon:', error);
+                Alert.alert('Error', 'Could not redeem coupon');
+                return;
+              }
+
+              Alert.alert('Success', 'Coupon redeemed successfully!');
+              fetchCoupons();
+            } catch (error) {
+              console.error('Error in handleRedeemCoupon:', error);
+              Alert.alert('Error', 'Could not redeem coupon');
+            } finally {
+              setRedeeming(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={[commonStyles.container, commonStyles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={[commonStyles.container, commonStyles.centerContent]}>
-      <View style={commonStyles.content}>
-        <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 20 }]}>
-          Spin The Wheel
-        </Text>
-        <Text style={[commonStyles.textSecondary, { textAlign: 'center', marginBottom: 40 }]}>
-          Try your luck and win amazing rewards!
-        </Text>
-
-        <View style={{ alignItems: 'center', marginBottom: 40 }}>
-          <Animated.View
-            style={{
-              width: 250,
-              height: 250,
-              borderRadius: 125,
-              backgroundColor: colors.card,
-              justifyContent: 'center',
-              alignItems: 'center',
-              transform: [{ rotate: spin }],
-              borderWidth: 8,
-              borderColor: colors.primary,
-            }}
-          >
-            <IconSymbol name="gift.fill" size={80} color={colors.primary} />
-          </Animated.View>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            buttonStyles.primary,
-            { width: '100%', maxWidth: 300, alignSelf: 'center' },
-            (!canSpin || spinning) && { opacity: 0.5 },
-          ]}
-          onPress={handleSpin}
-          disabled={!canSpin || spinning}
-        >
-          <Text style={buttonStyles.text}>
-            {spinning ? 'Spinning...' : canSpin ? 'Spin Now!' : 'Come Back Tomorrow'}
-          </Text>
+    <View style={commonStyles.container}>
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-
-        <View style={{ marginTop: 40 }}>
-          <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 16 }]}>
-            Possible Rewards
-          </Text>
-          {WHEEL_REWARDS.map((reward, index) => (
-            <View
-              key={index}
-              style={[
-                commonStyles.card,
-                { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-              ]}
-            >
-              <View
-                style={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: 6,
-                  backgroundColor: reward.color,
-                  marginRight: 12,
-                }}
-              />
-              <Text style={commonStyles.text}>{reward.type}</Text>
-            </View>
-          ))}
-        </View>
+        <Text style={commonStyles.headerTitle}>My Coupons</Text>
       </View>
+
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 24 }]}>
+          <IconSymbol name="gift.fill" size={48} color={colors.text} />
+          <Text style={[commonStyles.subtitle, { marginTop: 16, marginBottom: 8 }]}>
+            Your Rewards
+          </Text>
+          <Text style={commonStyles.textSecondary}>
+            Redeem your coupons at the shop or when booking appointments
+          </Text>
+        </View>
+
+        {coupons.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
+            <IconSymbol name="ticket" size={48} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSecondary, { marginTop: 16, textAlign: 'center' }]}>
+              No active coupons available
+            </Text>
+            <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
+              Check back later for special offers!
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Available Coupons
+            </Text>
+            {coupons.map((coupon) => {
+              const expirationDate = new Date(coupon.expiration_date);
+              const isExpiringSoon = (expirationDate.getTime() - Date.now()) < 7 * 24 * 60 * 60 * 1000;
+
+              return (
+                <View key={coupon.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <View
+                      style={{
+                        width: 60,
+                        height: 60,
+                        borderRadius: 30,
+                        backgroundColor: colors.primary,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 16,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 24, fontWeight: 'bold' }]}>
+                        {coupon.discount_value}%
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                        {coupon.coupon_type}
+                      </Text>
+                      <Text style={commonStyles.textSecondary}>
+                        Code: {coupon.coupon_code}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 12 }]}>
+                      Expires: {expirationDate.toLocaleDateString()}
+                      {isExpiringSoon && ' (Expiring Soon!)'}
+                    </Text>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { paddingVertical: 10 }]}
+                      onPress={() => handleRedeemCoupon(coupon)}
+                      disabled={redeeming}
+                    >
+                      <Text style={buttonStyles.text}>
+                        {redeeming ? 'Redeeming...' : 'Redeem Coupon'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }

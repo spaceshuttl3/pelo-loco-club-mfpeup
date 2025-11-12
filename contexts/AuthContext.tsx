@@ -9,9 +9,10 @@ interface AuthContextType {
   supabaseUser: SupabaseUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, phone: string, role?: UserRole) => Promise<void>;
+  signUp: (email: string, password: string, name: string, phone: string, birthday?: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -112,8 +113,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    if (supabaseUser) {
+      await fetchUserProfile(supabaseUser.id);
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     console.log('Attempting to sign in:', email);
+    setLoading(true);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -121,13 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Sign in error:', error);
+      setLoading(false);
       throw error;
     }
 
     console.log('Sign in successful:', data);
+    // The auth state change listener will handle fetching the profile
   };
 
-  const signUp = async (email: string, password: string, name: string, phone: string, role: UserRole = 'customer') => {
+  const signUp = async (email: string, password: string, name: string, phone: string, birthday?: string, role: UserRole = 'customer') => {
     console.log('Attempting to sign up:', email, 'with role:', role);
     
     // Create auth user with metadata that will be used by the trigger
@@ -139,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           name,
           phone,
+          birthday,
           role,
         }
       }
@@ -156,10 +168,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    console.log('Signing out...');
+    setLoading(true);
+    
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) {
+      console.error('Sign out error:', error);
+      setLoading(false);
+      throw error;
+    }
+    
+    console.log('Sign out successful');
     setUser(null);
     setSupabaseUser(null);
+    setLoading(false);
   };
 
   const isAdmin = user?.role === 'admin';
@@ -174,6 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         isAdmin,
+        refreshUser,
       }}
     >
       {children}

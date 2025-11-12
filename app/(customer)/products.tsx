@@ -1,5 +1,4 @@
 
-import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,41 +7,66 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Alert,
 } from 'react-native';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Product } from '@/types';
-import { commonStyles, colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { useCart } from '@/contexts/CartContext';
+import { useRouter } from 'expo-router';
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { addToCart, totalItems } = useCart();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .order('name', { ascending: true });
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        return;
+      }
+
       setProducts(data || []);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error in fetchProducts:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
     fetchProducts();
+  };
+
+  const handleAddToCart = async (product: Product) => {
+    if (product.stock <= 0) {
+      Alert.alert('Out of Stock', 'This product is currently out of stock');
+      return;
+    }
+
+    try {
+      await addToCart(product.id);
+      Alert.alert('Success', `${product.name} added to cart!`);
+    } catch (error: any) {
+      console.error('Error adding to cart:', error);
+      Alert.alert('Error', error.message || 'Could not add item to cart');
+    }
   };
 
   if (loading) {
@@ -55,6 +79,35 @@ export default function ProductsScreen() {
 
   return (
     <View style={commonStyles.container}>
+      <View style={[commonStyles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+        <Text style={commonStyles.headerTitle}>Shop</Text>
+        <TouchableOpacity
+          style={{ position: 'relative' }}
+          onPress={() => router.push('/(customer)/cart' as any)}
+        >
+          <IconSymbol name="cart.fill" size={28} color={colors.text} />
+          {totalItems > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: -8,
+                right: -8,
+                backgroundColor: colors.primary,
+                borderRadius: 10,
+                width: 20,
+                height: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.text, fontSize: 12, fontWeight: 'bold' }}>
+                {totalItems}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={commonStyles.content}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -62,92 +115,63 @@ export default function ProductsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={[commonStyles.title, { marginBottom: 8 }]}>
-          Shop Products
-        </Text>
-        <Text style={[commonStyles.textSecondary, { marginBottom: 20 }]}>
-          Premium grooming products
-        </Text>
-
         {products.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <IconSymbol name="bag" size={48} color={colors.textSecondary} />
-            <Text style={[commonStyles.text, { marginTop: 16, textAlign: 'center' }]}>
+            <IconSymbol name="bag.fill" size={48} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
               No products available
-            </Text>
-            <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
-              Check back soon for new items
             </Text>
           </View>
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-            {products.map((product) => (
-              <View
-                key={product.id}
-                style={{
-                  width: '50%',
-                  padding: 6,
-                }}
-              >
-                <View style={commonStyles.card}>
-                  {product.photo_url ? (
-                    <Image
-                      source={{ uri: product.photo_url }}
-                      style={{
-                        width: '100%',
-                        height: 120,
-                        borderRadius: 8,
-                        marginBottom: 12,
-                        backgroundColor: colors.highlight,
-                      }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: '100%',
-                        height: 120,
-                        borderRadius: 8,
-                        marginBottom: 12,
-                        backgroundColor: colors.highlight,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <IconSymbol name="photo" size={40} color={colors.textSecondary} />
-                    </View>
-                  )}
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+          products.map((product) => (
+            <View key={product.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+              {product.photo_url && (
+                <Image
+                  source={{ uri: product.photo_url }}
+                  style={{
+                    width: '100%',
+                    height: 200,
+                    borderRadius: 12,
+                    marginBottom: 12,
+                  }}
+                  resizeMode="cover"
+                />
+              )}
+              
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
                     {product.name}
                   </Text>
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
+                  <Text style={commonStyles.textSecondary}>
                     {product.description}
                   </Text>
-                  <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                    <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
-                      ${product.price.toFixed(2)}
-                    </Text>
-                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                      Stock: {product.stock}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: colors.primary,
-                      paddingVertical: 8,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    disabled={product.stock === 0}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </Text>
-                  </TouchableOpacity>
                 </View>
+                <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 18 }]}>
+                  ${product.price}
+                </Text>
               </View>
-            ))}
-          </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                <Text style={[commonStyles.textSecondary, { fontSize: 14 }]}>
+                  Stock: {product.stock}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    buttonStyles.primary,
+                    { paddingVertical: 8, paddingHorizontal: 16 },
+                    product.stock <= 0 && { opacity: 0.5 },
+                  ]}
+                  onPress={() => handleAddToCart(product)}
+                  disabled={product.stock <= 0}
+                >
+                  <Text style={buttonStyles.text}>
+                    {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         )}
       </ScrollView>
     </View>

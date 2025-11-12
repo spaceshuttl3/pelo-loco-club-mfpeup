@@ -1,5 +1,9 @@
 
+import { useRouter } from 'expo-router';
+import { commonStyles, colors } from '@/styles/commonStyles';
 import React, { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Appointment, Order } from '@/types';
 import {
   View,
   Text,
@@ -8,55 +12,68 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { Appointment, Order } from '@/types';
-import { commonStyles, colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function AdminDashboardScreen() {
-  const { user, signOut } = useAuth();
   const router = useRouter();
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
-  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-
       // Fetch today's appointments
-      const { data: appointments, error: aptError } = await supabase
+      const today = new Date().toISOString().split('T')[0];
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('*, user:users(*)')
+        .select('*, users(*)')
         .eq('date', today)
         .order('time', { ascending: true });
 
-      if (aptError) throw aptError;
-      setTodayAppointments(appointments || []);
+      if (appointmentsError) {
+        console.error('Error fetching appointments:', appointmentsError);
+      } else {
+        setAppointments(appointmentsData || []);
+      }
 
       // Fetch pending orders
-      const { data: orders, error: ordersError } = await supabase
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('*, user:users(*)')
+        .select('*, users(*)')
         .eq('payment_status', 'pending')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-      if (ordersError) throw ordersError;
-      setPendingOrders(orders || []);
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      } else {
+        setOrders(ordersData || []);
+      }
+
+      // Fetch upcoming birthdays (next 30 days)
+      const { data: birthdaysData, error: birthdaysError } = await supabase
+        .rpc('get_upcoming_birthdays', { days_ahead: 30 });
+
+      if (birthdaysError) {
+        console.error('Error fetching birthdays:', birthdaysError);
+      } else {
+        setUpcomingBirthdays(birthdaysData || []);
+      }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Error in fetchDashboardData:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -71,156 +88,161 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  const adminActions = [
-    {
-      title: 'Appointments',
-      icon: 'calendar',
-      color: colors.primary,
-      route: '/(admin)/appointments',
-      count: todayAppointments.length,
-    },
-    {
-      title: 'Products',
-      icon: 'bag.fill',
-      color: colors.secondary,
-      route: '/(admin)/products',
-    },
-    {
-      title: 'Notifications',
-      icon: 'bell.fill',
-      color: colors.accent,
-      route: '/(admin)/notifications',
-    },
-  ];
-
   return (
     <View style={commonStyles.container}>
+      <View style={commonStyles.header}>
+        <Text style={commonStyles.headerTitle}>Admin Dashboard</Text>
+      </View>
+
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <View style={{ marginBottom: 30 }}>
-          <Text style={[commonStyles.title, { fontSize: 32 }]}>
-            Admin Dashboard
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 24 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
+            Welcome back, {user?.name}!
           </Text>
-          <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
-            Welcome back, {user?.name}
+          <Text style={commonStyles.textSecondary}>
+            Here&apos;s your business overview
           </Text>
         </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 30 }}>
-          {adminActions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              style={{
-                width: '50%',
-                padding: 6,
-              }}
-              onPress={() => router.push(action.route as any)}
-            >
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
-                <View
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: action.color,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginBottom: 12,
-                  }}
-                >
-                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
-                </View>
-                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14, marginBottom: 4 }]}>
-                  {action.title}
-                </Text>
-                {action.count !== undefined && (
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                    {action.count} today
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+        {/* Quick Actions */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 24 }}>
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={() => router.push('/(admin)/appointments')}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="calendar" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Appointments
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={() => router.push('/(admin)/products')}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="bag.fill" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Products
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={() => router.push('/(admin)/birthdays' as any)}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="gift.fill" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Birthdays
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={() => router.push('/(admin)/coupons' as any)}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="ticket" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Coupons
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Today&apos;s Appointments ({todayAppointments.length})
+        {/* Today's Appointments */}
+        <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>
+          Today&apos;s Appointments ({appointments.length})
         </Text>
-
-        {todayAppointments.length === 0 ? (
-          <View style={[commonStyles.card, { alignItems: 'center', padding: 30 }]}>
-            <IconSymbol name="calendar" size={40} color={colors.textSecondary} />
-            <Text style={[commonStyles.textSecondary, { marginTop: 12 }]}>
-              No appointments today
-            </Text>
+        {appointments.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+            <Text style={commonStyles.textSecondary}>No appointments today</Text>
           </View>
         ) : (
-          todayAppointments.map((appointment) => (
-            <View key={appointment.id} style={commonStyles.card}>
-              <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                  {appointment.service}
-                </Text>
-                <Text style={[commonStyles.text, { color: colors.primary }]}>
-                  {appointment.time}
-                </Text>
+          appointments.slice(0, 3).map((appointment) => (
+            <View key={appointment.id} style={[commonStyles.card, { marginBottom: 12 }]}>
+              <View style={commonStyles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                    {appointment.user?.name}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    {appointment.service} • {appointment.time}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    backgroundColor: colors.primary,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                    {appointment.status}
+                  </Text>
+                </View>
               </View>
-              <Text style={commonStyles.textSecondary}>
-                Customer: {appointment.user?.name || 'Unknown'}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Status: {appointment.status} • Payment: {appointment.payment_status}
-              </Text>
             </View>
           ))
         )}
 
-        {pendingOrders.length > 0 && (
+        {/* Upcoming Birthdays */}
+        {upcomingBirthdays.length > 0 && (
           <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Pending Orders ({pendingOrders.length})
+            <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
+              Upcoming Birthdays ({upcomingBirthdays.length})
             </Text>
-            {pendingOrders.map((order) => (
-              <View key={order.id} style={commonStyles.card}>
-                <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    Order #{order.id.slice(0, 8)}
-                  </Text>
-                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
-                    ${order.total_price.toFixed(2)}
-                  </Text>
+            {upcomingBirthdays.slice(0, 3).map((birthday, index) => (
+              <View key={index} style={[commonStyles.card, { marginBottom: 12 }]}>
+                <View style={commonStyles.row}>
+                  <IconSymbol name="gift.fill" size={24} color={colors.primary} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                      {birthday.name}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      {new Date(birthday.birthday).toLocaleDateString()}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={commonStyles.textSecondary}>
-                  Customer: {order.user?.name || 'Unknown'}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Items: {order.items.length}
-                </Text>
               </View>
             ))}
           </>
         )}
 
-        <TouchableOpacity
-          style={{
-            backgroundColor: colors.error,
-            paddingVertical: 14,
-            paddingHorizontal: 24,
-            borderRadius: 8,
-            alignItems: 'center',
-            marginTop: 40,
-          }}
-          onPress={signOut}
-        >
-          <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-            Sign Out
-          </Text>
-        </TouchableOpacity>
+        {/* Pending Orders */}
+        {orders.length > 0 && (
+          <>
+            <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
+              Pending Orders ({orders.length})
+            </Text>
+            {orders.map((order) => (
+              <View key={order.id} style={[commonStyles.card, { marginBottom: 12 }]}>
+                <View style={commonStyles.row}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                      {order.user?.name}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      ${order.total_price.toFixed(2)} • {order.payment_mode}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
     </View>
   );

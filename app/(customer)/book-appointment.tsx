@@ -1,5 +1,9 @@
 
-import React, { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '@/lib/supabase';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,207 +11,305 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/types';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { IconSymbol } from '@/components/IconSymbol';
+
+interface Barber {
+  id: string;
+  name: string;
+  available_days: string[];
+  available_hours: { start: string; end: string };
+}
 
 export default function BookAppointmentScreen() {
-  const { user } = useAuth();
   const router = useRouter();
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [selectedService, setSelectedService] = useState('');
+  const [selectedBarber, setSelectedBarber] = useState('');
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'pay_in_person' | 'online'>('pay_in_person');
   const [loading, setLoading] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [loadingBarbers, setLoadingBarbers] = useState(true);
 
-  const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-    '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-  ];
+  useEffect(() => {
+    fetchBarbers();
+  }, []);
+
+  const fetchBarbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching barbers:', error);
+        return;
+      }
+
+      setBarbers(data || []);
+      if (data && data.length > 0) {
+        setSelectedBarber(data[0].id);
+      }
+    } catch (error) {
+      console.error('Error in fetchBarbers:', error);
+    } finally {
+      setLoadingBarbers(false);
+    }
+  };
 
   const handleBookAppointment = async () => {
-    if (!selectedService || !selectedTime) {
-      Alert.alert('Error', 'Please select a service and time slot');
+    if (!selectedService) {
+      Alert.alert('Error', 'Please select a service');
+      return;
+    }
+
+    if (!selectedBarber) {
+      Alert.alert('Error', 'Please select a barber');
+      return;
+    }
+
+    // Check if selected date is in the past
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      Alert.alert('Error', 'Please select a future date');
+      return;
+    }
+
+    // Check if barber is available on selected day
+    const selectedBarberData = barbers.find(b => b.id === selectedBarber);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    if (selectedBarberData && !selectedBarberData.available_days.includes(dayName)) {
+      Alert.alert('Error', `The selected barber is not available on ${dayName}`);
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('appointments').insert([
-        {
+      const service = SERVICES.find(s => s.id === selectedService);
+      
+      const { error } = await supabase
+        .from('appointments')
+        .insert({
           user_id: user?.id,
-          service: SERVICES.find(s => s.id === selectedService)?.name,
-          date: selectedDate.toISOString().split('T')[0],
-          time: selectedTime,
+          barber_id: selectedBarber,
+          service: service?.name,
+          date: date.toISOString().split('T')[0],
+          time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
           status: 'booked',
           payment_mode: paymentMode,
           payment_status: paymentMode === 'online' ? 'paid' : 'pending',
-        },
-      ]);
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error booking appointment:', error);
+        Alert.alert('Error', 'Could not book appointment. Please try again.');
+        return;
+      }
 
-      Alert.alert('Success', 'Appointment booked successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error: any) {
-      console.error('Error booking appointment:', error);
-      Alert.alert('Error', error.message || 'Failed to book appointment');
+      Alert.alert(
+        'Success!',
+        `Your appointment has been booked for ${date.toLocaleDateString()} at ${time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error in handleBookAppointment:', error);
+      Alert.alert('Error', 'Could not book appointment. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingBarbers) {
+    return (
+      <View style={[commonStyles.container, commonStyles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Select Service
-        </Text>
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={commonStyles.headerTitle}>Book Appointment</Text>
+      </View>
 
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+        <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>Select Service</Text>
         {SERVICES.map((service) => (
           <TouchableOpacity
             key={service.id}
             style={[
               commonStyles.card,
-              selectedService === service.id && {
-                borderColor: colors.primary,
-                borderWidth: 2,
-              },
+              commonStyles.row,
+              selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
             ]}
             onPress={() => setSelectedService(service.id)}
           >
-            <View style={commonStyles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                  {service.name}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  {service.duration} min
-                </Text>
-              </View>
-              <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
-                ${service.price}
+            <View style={{ flex: 1 }}>
+              <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                {service.name}
+              </Text>
+              <Text style={commonStyles.textSecondary}>
+                {service.duration} min • ${service.price}
               </Text>
             </View>
+            {selectedService === service.id && (
+              <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+            )}
           </TouchableOpacity>
         ))}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 16 }]}>
-          Select Date
-        </Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Barber</Text>
+        {barbers.map((barber) => (
+          <TouchableOpacity
+            key={barber.id}
+            style={[
+              commonStyles.card,
+              commonStyles.row,
+              selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
+            ]}
+            onPress={() => setSelectedBarber(barber.id)}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                {barber.name}
+              </Text>
+              <Text style={commonStyles.textSecondary}>
+                Available: {barber.available_days.join(', ')}
+              </Text>
+              <Text style={commonStyles.textSecondary}>
+                Hours: {barber.available_hours.start} - {barber.available_hours.end}
+              </Text>
+            </View>
+            {selectedBarber === barber.id && (
+              <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ))}
 
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Date & Time</Text>
+        
         <TouchableOpacity
-          style={commonStyles.card}
+          style={[commonStyles.card, commonStyles.row]}
           onPress={() => setShowDatePicker(true)}
         >
-          <Text style={commonStyles.text}>
-            {selectedDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+          <IconSymbol name="calendar" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12 }]}>
+            {date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </Text>
         </TouchableOpacity>
 
         {showDatePicker && (
           <DateTimePicker
-            value={selectedDate}
+            value={date}
             mode="date"
-            display="default"
-            minimumDate={new Date()}
-            onChange={(event, date) => {
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
               setShowDatePicker(Platform.OS === 'ios');
-              if (date) setSelectedDate(date);
+              if (selectedDate) {
+                setDate(selectedDate);
+              }
+            }}
+            minimumDate={new Date()}
+          />
+        )}
+
+        <TouchableOpacity
+          style={[commonStyles.card, commonStyles.row]}
+          onPress={() => setShowTimePicker(true)}
+        >
+          <IconSymbol name="clock" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12 }]}>
+            {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </TouchableOpacity>
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={time}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedTime) => {
+              setShowTimePicker(Platform.OS === 'ios');
+              if (selectedTime) {
+                setTime(selectedTime);
+              }
             }}
           />
         )}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 16 }]}>
-          Select Time
-        </Text>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
-          {timeSlots.map((time) => (
-            <TouchableOpacity
-              key={time}
-              style={[
-                {
-                  backgroundColor: selectedTime === time ? colors.primary : colors.card,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 8,
-                  margin: 4,
-                  minWidth: 80,
-                  alignItems: 'center',
-                },
-              ]}
-              onPress={() => setSelectedTime(time)}
-            >
-              <Text style={[commonStyles.text, { fontSize: 14 }]}>
-                {time}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 16 }]}>
-          Payment Method
-        </Text>
-
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Payment Method</Text>
+        
         <TouchableOpacity
           style={[
             commonStyles.card,
-            paymentMode === 'pay_in_person' && {
-              borderColor: colors.primary,
-              borderWidth: 2,
-            },
+            commonStyles.row,
+            paymentMode === 'pay_in_person' && { borderColor: colors.primary, borderWidth: 2 },
           ]}
           onPress={() => setPaymentMode('pay_in_person')}
         >
-          <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-            Pay in Person
-          </Text>
-          <Text style={[commonStyles.textSecondary, { marginTop: 4 }]}>
-            Pay at the shop after your appointment
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+              Pay in Person
+            </Text>
+            <Text style={commonStyles.textSecondary}>
+              Pay at the shop
+            </Text>
+          </View>
+          {paymentMode === 'pay_in_person' && (
+            <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
             commonStyles.card,
-            paymentMode === 'online' && {
-              borderColor: colors.primary,
-              borderWidth: 2,
-            },
+            commonStyles.row,
+            paymentMode === 'online' && { borderColor: colors.primary, borderWidth: 2 },
           ]}
           onPress={() => setPaymentMode('online')}
         >
-          <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-            Pay Online
-          </Text>
-          <Text style={[commonStyles.textSecondary, { marginTop: 4 }]}>
-            Stripe / Apple Pay (Coming Soon)
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+              Pay Online
+            </Text>
+            <Text style={commonStyles.textSecondary}>
+              Pay now with card
+            </Text>
+          </View>
+          {paymentMode === 'online' && (
+            <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[buttonStyles.primary, { marginTop: 30 }]}
+          style={[buttonStyles.primary, { marginTop: 24 }]}
           onPress={handleBookAppointment}
-          disabled={loading || !selectedService || !selectedTime}
+          disabled={loading}
         >
           <Text style={buttonStyles.text}>
-            {loading ? 'Booking...' : 'Confirm Booking'}
+            {loading ? 'Booking...' : 'Book Appointment'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

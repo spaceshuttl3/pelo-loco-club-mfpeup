@@ -14,6 +14,7 @@ export interface User {
 export interface Appointment {
   id: string;
   user_id: string;
+  barber_id?: string;
   service: string;
   date: string;
   time: string;
@@ -59,6 +60,8 @@ export interface Coupon {
   discount_value: number;
   expiration_date: string;
   status: 'active' | 'used' | 'expired';
+  coupon_code?: string;
+  config_id?: string;
   created_at?: string;
 }
 
@@ -69,3 +72,10 @@ export const SERVICES = [
   { id: 'shave', name: 'Hot Towel Shave', duration: 30, price: 30 },
   { id: 'kids', name: 'Kids Haircut', duration: 20, price: 20 },
 ];
+
+export interface TabBarItem {
+  name: string;
+  route: string;
+  icon: string;
+  label: string;
+}

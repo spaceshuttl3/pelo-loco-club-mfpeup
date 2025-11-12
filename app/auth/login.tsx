@@ -9,10 +9,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -61,66 +63,78 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={[commonStyles.content, commonStyles.centerContent]}>
-          <View style={{ width: '100%', maxWidth: 400 }}>
-            <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 8 }]}>
-              Pelo Loco Club
-            </Text>
-            <Text style={[commonStyles.textSecondary, { textAlign: 'center', marginBottom: 40 }]}>
-              Premium Barbershop Experience
-            </Text>
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!loading}
-            />
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 8 }]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              <Text style={buttonStyles.text}>
-                {loading ? 'Signing In...' : 'Sign In'}
+    <SafeAreaView style={[commonStyles.container, { flex: 1 }]} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={[commonStyles.content, commonStyles.centerContent, { paddingTop: 40 }]}>
+            <View style={{ width: '100%', maxWidth: 400 }}>
+              <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 16 }]}>
+                Pelo Loco Club
               </Text>
-            </TouchableOpacity>
+              
+              {/* App Logo */}
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <Image
+                  source={require('@/assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg')}
+                  style={{ width: 120, height: 120, borderRadius: 60 }}
+                  resizeMode="cover"
+                />
+              </View>
 
-            <TouchableOpacity
-              style={{ marginTop: 20, alignItems: 'center' }}
-              onPress={() => router.push('/auth/signup')}
-              disabled={loading}
-            >
-              <Text style={commonStyles.textSecondary}>
-                Don&apos;t have an account?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>
-                  Sign Up
+              <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 40 }]}>
+                Welcome Back
+              </Text>
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Email"
+                placeholderTextColor={colors.textSecondary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
+              />
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                editable={!loading}
+              />
+
+              <TouchableOpacity
+                style={[buttonStyles.primary, { marginTop: 8 }]}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                <Text style={buttonStyles.text}>
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Text>
-              </Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ marginTop: 20, alignItems: 'center' }}
+                onPress={() => router.push('/auth/signup')}
+                disabled={loading}
+              >
+                <Text style={commonStyles.textSecondary}>
+                  Don&apos;t have an account?{' '}
+                  <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                    Sign Up
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

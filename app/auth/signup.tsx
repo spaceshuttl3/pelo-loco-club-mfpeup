@@ -13,6 +13,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function SignupScreen() {
   const [name, setName] = useState('');
@@ -20,164 +23,238 @@ export default function SignupScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [birthday, setBirthday] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
-  const handleSignup = async () => {
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
-    // Basic email validation
+  const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    return emailRegex.test(email);
+  };
+
+  const validatePhone = (phone: string) => {
+    // Basic phone validation - at least 10 digits
+    const phoneRegex = /^\d{10,}$/;
+    return phoneRegex.test(phone.replace(/\D/g, ''));
+  };
+
+  const checkDuplicates = async (email: string, phone: string) => {
+    // Check for duplicate email
+    const { data: emailData, error: emailError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (emailData) {
+      throw new Error('An account with this email already exists');
+    }
+
+    // Check for duplicate phone
+    const { data: phoneData, error: phoneError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('phone', phone)
+      .single();
+
+    if (phoneData) {
+      throw new Error('An account with this phone number already exists');
+    }
+  };
+
+  const handleSignup = async () => {
+    // Validate all fields are filled
+    if (!name || !email || !phone || !password || !confirmPassword) {
+      Alert.alert('Error', 'All fields are mandatory. Please fill in all fields.');
+      return;
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      return;
+    }
+
+    // Validate phone format
+    if (!validatePhone(phone)) {
+      Alert.alert('Invalid Phone', 'Please enter a valid phone number (at least 10 digits)');
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    // Validate password match
+    if (password !== confirmPassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match');
       return;
     }
 
     setLoading(true);
     try {
-      await signUp(email, password, name, phone);
+      // Check for duplicates
+      await checkDuplicates(email, phone);
+
+      // Format birthday as YYYY-MM-DD
+      const birthdayStr = birthday.toISOString().split('T')[0];
+
+      // Sign up with birthday in metadata
+      await signUp(email, password, name, phone, birthdayStr);
       
-      // Show success message with email confirmation reminder
       Alert.alert(
-        'Check Your Email! 📧',
-        `We've sent a verification email to:\n\n${email}\n\nPlease click the link in the email to verify your account before signing in.\n\nIf you don't see it, check your spam folder.`,
+        'Success!',
+        'Account created successfully!\n\nPlease check your email and click the verification link to activate your account.\n\nAfter verification, you can sign in.',
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/auth/login')
-          }
+            onPress: () => router.replace('/auth/login'),
+          },
         ]
       );
     } catch (error: any) {
       console.error('Signup error:', error);
       
-      // Handle specific error cases
-      let errorTitle = 'Signup Failed';
-      let errorMessage = 'Could not create account';
+      let errorMessage = error.message || 'Could not create account';
       
-      if (error.message) {
-        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-          errorTitle = 'Email Already Registered';
-          errorMessage = 'This email is already registered. Please sign in instead or use a different email.';
-        } else if (error.message.includes('invalid email')) {
-          errorMessage = 'Please enter a valid email address.';
-        } else if (error.message.includes('Password should be at least')) {
-          errorMessage = 'Password must be at least 6 characters long.';
-        } else {
-          errorMessage = error.message;
-        }
+      // Handle specific error cases
+      if (error.message?.includes('already registered')) {
+        errorMessage = 'This email is already registered. Please sign in instead.';
+      } else if (error.message?.includes('duplicate')) {
+        errorMessage = error.message;
       }
       
-      Alert.alert(errorTitle, errorMessage);
+      Alert.alert('Signup Failed', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={[commonStyles.content, { paddingTop: 40 }]}>
-          <View style={{ width: '100%', maxWidth: 400 }}>
-            <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 8 }]}>
-              Create Account
-            </Text>
-            <Text style={[commonStyles.textSecondary, { textAlign: 'center', marginBottom: 30 }]}>
-              Join Pelo Loco Club
-            </Text>
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Full Name"
-              placeholderTextColor={colors.textSecondary}
-              value={name}
-              onChangeText={setName}
-              editable={!loading}
-            />
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              editable={!loading}
-            />
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Phone Number"
-              placeholderTextColor={colors.textSecondary}
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              editable={!loading}
-            />
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Password (min. 6 characters)"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor={colors.textSecondary}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 8 }]}
-              onPress={handleSignup}
-              disabled={loading}
-            >
-              <Text style={buttonStyles.text}>
-                {loading ? 'Creating Account...' : 'Sign Up'}
+    <SafeAreaView style={[commonStyles.container, { flex: 1 }]} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={[commonStyles.content, { paddingTop: 40 }]}>
+            <View style={{ width: '100%', maxWidth: 400 }}>
+              <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 8 }]}>
+                Join Pelo Loco Club
               </Text>
-            </TouchableOpacity>
+              <Text style={[commonStyles.textSecondary, { textAlign: 'center', marginBottom: 30 }]}>
+                Create your account
+              </Text>
 
-            <TouchableOpacity
-              style={{ marginTop: 20, alignItems: 'center' }}
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text style={commonStyles.textSecondary}>
-                Already have an account?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>
-                  Sign In
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Full Name *"
+                placeholderTextColor={colors.textSecondary}
+                value={name}
+                onChangeText={setName}
+                editable={!loading}
+              />
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Email *"
+                placeholderTextColor={colors.textSecondary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
+              />
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Phone Number *"
+                placeholderTextColor={colors.textSecondary}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                editable={!loading}
+              />
+
+              <TouchableOpacity
+                style={[commonStyles.input, { justifyContent: 'center' }]}
+                onPress={() => setShowDatePicker(true)}
+                disabled={loading}
+              >
+                <Text style={{ color: birthday ? colors.text : colors.textSecondary }}>
+                  {birthday ? `Birthday: ${birthday.toLocaleDateString()}` : 'Date of Birth *'}
                 </Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={birthday}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setBirthday(selectedDate);
+                    }
+                  }}
+                  maximumDate={new Date()}
+                />
+              )}
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Password *"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                editable={!loading}
+              />
+
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Confirm Password *"
+                placeholderTextColor={colors.textSecondary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                editable={!loading}
+              />
+
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 16 }]}>
+                * All fields are mandatory
               </Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity
+                style={buttonStyles.primary}
+                onPress={handleSignup}
+                disabled={loading}
+              >
+                <Text style={buttonStyles.text}>
+                  {loading ? 'Creating Account...' : 'Sign Up'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ marginTop: 20, alignItems: 'center' }}
+                onPress={() => router.back()}
+                disabled={loading}
+              >
+                <Text style={commonStyles.textSecondary}>
+                  Already have an account?{' '}
+                  <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                    Sign In
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

@@ -4,11 +4,13 @@ import { Stack } from 'expo-router';
 
 export default function AdminLayout() {
   return (
-    <Stack screenOptions={{ headerShown: true }}>
-      <Stack.Screen name="index" options={{ title: 'Admin Dashboard' }} />
-      <Stack.Screen name="appointments" options={{ title: 'Manage Appointments' }} />
-      <Stack.Screen name="products" options={{ title: 'Manage Products' }} />
-      <Stack.Screen name="notifications" options={{ title: 'Send Notifications' }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="appointments" />
+      <Stack.Screen name="products" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="birthdays" />
+      <Stack.Screen name="coupons" />
     </Stack>
   );
 }

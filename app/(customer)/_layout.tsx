@@ -64,8 +64,9 @@ export default function CustomerLayout() {
         <Stack.Screen name="bookings" />
         <Stack.Screen name="products" />
         <Stack.Screen name="profile" />
-        <Stack.Screen name="book-appointment" options={{ presentation: 'modal', headerShown: true, title: 'Book Appointment' }} />
-        <Stack.Screen name="spin-wheel" options={{ presentation: 'modal', headerShown: true, title: 'Spin The Wheel' }} />
+        <Stack.Screen name="cart" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="book-appointment" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="spin-wheel" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
       <FloatingTabBar tabs={tabs} />
     </>

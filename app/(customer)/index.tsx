@@ -24,7 +24,7 @@ export default function CustomerHomeScreen() {
       route: '/(customer)/book-appointment',
     },
     {
-      title: 'Spin The Wheel',
+      title: 'Redeem Coupon',
       icon: 'gift.fill',
       color: colors.accent,
       route: '/(customer)/spin-wheel',
@@ -41,6 +41,13 @@ export default function CustomerHomeScreen() {
       color: colors.primary,
       route: '/(customer)/bookings',
     },
+  ];
+
+  const services = [
+    { id: '1', name: 'Haircut', price: '$25', duration: '30 min' },
+    { id: '2', name: 'Beard Trim', price: '$15', duration: '20 min' },
+    { id: '3', name: 'Haircut + Beard', price: '$35', duration: '45 min' },
+    { id: '4', name: 'Hot Towel Shave', price: '$30', duration: '30 min' },
   ];
 
   return (
@@ -76,7 +83,7 @@ export default function CustomerHomeScreen() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
           {quickActions.map((action, index) => (
             <TouchableOpacity
-              key={index}
+              key={`action-${index}`}
               style={{
                 width: '50%',
                 padding: 6,
@@ -109,13 +116,8 @@ export default function CustomerHomeScreen() {
           <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
             Our Services
           </Text>
-          {[
-            { name: 'Haircut', price: '$25', duration: '30 min' },
-            { name: 'Beard Trim', price: '$15', duration: '20 min' },
-            { name: 'Haircut + Beard', price: '$35', duration: '45 min' },
-            { name: 'Hot Towel Shave', price: '$30', duration: '30 min' },
-          ].map((service, index) => (
-            <View key={index} style={[commonStyles.card, commonStyles.row]}>
+          {services.map((service) => (
+            <View key={service.id} style={[commonStyles.card, commonStyles.row]}>
               <View style={{ flex: 1 }}>
                 <Text style={[commonStyles.text, { fontWeight: '600' }]}>
                   {service.name}

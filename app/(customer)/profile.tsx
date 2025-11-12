@@ -7,28 +7,35 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
-            } catch (error) {
+              console.log('Signed out successfully');
+              // Navigation will be handled automatically by the auth state change
+            } catch (error: any) {
               console.error('Sign out error:', error);
-              Alert.alert('Error', 'Failed to sign out');
+              Alert.alert('Error', 'Could not sign out. Please try again.');
             }
           },
         },
@@ -38,26 +45,24 @@ export default function ProfileScreen() {
 
   return (
     <View style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text style={[commonStyles.title, { marginBottom: 30 }]}>
-          Profile
-        </Text>
+      <View style={commonStyles.header}>
+        <Text style={commonStyles.headerTitle}>Profile</Text>
+      </View>
 
-        <View style={[commonStyles.card, { alignItems: 'center', padding: 30 }]}>
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 24 }]}>
           <View
             style={{
               width: 80,
               height: 80,
               borderRadius: 40,
-              backgroundColor: colors.primary,
+              backgroundColor: colors.card,
               justifyContent: 'center',
               alignItems: 'center',
               marginBottom: 16,
             }}
           >
-            <Text style={[commonStyles.title, { fontSize: 36, marginBottom: 0 }]}>
-              {user?.name?.charAt(0).toUpperCase()}
-            </Text>
+            <IconSymbol name="person.fill" size={40} color={colors.text} />
           </View>
           <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
             {user?.name}
@@ -67,68 +72,56 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <View style={{ marginTop: 20 }}>
-          <View style={commonStyles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <IconSymbol name="phone.fill" size={20} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                {user?.phone || 'No phone number'}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconSymbol name="calendar" size={20} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                {user?.birthday
-                  ? new Date(user.birthday).toLocaleDateString()
-                  : 'No birthday set'}
-              </Text>
-            </View>
+        <View style={commonStyles.card}>
+          <View style={[commonStyles.row, { marginBottom: 16 }]}>
+            <Text style={commonStyles.text}>Phone</Text>
+            <Text style={commonStyles.textSecondary}>{user?.phone}</Text>
           </View>
+          {user?.birthday && (
+            <View style={commonStyles.row}>
+              <Text style={commonStyles.text}>Birthday</Text>
+              <Text style={commonStyles.textSecondary}>
+                {new Date(user.birthday).toLocaleDateString()}
+              </Text>
+            </View>
+          )}
         </View>
 
-        <View style={{ marginTop: 30 }}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>
-            Settings
-          </Text>
-
-          <TouchableOpacity style={commonStyles.card}>
-            <View style={[commonStyles.row, { alignItems: 'center' }]}>
-              <IconSymbol name="bell.fill" size={20} color={colors.textSecondary} />
-              <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-                Notifications
+        <View style={commonStyles.card}>
+          <TouchableOpacity
+            style={[commonStyles.row, { paddingVertical: 8 }]}
+            onPress={() => router.push('/(customer)/bookings')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <IconSymbol name="calendar" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
+                My Bookings
               </Text>
-              <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
             </View>
+            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={commonStyles.card}>
-            <View style={[commonStyles.row, { alignItems: 'center' }]}>
-              <IconSymbol name="gift.fill" size={20} color={colors.textSecondary} />
-              <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
+
+          <TouchableOpacity
+            style={[commonStyles.row, { paddingVertical: 8 }]}
+            onPress={() => router.push('/(customer)/spin-wheel')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <IconSymbol name="gift.fill" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
                 My Coupons
               </Text>
-              <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
             </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={commonStyles.card}>
-            <View style={[commonStyles.row, { alignItems: 'center' }]}>
-              <IconSymbol name="questionmark.circle" size={20} color={colors.textSecondary} />
-              <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-                Help & Support
-              </Text>
-              <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-            </View>
+            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={[buttonStyles.outline, { marginTop: 30, borderColor: colors.error }]}
+          style={[buttonStyles.primary, { backgroundColor: colors.error, marginTop: 24 }]}
           onPress={handleSignOut}
         >
-          <Text style={[buttonStyles.text, { color: colors.error }]}>
-            Sign Out
-          </Text>
+          <Text style={buttonStyles.text}>Sign Out</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
