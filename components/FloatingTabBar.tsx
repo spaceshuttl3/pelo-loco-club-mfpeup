@@ -47,8 +47,12 @@ export default function FloatingTabBar({
   const activeIndex = useSharedValue(0);
 
   const handleTabPress = (route: string) => {
-    console.log('Tab pressed:', route);
-    router.push(route as any);
+    console.log('FloatingTabBar - Tab pressed:', route);
+    try {
+      router.push(route as any);
+    } catch (error) {
+      console.error('FloatingTabBar - Navigation error:', error);
+    }
   };
 
   // Find the active tab index
@@ -84,6 +88,7 @@ export default function FloatingTabBar({
           bottom: bottomMargin,
         },
       ]}
+      pointerEvents="box-none"
     >
       <BlurView
         intensity={Platform.OS === 'ios' ? 80 : 0}
@@ -106,6 +111,7 @@ export default function FloatingTabBar({
               borderRadius: borderRadius - 5,
             },
           ]}
+          pointerEvents="none"
         />
         {tabs.map((tab, index) => {
           const isActive = pathname.includes(tab.name);
@@ -114,6 +120,7 @@ export default function FloatingTabBar({
               key={tab.name}
               style={styles.tab}
               onPress={() => handleTabPress(tab.route)}
+              activeOpacity={0.7}
             >
               <IconSymbol
                 name={tab.icon as any}
@@ -172,7 +179,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    zIndex: 1,
+    zIndex: 2,
   },
   label: {
     fontSize: 11,

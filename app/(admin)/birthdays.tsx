@@ -57,12 +57,20 @@ export default function BirthdaysScreen() {
         return;
       }
 
-      // Calculate days until birthday
+      // Calculate days until birthday (ignoring year)
       const today = new Date();
+      const currentMonth = today.getMonth();
+      const currentDay = today.getDate();
+      
       const birthdaysWithDays = data?.map(user => {
         const birthday = new Date(user.birthday);
-        const thisYearBirthday = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
+        const birthMonth = birthday.getMonth();
+        const birthDay = birthday.getDate();
         
+        // Create birthday for this year
+        const thisYearBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
+        
+        // If birthday has passed this year, use next year
         if (thisYearBirthday < today) {
           thisYearBirthday.setFullYear(today.getFullYear() + 1);
         }
@@ -79,6 +87,7 @@ export default function BirthdaysScreen() {
       birthdaysWithDays.sort((a, b) => a.days_until - b.days_until);
 
       console.log('Birthdays fetched:', birthdaysWithDays.length);
+      console.log('Birthdays within 30 days:', birthdaysWithDays.filter(b => b.days_until <= 30).length);
       setBirthdays(birthdaysWithDays);
     } catch (error) {
       console.error('Error in fetchBirthdays:', error);
@@ -94,6 +103,7 @@ export default function BirthdaysScreen() {
   };
 
   const handleSendCoupon = (user: Birthday) => {
+    console.log('SendCoupon - Button pressed for:', user.name);
     setSelectedUser(user);
     setDiscountValue('20');
     setModalVisible(true);
@@ -168,7 +178,14 @@ export default function BirthdaysScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('Back button pressed');
+            router.back();
+          }} 
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Upcoming Birthdays</Text>
@@ -248,6 +265,7 @@ export default function BirthdaysScreen() {
                 <TouchableOpacity
                   style={[buttonStyles.primary, { paddingVertical: 10 }]}
                   onPress={() => handleSendCoupon(user)}
+                  activeOpacity={0.7}
                 >
                   <Text style={buttonStyles.text}>Send Birthday Coupon</Text>
                 </TouchableOpacity>
@@ -295,6 +313,7 @@ export default function BirthdaysScreen() {
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={sendCoupon}
                 disabled={sending}
+                activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
                   {sending ? 'Sending...' : 'Send Coupon'}
@@ -307,6 +326,7 @@ export default function BirthdaysScreen() {
                   setSelectedUser(null);
                 }}
                 disabled={sending}
+                activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>

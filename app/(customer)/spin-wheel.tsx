@@ -58,6 +58,8 @@ export default function SpinWheelScreen() {
   };
 
   const handleRedeemCoupon = async (coupon: Coupon) => {
+    console.log('RedeemCoupon - Button pressed for:', coupon.coupon_type);
+    
     Alert.alert(
       'Redeem Coupon',
       `Redeem ${coupon.coupon_type} (${coupon.discount_value}% off)?`,
@@ -107,7 +109,14 @@ export default function SpinWheelScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('Back button pressed');
+            router.back();
+          }} 
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>My Coupons</Text>
@@ -164,6 +173,7 @@ export default function SpinWheelScreen() {
               <TouchableOpacity
                 style={[buttonStyles.primary, { backgroundColor: colors.card }]}
                 onPress={() => handleRedeemCoupon(coupon)}
+                activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>Redeem Coupon</Text>
               </TouchableOpacity>

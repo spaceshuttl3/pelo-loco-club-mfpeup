@@ -59,7 +59,7 @@ export default function ProductsScreen() {
   };
 
   const handleAddToCart = async (product: Product) => {
-    console.log('Add to cart button pressed for:', product.name);
+    console.log('AddToCart - Button pressed for:', product.name);
     
     if (product.stock <= 0) {
       Alert.alert('Out of Stock', 'This product is currently out of stock');
@@ -76,8 +76,12 @@ export default function ProductsScreen() {
   };
 
   const handleCartPress = () => {
-    console.log('Cart button pressed, navigating to cart');
-    router.push('/(customer)/cart' as any);
+    console.log('Cart - Button pressed, navigating to cart');
+    try {
+      router.push('/(customer)/cart' as any);
+    } catch (error) {
+      console.error('Cart navigation error:', error);
+    }
   };
 
   if (loading) {
@@ -93,22 +97,24 @@ export default function ProductsScreen() {
       <View style={[commonStyles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <Text style={commonStyles.headerTitle}>Shop</Text>
         <TouchableOpacity
-          style={{ position: 'relative' }}
+          style={{ position: 'relative', padding: 8 }}
           onPress={handleCartPress}
+          activeOpacity={0.7}
         >
           <IconSymbol name="cart.fill" size={28} color={colors.text} />
           {totalItems > 0 && (
             <View
               style={{
                 position: 'absolute',
-                top: -8,
-                right: -8,
+                top: 0,
+                right: 0,
                 backgroundColor: colors.primary,
                 borderRadius: 10,
-                width: 20,
+                minWidth: 20,
                 height: 20,
                 justifyContent: 'center',
                 alignItems: 'center',
+                paddingHorizontal: 4,
               }}
             >
               <Text style={{ color: colors.text, fontSize: 12, fontWeight: 'bold' }}>
@@ -141,7 +147,7 @@ export default function ProductsScreen() {
                   source={{ uri: product.photo_url }}
                   style={{
                     width: '100%',
-                    height: (width - 40) * (9 / 16), // 16:9 aspect ratio optimized for 1920x1080
+                    height: (width - 40) * (9 / 16),
                     backgroundColor: colors.card,
                   }}
                   resizeMode="cover"
@@ -190,6 +196,7 @@ export default function ProductsScreen() {
                     ]}
                     onPress={() => handleAddToCart(product)}
                     disabled={product.stock <= 0}
+                    activeOpacity={0.7}
                   >
                     <Text style={buttonStyles.text}>
                       {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}

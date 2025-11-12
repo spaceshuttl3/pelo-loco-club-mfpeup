@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 
@@ -31,19 +30,6 @@ export default function AdminLayout() {
       label: 'Coupons',
     },
   ];
-
-  if (Platform.OS === 'ios') {
-    return (
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="appointments" />
-        <Stack.Screen name="products" />
-        <Stack.Screen name="notifications" />
-        <Stack.Screen name="birthdays" />
-        <Stack.Screen name="coupons" />
-      </Stack>
-    );
-  }
 
   return (
     <>

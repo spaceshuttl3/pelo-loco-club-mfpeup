@@ -1,10 +1,7 @@
 
 import React from 'react';
-import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
-import { colors } from '@/styles/commonStyles';
 
 export default function CustomerLayout() {
   const tabs: TabBarItem[] = [
@@ -33,29 +30,6 @@ export default function CustomerLayout() {
       label: 'Profile',
     },
   ];
-
-  if (Platform.OS === 'ios') {
-    return (
-      <NativeTabs>
-        <NativeTabs.Trigger name="index">
-          <Icon sf="house.fill" drawable="ic_home" />
-          <Label>Home</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="bookings">
-          <Icon sf="calendar" drawable="ic_calendar" />
-          <Label>Bookings</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="products">
-          <Icon sf="bag.fill" drawable="ic_bag" />
-          <Label>Shop</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="profile">
-          <Icon sf="person.fill" drawable="ic_profile" />
-          <Label>Profile</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
-    );
-  }
 
   return (
     <>

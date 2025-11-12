@@ -81,10 +81,10 @@ export default function CouponsScreen() {
       if (usersError) {
         console.error('Error fetching users:', usersError);
       } else {
-        console.log('Users fetched:', usersData?.length || 0);
+        console.log('All users fetched:', usersData?.length || 0);
         // Filter to only show customers
         const customerUsers = usersData?.filter(u => u.role === 'customer') || [];
-        console.log('Customer users:', customerUsers.length);
+        console.log('Customer users filtered:', customerUsers.length);
         setUsers(customerUsers);
       }
     } catch (error) {
@@ -163,6 +163,8 @@ export default function CouponsScreen() {
   };
 
   const handleSendCoupons = async () => {
+    console.log('SendCoupons - Button pressed');
+    
     if (!selectedConfig) return;
 
     if (selectedUsers.length === 0) {
@@ -218,6 +220,7 @@ export default function CouponsScreen() {
   };
 
   const toggleUserSelection = (userId: string) => {
+    console.log('User selection toggled:', userId);
     if (selectedUsers.includes(userId)) {
       setSelectedUsers(selectedUsers.filter(id => id !== userId));
     } else {
@@ -226,6 +229,7 @@ export default function CouponsScreen() {
   };
 
   const selectAllUsers = () => {
+    console.log('Select all users pressed');
     if (selectedUsers.length === users.length) {
       setSelectedUsers([]);
     } else {
@@ -244,18 +248,27 @@ export default function CouponsScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('Back button pressed');
+            router.back();
+          }} 
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Coupons</Text>
         <TouchableOpacity
           onPress={() => {
+            console.log('Add coupon button pressed');
             setEditingConfig(null);
             setCouponText('');
             setDiscountValue('');
             setIsSpinWheel(false);
             setModalVisible(true);
           }}
+          activeOpacity={0.7}
         >
           <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -321,22 +334,26 @@ export default function CouponsScreen() {
                   <TouchableOpacity
                     style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
                     onPress={() => {
+                      console.log('Send to users button pressed for config:', config.id);
                       setSelectedConfig(config);
                       setSelectedUsers([]);
                       setSendModalVisible(true);
                     }}
+                    activeOpacity={0.7}
                   >
                     <Text style={buttonStyles.text}>Send to Users</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[buttonStyles.primary, { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.card }]}
                     onPress={() => {
+                      console.log('Edit button pressed for config:', config.id);
                       setEditingConfig(config);
                       setCouponText(config.coupon_text);
                       setDiscountValue(config.discount_value.toString());
                       setIsSpinWheel(config.is_spin_wheel);
                       setModalVisible(true);
                     }}
+                    activeOpacity={0.7}
                   >
                     <IconSymbol name="pencil" size={20} color={colors.text} />
                   </TouchableOpacity>
@@ -391,6 +408,7 @@ export default function CouponsScreen() {
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={handleSaveConfig}
                 disabled={saving}
+                activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
                   {saving ? 'Saving...' : editingConfig ? 'Update' : 'Create'}
@@ -403,6 +421,7 @@ export default function CouponsScreen() {
                   setEditingConfig(null);
                 }}
                 disabled={saving}
+                activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
@@ -440,12 +459,16 @@ export default function CouponsScreen() {
                 <Text style={commonStyles.textSecondary}>
                   No customer users found
                 </Text>
+                <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
+                  Make sure you have users with the &apos;customer&apos; role in your database.
+                </Text>
               </View>
             ) : (
               <>
                 <TouchableOpacity
                   style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
                   onPress={selectAllUsers}
+                  activeOpacity={0.7}
                 >
                   <Text style={commonStyles.text}>
                     {selectedUsers.length === users.length ? 'Deselect All' : 'Select All'}
@@ -466,6 +489,7 @@ export default function CouponsScreen() {
                         selectedUsers.includes(user.id) && { borderColor: colors.primary, borderWidth: 2 },
                       ]}
                       onPress={() => toggleUserSelection(user.id)}
+                      activeOpacity={0.7}
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={[commonStyles.text, { fontWeight: '600' }]}>
@@ -489,6 +513,7 @@ export default function CouponsScreen() {
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={handleSendCoupons}
                 disabled={saving || users.length === 0}
+                activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
                   {saving ? 'Sending...' : `Send to ${selectedUsers.length} user(s)`}
@@ -502,6 +527,7 @@ export default function CouponsScreen() {
                   setSelectedUsers([]);
                 }}
                 disabled={saving}
+                activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>

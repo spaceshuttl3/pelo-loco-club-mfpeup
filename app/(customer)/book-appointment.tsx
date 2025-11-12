@@ -124,7 +124,7 @@ export default function BookAppointmentScreen() {
   };
 
   const handleBookAppointment = async () => {
-    console.log('Book appointment button pressed');
+    console.log('BookAppointment - Button pressed');
     
     if (!selectedService) {
       Alert.alert('Error', 'Please select a service');
@@ -216,7 +216,14 @@ export default function BookAppointmentScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('Back button pressed');
+            router.back();
+          }} 
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Book Appointment</Text>
@@ -233,7 +240,11 @@ export default function BookAppointmentScreen() {
               commonStyles.row,
               selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
             ]}
-            onPress={() => setSelectedService(service.id)}
+            onPress={() => {
+              console.log('Service selected:', service.name);
+              setSelectedService(service.id);
+            }}
+            activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
               <Text style={[commonStyles.text, { fontWeight: '600' }]}>
@@ -263,7 +274,11 @@ export default function BookAppointmentScreen() {
                 commonStyles.row,
                 selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
               ]}
-              onPress={() => setSelectedBarber(barber.id)}
+              onPress={() => {
+                console.log('Barber selected:', barber.name);
+                setSelectedBarber(barber.id);
+              }}
+              activeOpacity={0.7}
             >
               <View style={{ flex: 1 }}>
                 <Text style={[commonStyles.text, { fontWeight: '600' }]}>
@@ -287,7 +302,11 @@ export default function BookAppointmentScreen() {
         
         <TouchableOpacity
           style={[commonStyles.card, commonStyles.row]}
-          onPress={() => setShowDatePicker(true)}
+          onPress={() => {
+            console.log('Date picker opened');
+            setShowDatePicker(true);
+          }}
+          activeOpacity={0.7}
         >
           <IconSymbol name="calendar" size={24} color={colors.primary} />
           <Text style={[commonStyles.text, { marginLeft: 12 }]}>
@@ -303,6 +322,7 @@ export default function BookAppointmentScreen() {
             onChange={(event, selectedDate) => {
               setShowDatePicker(Platform.OS === 'ios');
               if (selectedDate) {
+                console.log('Date selected:', selectedDate);
                 setDate(selectedDate);
               }
             }}
@@ -334,7 +354,11 @@ export default function BookAppointmentScreen() {
                       borderColor: isSelected ? colors.primary : colors.border,
                     },
                   ]}
-                  onPress={() => setTime(slotTime)}
+                  onPress={() => {
+                    console.log('Time slot selected:', slot);
+                    setTime(slotTime);
+                  }}
+                  activeOpacity={0.7}
                 >
                   <Text style={[commonStyles.text, { fontSize: 14 }]}>
                     {slot}
@@ -346,7 +370,11 @@ export default function BookAppointmentScreen() {
         ) : (
           <TouchableOpacity
             style={[commonStyles.card, commonStyles.row]}
-            onPress={() => setShowTimePicker(true)}
+            onPress={() => {
+              console.log('Time picker opened');
+              setShowTimePicker(true);
+            }}
+            activeOpacity={0.7}
           >
             <IconSymbol name="clock" size={24} color={colors.primary} />
             <Text style={[commonStyles.text, { marginLeft: 12 }]}>
@@ -363,6 +391,7 @@ export default function BookAppointmentScreen() {
             onChange={(event, selectedTime) => {
               setShowTimePicker(Platform.OS === 'ios');
               if (selectedTime) {
+                console.log('Time selected:', selectedTime);
                 setTime(selectedTime);
               }
             }}
@@ -377,7 +406,11 @@ export default function BookAppointmentScreen() {
             commonStyles.row,
             paymentMode === 'pay_in_person' && { borderColor: colors.primary, borderWidth: 2 },
           ]}
-          onPress={() => setPaymentMode('pay_in_person')}
+          onPress={() => {
+            console.log('Payment mode selected: pay_in_person');
+            setPaymentMode('pay_in_person');
+          }}
+          activeOpacity={0.7}
         >
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>
@@ -398,7 +431,11 @@ export default function BookAppointmentScreen() {
             commonStyles.row,
             paymentMode === 'online' && { borderColor: colors.primary, borderWidth: 2 },
           ]}
-          onPress={() => setPaymentMode('online')}
+          onPress={() => {
+            console.log('Payment mode selected: online');
+            setPaymentMode('online');
+          }}
+          activeOpacity={0.7}
         >
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>
@@ -417,6 +454,7 @@ export default function BookAppointmentScreen() {
           style={[buttonStyles.primary, { marginTop: 24 }]}
           onPress={handleBookAppointment}
           disabled={loading}
+          activeOpacity={0.7}
         >
           <Text style={buttonStyles.text}>
             {loading ? 'Booking...' : 'Book Appointment'}

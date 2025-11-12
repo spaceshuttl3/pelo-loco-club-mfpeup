@@ -25,6 +25,8 @@ export default function CartScreen() {
   const { cartItems, removeFromCart, updateQuantity, clearCart, totalPrice, loading } = useCart();
 
   const handleCheckout = async () => {
+    console.log('Checkout - Button pressed');
+    
     if (cartItems.length === 0) {
       Alert.alert('Empty Cart', 'Your cart is empty');
       return;
@@ -125,7 +127,14 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('Back button pressed');
+            router.back();
+          }} 
+          style={{ marginRight: 16 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Shopping Cart</Text>
@@ -142,6 +151,7 @@ export default function CartScreen() {
             <TouchableOpacity
               style={[buttonStyles.primary, { marginTop: 20 }]}
               onPress={() => router.back()}
+              activeOpacity={0.7}
             >
               <Text style={buttonStyles.text}>Continue Shopping</Text>
             </TouchableOpacity>
@@ -200,6 +210,7 @@ export default function CartScreen() {
                             borderColor: colors.border,
                           }}
                           onPress={() => updateQuantity(item.id, item.quantity - 1)}
+                          activeOpacity={0.7}
                         >
                           <IconSymbol name="minus" size={16} color={colors.text} />
                         </TouchableOpacity>
@@ -221,6 +232,7 @@ export default function CartScreen() {
                           }}
                           onPress={() => updateQuantity(item.id, item.quantity + 1)}
                           disabled={item.quantity >= item.product.stock}
+                          activeOpacity={0.7}
                         >
                           <IconSymbol name="plus" size={16} color={colors.text} />
                         </TouchableOpacity>
@@ -228,6 +240,7 @@ export default function CartScreen() {
 
                       <TouchableOpacity
                         onPress={() => handleRemove(item.id, item.product.name)}
+                        activeOpacity={0.7}
                       >
                         <IconSymbol name="trash" size={20} color={colors.error} />
                       </TouchableOpacity>
@@ -273,6 +286,7 @@ export default function CartScreen() {
             style={buttonStyles.primary}
             onPress={handleCheckout}
             disabled={loading}
+            activeOpacity={0.7}
           >
             <Text style={buttonStyles.text}>
               Proceed to Checkout
