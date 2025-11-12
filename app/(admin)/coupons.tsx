@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface CouponConfig {
   id: string;
@@ -30,6 +31,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role: string;
 }
 
 export default function CouponsScreen() {
@@ -55,6 +57,8 @@ export default function CouponsScreen() {
 
   const fetchData = async () => {
     try {
+      console.log('Fetching coupon configs and users...');
+      
       // Fetch coupon configs
       const { data: configsData, error: configsError } = await supabase
         .from('admin_coupon_config')
@@ -64,20 +68,24 @@ export default function CouponsScreen() {
       if (configsError) {
         console.error('Error fetching configs:', configsError);
       } else {
+        console.log('Configs fetched:', configsData?.length || 0);
         setConfigs(configsData || []);
       }
 
-      // Fetch users
+      // Fetch ALL users (not just customers) to fix the user selection issue
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('id, name, email')
-        .eq('role', 'customer')
+        .select('id, name, email, role')
         .order('name', { ascending: true });
 
       if (usersError) {
         console.error('Error fetching users:', usersError);
       } else {
-        setUsers(usersData || []);
+        console.log('Users fetched:', usersData?.length || 0);
+        // Filter to only show customers
+        const customerUsers = usersData?.filter(u => u.role === 'customer') || [];
+        console.log('Customer users:', customerUsers.length);
+        setUsers(customerUsers);
       }
     } catch (error) {
       console.error('Error in fetchData:', error);
@@ -227,19 +235,19 @@ export default function CouponsScreen() {
 
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Coupon Management</Text>
+        <Text style={commonStyles.headerTitle}>Coupons</Text>
         <TouchableOpacity
           onPress={() => {
             setEditingConfig(null);
@@ -255,6 +263,7 @@ export default function CouponsScreen() {
 
       <ScrollView
         style={commonStyles.content}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -426,50 +435,60 @@ export default function CouponsScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
-              onPress={selectAllUsers}
-            >
-              <Text style={commonStyles.text}>
-                {selectedUsers.length === users.length ? 'Deselect All' : 'Select All'}
-              </Text>
-              <Text style={[commonStyles.text, { color: colors.primary }]}>
-                {selectedUsers.length}/{users.length}
-              </Text>
-            </TouchableOpacity>
-
-            <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
-              {users.map((user) => (
+            {users.length === 0 ? (
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+                <Text style={commonStyles.textSecondary}>
+                  No customer users found
+                </Text>
+              </View>
+            ) : (
+              <>
                 <TouchableOpacity
-                  key={user.id}
-                  style={[
-                    commonStyles.card,
-                    commonStyles.row,
-                    { marginBottom: 8 },
-                    selectedUsers.includes(user.id) && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
-                  onPress={() => toggleUserSelection(user.id)}
+                  style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+                  onPress={selectAllUsers}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                      {user.name}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      {user.email}
-                    </Text>
-                  </View>
-                  {selectedUsers.includes(user.id) && (
-                    <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-                  )}
+                  <Text style={commonStyles.text}>
+                    {selectedUsers.length === users.length ? 'Deselect All' : 'Select All'}
+                  </Text>
+                  <Text style={[commonStyles.text, { color: colors.primary }]}>
+                    {selectedUsers.length}/{users.length}
+                  </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+
+                <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
+                  {users.map((user) => (
+                    <TouchableOpacity
+                      key={user.id}
+                      style={[
+                        commonStyles.card,
+                        commonStyles.row,
+                        { marginBottom: 8 },
+                        selectedUsers.includes(user.id) && { borderColor: colors.primary, borderWidth: 2 },
+                      ]}
+                      onPress={() => toggleUserSelection(user.id)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                          {user.name}
+                        </Text>
+                        <Text style={commonStyles.textSecondary}>
+                          {user.email}
+                        </Text>
+                      </View>
+                      {selectedUsers.includes(user.id) && (
+                        <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={handleSendCoupons}
-                disabled={saving}
+                disabled={saving || users.length === 0}
               >
                 <Text style={buttonStyles.text}>
                   {saving ? 'Sending...' : `Send to ${selectedUsers.length} user(s)`}
@@ -490,6 +509,6 @@ export default function CouponsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

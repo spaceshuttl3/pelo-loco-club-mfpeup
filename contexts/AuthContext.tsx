@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, UserRole } from '@/types';
+import { useRouter, useSegments } from 'expo-router';
 
 interface AuthContextType {
   user: User | null;
@@ -21,6 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -48,6 +51,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Handle navigation based on auth state
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!user && !inAuthGroup) {
+      // Redirect to login if not authenticated
+      router.replace('/auth/login');
+    } else if (user && inAuthGroup) {
+      // Redirect to appropriate dashboard after login
+      if (user.role === 'admin') {
+        router.replace('/(admin)/');
+      } else {
+        router.replace('/(customer)/');
+      }
+    }
+  }, [user, segments, loading]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -135,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('Sign in successful:', data);
-    // The auth state change listener will handle fetching the profile
+    // The auth state change listener will handle fetching the profile and navigation
   };
 
   const signUp = async (email: string, password: string, name: string, phone: string, birthday?: string, role: UserRole = 'customer') => {
@@ -182,6 +204,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSupabaseUser(null);
     setLoading(false);
+    
+    // Navigate to login
+    router.replace('/auth/login');
   };
 
   const isAdmin = user?.role === 'admin';

@@ -21,8 +21,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 interface Barber {
   id: string;
   name: string;
+  email: string;
+  phone: string;
   available_days: string[];
   available_hours: { start: string; end: string };
+  is_active: boolean;
+}
+
+interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 export default function BookAppointmentScreen() {
@@ -31,6 +41,7 @@ export default function BookAppointmentScreen() {
   const [selectedService, setSelectedService] = useState('');
   const [selectedBarber, setSelectedBarber] = useState('');
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -38,13 +49,22 @@ export default function BookAppointmentScreen() {
   const [paymentMode, setPaymentMode] = useState<'pay_in_person' | 'online'>('pay_in_person');
   const [loading, setLoading] = useState(false);
   const [loadingBarbers, setLoadingBarbers] = useState(true);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
   useEffect(() => {
     fetchBarbers();
+    fetchAdminUsers();
   }, []);
+
+  useEffect(() => {
+    if (selectedBarber && date) {
+      generateTimeSlots();
+    }
+  }, [selectedBarber, date]);
 
   const fetchBarbers = async () => {
     try {
+      console.log('Fetching barbers...');
       const { data, error } = await supabase
         .from('barbers')
         .select('*')
@@ -55,15 +75,52 @@ export default function BookAppointmentScreen() {
         return;
       }
 
+      console.log('Barbers fetched:', data?.length || 0);
       setBarbers(data || []);
       if (data && data.length > 0) {
         setSelectedBarber(data[0].id);
       }
     } catch (error) {
       console.error('Error in fetchBarbers:', error);
+    }
+  };
+
+  const fetchAdminUsers = async () => {
+    try {
+      console.log('Fetching admin users...');
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .eq('role', 'admin');
+
+      if (error) {
+        console.error('Error fetching admin users:', error);
+        return;
+      }
+
+      console.log('Admin users fetched:', data?.length || 0);
+      setAdminUsers(data || []);
+    } catch (error) {
+      console.error('Error in fetchAdminUsers:', error);
     } finally {
       setLoadingBarbers(false);
     }
+  };
+
+  const generateTimeSlots = () => {
+    const selectedBarberData = barbers.find(b => b.id === selectedBarber);
+    if (!selectedBarberData) return;
+
+    const slots: string[] = [];
+    const startHour = parseInt(selectedBarberData.available_hours.start.split(':')[0]);
+    const endHour = parseInt(selectedBarberData.available_hours.end.split(':')[0]);
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+
+    setAvailableTimeSlots(slots);
   };
 
   const handleBookAppointment = async () => {
@@ -146,6 +203,16 @@ export default function BookAppointmentScreen() {
     );
   }
 
+  const allBarbers = [...barbers, ...adminUsers.map(admin => ({
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+    phone: '',
+    available_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    available_hours: { start: '09:00', end: '18:00' },
+    is_active: true,
+  }))];
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
@@ -153,9 +220,10 @@ export default function BookAppointmentScreen() {
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Book Appointment</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>Select Service</Text>
         {SERVICES.map((service) => (
           <TouchableOpacity
@@ -182,34 +250,40 @@ export default function BookAppointmentScreen() {
         ))}
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Barber</Text>
-        {barbers.map((barber) => (
-          <TouchableOpacity
-            key={barber.id}
-            style={[
-              commonStyles.card,
-              commonStyles.row,
-              selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
-            ]}
-            onPress={() => setSelectedBarber(barber.id)}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                {barber.name}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Available: {barber.available_days.join(', ')}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Hours: {barber.available_hours.start} - {barber.available_hours.end}
-              </Text>
-            </View>
-            {selectedBarber === barber.id && (
-              <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-        ))}
+        {allBarbers.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+            <Text style={commonStyles.textSecondary}>No barbers available</Text>
+          </View>
+        ) : (
+          allBarbers.map((barber) => (
+            <TouchableOpacity
+              key={barber.id}
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => setSelectedBarber(barber.id)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                  {barber.name}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Available: {barber.available_days.join(', ')}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Hours: {barber.available_hours.start} - {barber.available_hours.end}
+                </Text>
+              </View>
+              {selectedBarber === barber.id && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))
+        )}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Date & Time</Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Date</Text>
         
         <TouchableOpacity
           style={[commonStyles.card, commonStyles.row]}
@@ -236,15 +310,50 @@ export default function BookAppointmentScreen() {
           />
         )}
 
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row]}
-          onPress={() => setShowTimePicker(true)}
-        >
-          <IconSymbol name="clock" size={24} color={colors.primary} />
-          <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-            {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </TouchableOpacity>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Time</Text>
+        
+        {availableTimeSlots.length > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+            {availableTimeSlots.map((slot) => {
+              const [hours, minutes] = slot.split(':');
+              const slotTime = new Date();
+              slotTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+              const isSelected = time.getHours() === slotTime.getHours() && time.getMinutes() === slotTime.getMinutes();
+              
+              return (
+                <TouchableOpacity
+                  key={slot}
+                  style={[
+                    {
+                      margin: 4,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      backgroundColor: isSelected ? colors.primary : colors.card,
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => setTime(slotTime)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                    {slot}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[commonStyles.card, commonStyles.row]}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <IconSymbol name="clock" size={24} color={colors.primary} />
+            <Text style={[commonStyles.text, { marginLeft: 12 }]}>
+              {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {showTimePicker && (
           <DateTimePicker

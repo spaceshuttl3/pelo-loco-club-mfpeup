@@ -11,6 +11,7 @@ export const colors = {
   secondary: '#8e44ad',
   accent: '#bb8fce',
   error: '#ff4444',
+  success: '#4CAF50',
 };
 
 export const commonStyles = StyleSheet.create({
@@ -31,7 +32,7 @@ export const commonStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 10,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

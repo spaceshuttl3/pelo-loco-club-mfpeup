@@ -47,6 +47,7 @@ export default function FloatingTabBar({
   const activeIndex = useSharedValue(0);
 
   const handleTabPress = (route: string) => {
+    console.log('Tab pressed:', route);
     router.push(route as any);
   };
 
@@ -85,14 +86,14 @@ export default function FloatingTabBar({
       ]}
     >
       <BlurView
-        intensity={80}
+        intensity={Platform.OS === 'ios' ? 80 : 0}
         tint={theme.dark ? 'dark' : 'light'}
         style={[
           styles.tabBar,
           {
             width: containerWidth,
             borderRadius,
-            backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.card,
+            backgroundColor: Platform.OS === 'ios' ? 'rgba(26, 26, 26, 0.8)' : colors.card,
           },
         ]}
       >
@@ -151,7 +152,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     overflow: 'hidden',
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
   },
   indicator: {

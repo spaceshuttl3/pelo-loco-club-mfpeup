@@ -92,7 +92,10 @@ export default function CustomerHomeScreen() {
                 width: '50%',
                 padding: 6,
               }}
-              onPress={() => router.push(action.route as any)}
+              onPress={() => {
+                console.log('Quick action pressed:', action.title);
+                router.push(action.route as any);
+              }}
             >
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <View

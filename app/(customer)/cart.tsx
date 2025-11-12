@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
@@ -14,6 +15,9 @@ import { useCart } from '@/contexts/CartContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 export default function CartScreen() {
   const router = useRouter();
@@ -28,14 +32,14 @@ export default function CartScreen() {
 
     Alert.alert(
       'Checkout',
-      'How would you like to pay?',
+      'How would you like to proceed?',
       [
         {
-          text: 'Pay in Person',
+          text: 'Reserve (Pay Later)',
           onPress: () => processOrder('pay_in_person'),
         },
         {
-          text: 'Pay Online',
+          text: 'Pay Now',
           onPress: () => processOrder('online'),
         },
         {
@@ -86,7 +90,7 @@ export default function CartScreen() {
         'Order Placed!',
         paymentMode === 'online'
           ? 'Your order has been placed and paid successfully!'
-          : 'Your order has been placed. Please pay at the shop when you pick up your items.',
+          : 'Your order has been reserved. Please pay at the shop when you pick up your items.',
         [
           {
             text: 'OK',
@@ -119,12 +123,13 @@ export default function CartScreen() {
   };
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Shopping Cart</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
@@ -146,17 +151,31 @@ export default function CartScreen() {
             {cartItems.map((item) => (
               <View key={item.id} style={[commonStyles.card, { marginBottom: 16 }]}>
                 <View style={{ flexDirection: 'row' }}>
-                  {item.product.photo_url && (
+                  {item.product.photo_url ? (
                     <Image
                       source={{ uri: item.product.photo_url }}
                       style={{
-                        width: 80,
-                        height: 80,
+                        width: 100,
+                        height: 100,
                         borderRadius: 8,
                         marginRight: 12,
                       }}
                       resizeMode="cover"
                     />
+                  ) : (
+                    <View
+                      style={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 8,
+                        marginRight: 12,
+                        backgroundColor: colors.background,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <IconSymbol name="photo" size={32} color={colors.textSecondary} />
+                    </View>
                   )}
                   
                   <View style={{ flex: 1 }}>
@@ -177,6 +196,8 @@ export default function CartScreen() {
                             backgroundColor: colors.card,
                             justifyContent: 'center',
                             alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: colors.border,
                           }}
                           onPress={() => updateQuantity(item.id, item.quantity - 1)}
                         >
@@ -195,6 +216,8 @@ export default function CartScreen() {
                             backgroundColor: colors.card,
                             justifyContent: 'center',
                             alignItems: 'center',
+                            borderWidth: 1,
+                            borderColor: colors.border,
                           }}
                           onPress={() => updateQuantity(item.id, item.quantity + 1)}
                           disabled={item.quantity >= item.product.stock}
@@ -257,6 +280,6 @@ export default function CartScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }

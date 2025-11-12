@@ -1,5 +1,4 @@
 
-import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,8 +12,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Birthday {
   id: string;
@@ -32,8 +33,7 @@ export default function BirthdaysScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Birthday | null>(null);
-  const [couponText, setCouponText] = useState('Birthday Special');
-  const [discountValue, setDiscountValue] = useState('20');
+  const [discountValue, setDiscountValue] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -42,15 +42,44 @@ export default function BirthdaysScreen() {
 
   const fetchBirthdays = async () => {
     try {
+      console.log('Fetching birthdays...');
+      
+      // Get all users with birthdays
       const { data, error } = await supabase
-        .rpc('get_upcoming_birthdays', { days_ahead: 30 });
+        .from('users')
+        .select('id, name, email, phone, birthday')
+        .not('birthday', 'is', null)
+        .eq('role', 'customer')
+        .order('birthday', { ascending: true });
 
       if (error) {
         console.error('Error fetching birthdays:', error);
         return;
       }
 
-      setBirthdays(data || []);
+      // Calculate days until birthday
+      const today = new Date();
+      const birthdaysWithDays = data?.map(user => {
+        const birthday = new Date(user.birthday);
+        const thisYearBirthday = new Date(today.getFullYear(), birthday.getMonth(), birthday.getDate());
+        
+        if (thisYearBirthday < today) {
+          thisYearBirthday.setFullYear(today.getFullYear() + 1);
+        }
+        
+        const daysUntil = Math.ceil((thisYearBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...user,
+          days_until: daysUntil,
+        };
+      }) || [];
+
+      // Sort by days until birthday
+      birthdaysWithDays.sort((a, b) => a.days_until - b.days_until);
+
+      console.log('Birthdays fetched:', birthdaysWithDays.length);
+      setBirthdays(birthdaysWithDays);
     } catch (error) {
       console.error('Error in fetchBirthdays:', error);
     } finally {
@@ -66,16 +95,13 @@ export default function BirthdaysScreen() {
 
   const handleSendCoupon = (user: Birthday) => {
     setSelectedUser(user);
-    setCouponText('Birthday Special');
     setDiscountValue('20');
     setModalVisible(true);
   };
 
   const sendCoupon = async () => {
-    if (!selectedUser) return;
-
-    if (!couponText || !discountValue) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!selectedUser || !discountValue) {
+      Alert.alert('Error', 'Please enter a discount value');
       return;
     }
 
@@ -87,40 +113,36 @@ export default function BirthdaysScreen() {
 
     setSending(true);
     try {
-      // Generate coupon code
-      const couponCode = `BDAY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      // Calculate expiration date (30 days from now)
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 30);
 
-      // Create coupon
       const { error } = await supabase
         .from('coupons')
         .insert({
           user_id: selectedUser.id,
-          coupon_type: couponText,
+          coupon_type: 'Birthday Special',
           discount_value: discount,
           expiration_date: expirationDate.toISOString().split('T')[0],
           status: 'active',
-          coupon_code: couponCode,
+          coupon_code: `BDAY${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         });
 
       if (error) {
-        console.error('Error creating coupon:', error);
+        console.error('Error sending coupon:', error);
         Alert.alert('Error', 'Could not send coupon');
         return;
       }
 
       Alert.alert(
         'Success',
-        `Birthday coupon sent to ${selectedUser.name}!\n\nCoupon Code: ${couponCode}\nDiscount: ${discount}%`,
+        `Birthday coupon sent to ${selectedUser.name}!`,
         [
           {
             text: 'OK',
             onPress: () => {
               setModalVisible(false);
               setSelectedUser(null);
+              setDiscountValue('');
             },
           },
         ]
@@ -135,44 +157,52 @@ export default function BirthdaysScreen() {
 
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
+  const upcomingBirthdays = birthdays.filter(b => b.days_until <= 30);
+
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Upcoming Birthdays</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
         style={commonStyles.content}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {birthdays.length === 0 ? (
+        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+          Next 30 Days ({upcomingBirthdays.length})
+        </Text>
+
+        {upcomingBirthdays.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <IconSymbol name="gift.fill" size={48} color={colors.textSecondary} />
+            <IconSymbol name="gift" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
               No upcoming birthdays in the next 30 days
             </Text>
           </View>
         ) : (
-          birthdays.map((birthday) => (
-            <View key={birthday.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+          upcomingBirthdays.map((user) => (
+            <View key={user.id} style={commonStyles.card}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <View
                   style={{
                     width: 50,
                     height: 50,
                     borderRadius: 25,
-                    backgroundColor: colors.primary,
+                    backgroundColor: user.days_until === 0 ? colors.primary : colors.card,
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: 12,
@@ -182,36 +212,42 @@ export default function BirthdaysScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                    {birthday.name}
+                    {user.name}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    {new Date(birthday.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                    {new Date(user.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                  </Text>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                    {user.days_until === 0 ? 'Today!' : `In ${user.days_until} day${user.days_until === 1 ? '' : 's'}`}
                   </Text>
                 </View>
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 12,
-                    backgroundColor: birthday.days_until === 0 ? colors.primary : colors.card,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600' }]}>
-                    {birthday.days_until === 0 ? 'Today!' : `${birthday.days_until} days`}
-                  </Text>
-                </View>
+                {user.days_until === 0 && (
+                  <View
+                    style={{
+                      backgroundColor: colors.primary,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      TODAY
+                    </Text>
+                  </View>
+                )}
               </View>
 
               <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
-                  {birthday.email}
+                <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
+                  📧 {user.email}
                 </Text>
-                <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 12 }]}>
-                  {birthday.phone}
+                <Text style={[commonStyles.textSecondary, { marginBottom: 12 }]}>
+                  📱 {user.phone}
                 </Text>
+
                 <TouchableOpacity
                   style={[buttonStyles.primary, { paddingVertical: 10 }]}
-                  onPress={() => handleSendCoupon(birthday)}
+                  onPress={() => handleSendCoupon(user)}
                 >
                   <Text style={buttonStyles.text}>Send Birthday Coupon</Text>
                 </TouchableOpacity>
@@ -221,6 +257,7 @@ export default function BirthdaysScreen() {
         )}
       </ScrollView>
 
+      {/* Send Coupon Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -239,18 +276,10 @@ export default function BirthdaysScreen() {
                   {selectedUser.name}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Birthday: {new Date(selectedUser.birthday).toLocaleDateString()}
+                  Birthday: {new Date(selectedUser.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                 </Text>
               </View>
             )}
-
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Coupon Text"
-              placeholderTextColor={colors.textSecondary}
-              value={couponText}
-              onChangeText={setCouponText}
-            />
 
             <TextInput
               style={commonStyles.input}
@@ -260,10 +289,6 @@ export default function BirthdaysScreen() {
               onChangeText={setDiscountValue}
               keyboardType="number-pad"
             />
-
-            <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 16 }]}>
-              Coupon will be valid for 30 days
-            </Text>
 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
@@ -289,6 +314,6 @@ export default function BirthdaysScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

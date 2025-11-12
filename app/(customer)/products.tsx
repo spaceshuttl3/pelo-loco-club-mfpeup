@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import React, { useEffect, useState } from 'react';
@@ -17,6 +18,8 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useCart } from '@/contexts/CartContext';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -132,51 +135,67 @@ export default function ProductsScreen() {
           </View>
         ) : (
           products.map((product) => (
-            <View key={product.id} style={[commonStyles.card, { marginBottom: 16 }]}>
-              {product.photo_url && (
+            <View key={product.id} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
+              {product.photo_url ? (
                 <Image
                   source={{ uri: product.photo_url }}
                   style={{
                     width: '100%',
-                    height: 200,
-                    borderRadius: 12,
-                    marginBottom: 12,
+                    height: (width - 40) * (9 / 16), // 16:9 aspect ratio optimized for 1920x1080
+                    backgroundColor: colors.card,
                   }}
                   resizeMode="cover"
                 />
-              )}
-              
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
-                    {product.name}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    {product.description}
+              ) : (
+                <View
+                  style={{
+                    width: '100%',
+                    height: (width - 40) * (9 / 16),
+                    backgroundColor: colors.card,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <IconSymbol name="photo" size={48} color={colors.textSecondary} />
+                  <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
+                    No image
                   </Text>
                 </View>
-                <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 18 }]}>
-                  ${product.price}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                <Text style={[commonStyles.textSecondary, { fontSize: 14 }]}>
-                  Stock: {product.stock}
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    buttonStyles.primary,
-                    { paddingVertical: 8, paddingHorizontal: 16 },
-                    product.stock <= 0 && { opacity: 0.5 },
-                  ]}
-                  onPress={() => handleAddToCart(product)}
-                  disabled={product.stock <= 0}
-                >
-                  <Text style={buttonStyles.text}>
-                    {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+              )}
+              
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
+                      {product.name}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      {product.description}
+                    </Text>
+                  </View>
+                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 20, marginLeft: 12 }]}>
+                    ${product.price}
                   </Text>
-                </TouchableOpacity>
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 14 }]}>
+                    Stock: {product.stock}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      buttonStyles.primary,
+                      { paddingVertical: 10, paddingHorizontal: 20 },
+                      product.stock <= 0 && { opacity: 0.5 },
+                    ]}
+                    onPress={() => handleAddToCart(product)}
+                    disabled={product.stock <= 0}
+                  >
+                    <Text style={buttonStyles.text}>
+                      {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ))

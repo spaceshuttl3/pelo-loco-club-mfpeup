@@ -8,10 +8,13 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {
+  const router = useRouter();
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -57,8 +60,16 @@ export default function NotificationsScreen() {
   ];
 
   return (
-    <View style={commonStyles.container}>
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={commonStyles.headerTitle}>Notifications</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Send Custom Notification
         </Text>
@@ -137,6 +148,6 @@ export default function NotificationsScreen() {
           </Text>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

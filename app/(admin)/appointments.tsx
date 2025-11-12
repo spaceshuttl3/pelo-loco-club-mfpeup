@@ -9,28 +9,44 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Appointment } from '@/types';
 import { commonStyles, colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ManageAppointmentsScreen() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchAppointments = async () => {
     try {
+      console.log('Fetching appointments...');
+      
+      // Fetch appointments with user details and barber details
       const { data, error } = await supabase
         .from('appointments')
-        .select('*, user:users(*)')
+        .select(`
+          *,
+          user:users!appointments_user_id_fkey(id, name, email, phone),
+          barber:barbers!appointments_barber_id_fkey(id, name)
+        `)
         .order('date', { ascending: true })
         .order('time', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        throw error;
+      }
+
+      console.log('Appointments fetched:', data?.length || 0);
       setAppointments(data || []);
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      console.error('Error in fetchAppointments:', error);
+      Alert.alert('Error', 'Could not load appointments');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -64,9 +80,9 @@ export default function ManageAppointmentsScreen() {
 
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -74,17 +90,29 @@ export default function ManageAppointmentsScreen() {
     (apt) => apt.status === 'booked' && new Date(apt.date) >= new Date()
   );
 
+  const pastAppointments = appointments.filter(
+    (apt) => apt.status !== 'booked' || new Date(apt.date) < new Date()
+  );
+
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={commonStyles.headerTitle}>Appointments</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Upcoming Appointments ({upcomingAppointments.length})
+          Upcoming ({upcomingAppointments.length})
         </Text>
 
         {upcomingAppointments.length === 0 ? (
@@ -103,13 +131,13 @@ export default function ManageAppointmentsScreen() {
                 </Text>
                 <View
                   style={{
-                    backgroundColor: colors.secondary,
+                    backgroundColor: colors.primary,
                     paddingHorizontal: 12,
                     paddingVertical: 4,
                     borderRadius: 12,
                   }}
                 >
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12, color: colors.text }]}>
+                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
                     {appointment.status.toUpperCase()}
                   </Text>
                 </View>
@@ -125,6 +153,11 @@ export default function ManageAppointmentsScreen() {
                 <Text style={commonStyles.textSecondary}>
                   Date: {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
                 </Text>
+                {appointment.barber && (
+                  <Text style={commonStyles.textSecondary}>
+                    Barber: {appointment.barber.name}
+                  </Text>
+                )}
                 <Text style={commonStyles.textSecondary}>
                   Payment: {appointment.payment_mode === 'pay_in_person' ? 'In Person' : 'Online'} -{' '}
                   {appointment.payment_status}
@@ -135,7 +168,7 @@ export default function ManageAppointmentsScreen() {
                 <TouchableOpacity
                   style={{
                     flex: 1,
-                    backgroundColor: colors.success,
+                    backgroundColor: colors.primary,
                     paddingVertical: 10,
                     borderRadius: 6,
                     alignItems: 'center',
@@ -164,7 +197,44 @@ export default function ManageAppointmentsScreen() {
             </View>
           ))
         )}
+
+        {pastAppointments.length > 0 && (
+          <>
+            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
+              Past Appointments ({pastAppointments.length})
+            </Text>
+
+            {pastAppointments.map((appointment) => (
+              <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7 }]}>
+                <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                    {appointment.service}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      {appointment.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={commonStyles.textSecondary}>
+                  Customer: {appointment.user?.name || 'Unknown'}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Date: {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                </Text>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
