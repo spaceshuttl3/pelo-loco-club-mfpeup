@@ -11,9 +11,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
@@ -22,7 +24,7 @@ export default function AdminDashboardScreen() {
   const [upcomingBirthdays, setUpcomingBirthdays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     fetchDashboardData();
@@ -30,7 +32,6 @@ export default function AdminDashboardScreen() {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch today's appointments
       const today = new Date().toISOString().split('T')[0];
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
@@ -44,7 +45,6 @@ export default function AdminDashboardScreen() {
         setAppointments(appointmentsData || []);
       }
 
-      // Fetch pending orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*, users(*)')
@@ -58,7 +58,6 @@ export default function AdminDashboardScreen() {
         setOrders(ordersData || []);
       }
 
-      // Fetch upcoming birthdays (next 30 days)
       const { data: birthdaysData, error: birthdaysError } = await supabase
         .rpc('get_upcoming_birthdays', { days_ahead: 30 });
 
@@ -80,22 +79,31 @@ export default function AdminDashboardScreen() {
     fetchDashboardData();
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
       <View style={commonStyles.header}>
         <Text style={commonStyles.headerTitle}>Admin Dashboard</Text>
       </View>
 
       <ScrollView
         style={commonStyles.content}
+        contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 20 : 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -109,7 +117,6 @@ export default function AdminDashboardScreen() {
           </Text>
         </View>
 
-        {/* Quick Actions */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 24 }}>
           <TouchableOpacity
             style={{ width: '50%', padding: 6 }}
@@ -158,9 +165,32 @@ export default function AdminDashboardScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={() => router.push('/(admin)/notifications' as any)}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="bell.fill" size={32} color={colors.primary} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Notifications
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ width: '50%', padding: 6 }}
+            onPress={handleSignOut}
+          >
+            <View style={[commonStyles.card, { alignItems: 'center', padding: 16 }]}>
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={32} color={colors.error} />
+              <Text style={[commonStyles.text, { marginTop: 8, textAlign: 'center' }]}>
+                Sign Out
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Today's Appointments */}
         <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>
           Today&apos;s Appointments ({appointments.length})
         </Text>
@@ -197,14 +227,13 @@ export default function AdminDashboardScreen() {
           ))
         )}
 
-        {/* Upcoming Birthdays */}
         {upcomingBirthdays.length > 0 && (
           <>
             <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
               Upcoming Birthdays ({upcomingBirthdays.length})
             </Text>
             {upcomingBirthdays.slice(0, 3).map((birthday, index) => (
-              <View key={index} style={[commonStyles.card, { marginBottom: 12 }]}>
+              <View key={`birthday-${index}`} style={[commonStyles.card, { marginBottom: 12 }]}>
                 <View style={commonStyles.row}>
                   <IconSymbol name="gift.fill" size={24} color={colors.primary} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
@@ -221,7 +250,6 @@ export default function AdminDashboardScreen() {
           </>
         )}
 
-        {/* Pending Orders */}
         {orders.length > 0 && (
           <>
             <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
@@ -244,6 +272,6 @@ export default function AdminDashboardScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

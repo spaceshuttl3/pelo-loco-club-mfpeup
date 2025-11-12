@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { SERVICES } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Barber {
   id: string;
@@ -66,6 +67,8 @@ export default function BookAppointmentScreen() {
   };
 
   const handleBookAppointment = async () => {
+    console.log('Book appointment button pressed');
+    
     if (!selectedService) {
       Alert.alert('Error', 'Please select a service');
       return;
@@ -76,7 +79,6 @@ export default function BookAppointmentScreen() {
       return;
     }
 
-    // Check if selected date is in the past
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
     const today = new Date();
@@ -87,7 +89,6 @@ export default function BookAppointmentScreen() {
       return;
     }
 
-    // Check if barber is available on selected day
     const selectedBarberData = barbers.find(b => b.id === selectedBarber);
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
     
@@ -139,14 +140,14 @@ export default function BookAppointmentScreen() {
 
   if (loadingBarbers) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
@@ -313,6 +314,6 @@ export default function BookAppointmentScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

@@ -5,12 +5,12 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CustomerHomeScreen() {
   const { user } = useAuth();
@@ -18,24 +18,28 @@ export default function CustomerHomeScreen() {
 
   const quickActions = [
     {
+      id: 'book-appointment',
       title: 'Book Appointment',
       icon: 'calendar.badge.plus',
       color: colors.primary,
       route: '/(customer)/book-appointment',
     },
     {
+      id: 'redeem-coupon',
       title: 'Redeem Coupon',
       icon: 'gift.fill',
       color: colors.accent,
       route: '/(customer)/spin-wheel',
     },
     {
+      id: 'shop-products',
       title: 'Shop Products',
       icon: 'bag.fill',
       color: colors.secondary,
       route: '/(customer)/products',
     },
     {
+      id: 'my-bookings',
       title: 'My Bookings',
       icon: 'list.bullet',
       color: colors.primary,
@@ -44,16 +48,16 @@ export default function CustomerHomeScreen() {
   ];
 
   const services = [
-    { id: '1', name: 'Haircut', price: '$25', duration: '30 min' },
-    { id: '2', name: 'Beard Trim', price: '$15', duration: '20 min' },
-    { id: '3', name: 'Haircut + Beard', price: '$35', duration: '45 min' },
-    { id: '4', name: 'Hot Towel Shave', price: '$30', duration: '30 min' },
+    { id: 'service-1', name: 'Haircut', price: '$25', duration: '30 min' },
+    { id: 'service-2', name: 'Beard Trim', price: '$15', duration: '20 min' },
+    { id: 'service-3', name: 'Haircut + Beard', price: '$35', duration: '45 min' },
+    { id: 'service-4', name: 'Hot Towel Shave', price: '$30', duration: '30 min' },
   ];
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={{ marginBottom: 30 }}>
+        <View style={{ marginBottom: 30, marginTop: 20 }}>
           <Text style={[commonStyles.title, { fontSize: 32 }]}>
             Welcome back,
           </Text>
@@ -81,9 +85,9 @@ export default function CustomerHomeScreen() {
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-          {quickActions.map((action, index) => (
+          {quickActions.map((action) => (
             <TouchableOpacity
-              key={`action-${index}`}
+              key={action.id}
               style={{
                 width: '50%',
                 padding: 6,
@@ -133,6 +137,6 @@ export default function CustomerHomeScreen() {
           ))}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

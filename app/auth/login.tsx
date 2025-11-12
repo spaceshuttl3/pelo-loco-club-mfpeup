@@ -33,16 +33,13 @@ export default function LoginScreen() {
     try {
       await signIn(email, password);
       console.log('Login successful');
-      // Navigation will be handled automatically by the auth state change
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Handle specific error cases
       let errorTitle = 'Login Failed';
       let errorMessage = 'Invalid credentials';
       
       if (error.message) {
-        // Check for specific error messages
         if (error.message.includes('Email not confirmed')) {
           errorTitle = 'Email Not Verified';
           errorMessage = 'Please check your email and click the verification link before signing in.\n\nIf you don\'t see the email, check your spam folder.';
@@ -69,13 +66,12 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={[commonStyles.content, commonStyles.centerContent, { paddingTop: 40 }]}>
+          <View style={[commonStyles.content, commonStyles.centerContent, { paddingTop: 60 }]}>
             <View style={{ width: '100%', maxWidth: 400 }}>
               <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 16 }]}>
                 Pelo Loco Club
               </Text>
               
-              {/* App Logo */}
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
                 <Image
                   source={require('@/assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg')}

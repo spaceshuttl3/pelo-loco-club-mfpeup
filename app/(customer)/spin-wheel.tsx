@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Coupon {
   id: string;
@@ -59,6 +60,8 @@ export default function SpinWheelScreen() {
   };
 
   const handleRedeemCoupon = async (coupon: Coupon) => {
+    console.log('Redeem coupon button pressed for:', coupon.id);
+    
     Alert.alert(
       'Redeem Coupon',
       `Redeem ${coupon.discount_value}% off coupon?\n\nShow this code to the barber: ${coupon.coupon_code}`,
@@ -99,14 +102,14 @@ export default function SpinWheelScreen() {
 
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
@@ -193,6 +196,6 @@ export default function SpinWheelScreen() {
           </>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

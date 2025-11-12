@@ -16,6 +16,7 @@ import { Product } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useCart } from '@/contexts/CartContext';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -55,6 +56,8 @@ export default function ProductsScreen() {
   };
 
   const handleAddToCart = async (product: Product) => {
+    console.log('Add to cart button pressed for:', product.name);
+    
     if (product.stock <= 0) {
       Alert.alert('Out of Stock', 'This product is currently out of stock');
       return;
@@ -69,21 +72,26 @@ export default function ProductsScreen() {
     }
   };
 
+  const handleCartPress = () => {
+    console.log('Cart button pressed, navigating to cart');
+    router.push('/(customer)/cart' as any);
+  };
+
   if (loading) {
     return (
-      <View style={[commonStyles.container, commonStyles.centerContent]}>
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={commonStyles.container}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={[commonStyles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <Text style={commonStyles.headerTitle}>Shop</Text>
         <TouchableOpacity
           style={{ position: 'relative' }}
-          onPress={() => router.push('/(customer)/cart' as any)}
+          onPress={handleCartPress}
         >
           <IconSymbol name="cart.fill" size={28} color={colors.text} />
           {totalItems > 0 && (
@@ -174,6 +182,6 @@ export default function ProductsScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

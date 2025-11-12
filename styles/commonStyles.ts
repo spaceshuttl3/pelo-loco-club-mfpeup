@@ -7,9 +7,9 @@ export const colors = {
   border: '#2a2a2a',
   text: '#ffffff',
   textSecondary: '#888888',
-  primary: '#d4af37',
-  secondary: '#8b7355',
-  accent: '#c9a961',
+  primary: '#9b59b6',
+  secondary: '#8e44ad',
+  accent: '#bb8fce',
   error: '#ff4444',
 };
 
