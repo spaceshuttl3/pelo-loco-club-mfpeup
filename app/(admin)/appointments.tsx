@@ -9,7 +9,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
-  TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +18,7 @@ import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { GlassView } from 'expo-glass-effect';
 
 interface ExistingAppointment {
   id: string;
@@ -26,9 +27,19 @@ interface ExistingAppointment {
   service: string;
 }
 
+interface Barber {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  is_active: boolean;
+}
+
 export default function ManageAppointmentsScreen() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -39,6 +50,25 @@ export default function ManageAppointmentsScreen() {
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
+  const fetchBarbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('barbers')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching barbers:', error);
+        return;
+      }
+
+      setBarbers(data || []);
+    } catch (error) {
+      console.error('Error in fetchBarbers:', error);
+    }
+  };
+
   const fetchAppointments = async () => {
     try {
       console.log('Fetching appointments...');
@@ -47,14 +77,20 @@ export default function ManageAppointmentsScreen() {
       today.setHours(0, 0, 0, 0);
       const todayString = today.toISOString().split('T')[0];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('appointments')
         .select(`
           *,
           user:users!appointments_user_id_fkey(id, name, email, phone),
           barber:barbers!appointments_barber_id_fkey(id, name)
         `)
-        .gte('date', todayString)
+        .gte('date', todayString);
+
+      if (selectedBarberId) {
+        query = query.eq('barber_id', selectedBarberId);
+      }
+
+      const { data, error } = await query
         .order('date', { ascending: true })
         .order('time', { ascending: true });
 
@@ -99,8 +135,12 @@ export default function ManageAppointmentsScreen() {
   };
 
   useEffect(() => {
-    fetchAppointments();
+    fetchBarbers();
   }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [selectedBarberId]);
 
   useEffect(() => {
     if (selectedAppointment && editDate) {
@@ -300,6 +340,110 @@ export default function ManageAppointmentsScreen() {
         <View style={{ width: 24 }} />
       </View>
 
+      {Platform.OS === 'ios' ? (
+        <GlassView
+          style={{
+            marginHorizontal: 16,
+            marginBottom: 16,
+            borderRadius: 16,
+            overflow: 'hidden',
+          }}
+          intensity={80}
+          tint="dark"
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ padding: 12, gap: 8 }}
+          >
+            <TouchableOpacity
+              style={[
+                {
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  backgroundColor: !selectedBarberId ? colors.primary : 'rgba(255,255,255,0.1)',
+                },
+              ]}
+              onPress={() => setSelectedBarberId(null)}
+            >
+              <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                Tutti
+              </Text>
+            </TouchableOpacity>
+            {barbers.map((barber) => (
+              <TouchableOpacity
+                key={barber.id}
+                style={[
+                  {
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    backgroundColor: selectedBarberId === barber.id ? colors.primary : 'rgba(255,255,255,0.1)',
+                  },
+                ]}
+                onPress={() => setSelectedBarberId(barber.id)}
+              >
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  {barber.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </GlassView>
+      ) : (
+        <View
+          style={{
+            marginHorizontal: 16,
+            marginBottom: 16,
+            borderRadius: 16,
+            backgroundColor: colors.card,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ padding: 12, gap: 8 }}
+          >
+            <TouchableOpacity
+              style={[
+                {
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  backgroundColor: !selectedBarberId ? colors.primary : colors.border,
+                },
+              ]}
+              onPress={() => setSelectedBarberId(null)}
+            >
+              <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                Tutti
+              </Text>
+            </TouchableOpacity>
+            {barbers.map((barber) => (
+              <TouchableOpacity
+                key={barber.id}
+                style={[
+                  {
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 20,
+                    backgroundColor: selectedBarberId === barber.id ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setSelectedBarberId(barber.id)}
+              >
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  {barber.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       <ScrollView
         style={commonStyles.content}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -464,6 +608,11 @@ export default function ManageAppointmentsScreen() {
                   <Text style={commonStyles.textSecondary}>
                     Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
                   </Text>
+                  {appointment.barber && (
+                    <Text style={commonStyles.textSecondary}>
+                      Barbiere: {appointment.barber.name}
+                    </Text>
+                  )}
                 </View>
               ))}
             </React.Fragment>

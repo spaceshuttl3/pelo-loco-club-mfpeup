@@ -156,7 +156,10 @@ export default function SpinWheelScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>I Miei Coupon</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>I Miei Coupon</Text>
         <TouchableOpacity onPress={() => setRedeemModalVisible(true)}>
           <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
         </TouchableOpacity>

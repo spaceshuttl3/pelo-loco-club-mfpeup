@@ -1,9 +1,5 @@
 
-import { useRouter } from 'expo-router';
 import { commonStyles, colors } from '@/styles/commonStyles';
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Appointment, Order } from '@/types';
 import {
   View,
   Text,
@@ -13,17 +9,21 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { Appointment, Order } from '@/types';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { IconSymbol } from '@/components/IconSymbol';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { signOut } = useAuth();
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { signOut } = useAuth();
 
   useEffect(() => {
     fetchDashboardData();
@@ -33,30 +33,29 @@ export default function AdminDashboardScreen() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      // Fetch today's appointments
-      const { data: appointmentsData, error: appointmentsError } = await supabase
+      const { data: appointments, error: aptError } = await supabase
         .from('appointments')
-        .select('*, user:users!appointments_user_id_fkey(*)')
+        .select('*')
         .eq('date', today)
+        .eq('status', 'booked')
         .order('time', { ascending: true });
 
-      if (appointmentsError) {
-        console.error('Error fetching appointments:', appointmentsError);
+      if (aptError) {
+        console.error('Error fetching appointments:', aptError);
       } else {
-        setTodayAppointments(appointmentsData || []);
+        setTodayAppointments(appointments || []);
       }
 
-      // Fetch pending orders
-      const { data: ordersData, error: ordersError } = await supabase
+      const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('*, user:users!orders_user_id_fkey(*)')
+        .select('*')
         .eq('payment_status', 'pending')
         .order('created_at', { ascending: false });
 
       if (ordersError) {
         console.error('Error fetching orders:', ordersError);
       } else {
-        setPendingOrders(ordersData || []);
+        setPendingOrders(orders || []);
       }
     } catch (error) {
       console.error('Error in fetchDashboardData:', error);
@@ -71,7 +70,7 @@ export default function AdminDashboardScreen() {
     fetchDashboardData();
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     Alert.alert(
       'Esci',
       'Sei sicuro di voler uscire?',
@@ -86,10 +85,9 @@ export default function AdminDashboardScreen() {
           onPress: async () => {
             try {
               await signOut();
-              console.log('Signed out successfully');
-            } catch (error: any) {
-              console.error('Sign out error:', error);
-              Alert.alert('Errore', 'Impossibile uscire. Riprova.');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Errore', 'Impossibile uscire');
             }
           },
         },
@@ -105,218 +103,159 @@ export default function AdminDashboardScreen() {
     );
   }
 
+  const quickActions = [
+    {
+      id: 'appointments',
+      title: 'Appuntamenti',
+      icon: 'calendar',
+      color: colors.primary,
+      route: '/(admin)/appointments',
+      badge: todayAppointments.length,
+    },
+    {
+      id: 'orders',
+      title: 'Ordini',
+      icon: 'bag.fill',
+      color: colors.secondary,
+      route: '/(admin)/orders',
+      badge: pendingOrders.length,
+    },
+    {
+      id: 'products',
+      title: 'Prodotti',
+      icon: 'cube.fill',
+      color: colors.accent,
+      route: '/(admin)/products',
+    },
+    {
+      id: 'services',
+      title: 'Servizi',
+      icon: 'scissors',
+      color: colors.primary,
+      route: '/(admin)/services',
+    },
+    {
+      id: 'coupons',
+      title: 'Coupon',
+      icon: 'gift.fill',
+      color: colors.secondary,
+      route: '/(admin)/coupons',
+    },
+    {
+      id: 'birthdays',
+      title: 'Compleanni',
+      icon: 'birthday.cake.fill',
+      color: colors.accent,
+      route: '/(admin)/birthdays',
+    },
+    {
+      id: 'notifications',
+      title: 'Notifiche',
+      icon: 'bell.fill',
+      color: colors.primary,
+      route: '/(admin)/notifications',
+    },
+  ];
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>Dashboard</Text>
-        <TouchableOpacity onPress={handleSignOut}>
-          <IconSymbol name="rectangle.portrait.and.arrow.right" size={24} color={colors.error} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {/* Today's Summary Card */}
-        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 24, marginBottom: 24 }]}>
-          <Text style={[commonStyles.title, { fontSize: 28, marginBottom: 8 }]}>
-            Ciao! 👋
+        <View style={{ marginBottom: 30, marginTop: 20 }}>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
+            <Text style={[commonStyles.title, { fontSize: 32, flex: 1 }]}>
+              Dashboard Admin
+            </Text>
+            <TouchableOpacity onPress={handleSignOut}>
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={28} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+          <Text style={commonStyles.textSecondary}>
+            Gestisci il tuo barbershop
           </Text>
-          <Text style={[commonStyles.textSecondary, { fontSize: 16 }]}>
-            Ecco il riepilogo di oggi
+        </View>
+
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 30 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+            Oggi
           </Text>
-          
-          <View style={{ flexDirection: 'row', marginTop: 20, gap: 16 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {todayAppointments.length}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Appuntamenti
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {pendingOrders.length}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Ordini
-              </Text>
-            </View>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
+            <Text style={commonStyles.text}>Appuntamenti:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+              {todayAppointments.length}
+            </Text>
+          </View>
+          <View style={commonStyles.row}>
+            <Text style={commonStyles.text}>Ordini in Attesa:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+              {pendingOrders.length}
+            </Text>
           </View>
         </View>
 
-        {/* Quick Actions - Simplified for Barber */}
-        <Text style={[commonStyles.subtitle, { marginBottom: 16, fontSize: 20 }]}>
-          Funzioni Principali
+        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+          Azioni Rapide
         </Text>
 
-        <TouchableOpacity
-          style={[commonStyles.card, { marginBottom: 12, padding: 20 }]}
-          onPress={() => router.push('/(admin)/appointments' as any)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+          {quickActions.map((action) => (
+            <TouchableOpacity
+              key={action.id}
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.primary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16,
+                width: '50%',
+                padding: 6,
+              }}
+              onPress={() => {
+                console.log('Quick action pressed:', action.title);
+                router.push(action.route as any);
               }}
             >
-              <IconSymbol name="calendar" size={28} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 4 }]}>
-                Appuntamenti
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Visualizza e gestisci prenotazioni
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, { marginBottom: 12, padding: 20 }]}
-          onPress={() => router.push('/(admin)/orders' as any)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.accent,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16,
-              }}
-            >
-              <IconSymbol name="bag.fill" size={28} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 4 }]}>
-                Ordini
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Gestisci ordini prodotti
-              </Text>
-            </View>
-            {pendingOrders.length > 0 && (
-              <View
-                style={{
-                  backgroundColor: colors.primary,
-                  borderRadius: 12,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  marginRight: 8,
-                }}
-              >
-                <Text style={{ color: colors.text, fontSize: 14, fontWeight: 'bold' }}>
-                  {pendingOrders.length}
-                </Text>
-              </View>
-            )}
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, { marginBottom: 12, padding: 20 }]}
-          onPress={() => router.push('/(admin)/products' as any)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.secondary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16,
-              }}
-            >
-              <IconSymbol name="cube.fill" size={28} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 4 }]}>
-                Prodotti
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Gestisci inventario
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, { marginBottom: 12, padding: 20 }]}
-          onPress={() => router.push('/(admin)/coupons' as any)}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: colors.accent,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 16,
-              }}
-            >
-              <IconSymbol name="ticket" size={28} color={colors.text} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 18, fontWeight: '600', marginBottom: 4 }]}>
-                Coupon
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                Crea e invia sconti
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </View>
-        </TouchableOpacity>
-
-        {/* Today's Appointments */}
-        {todayAppointments.length > 0 && (
-          <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16, fontSize: 20 }]}>
-              Appuntamenti di Oggi
-            </Text>
-
-            {todayAppointments.map((appointment) => (
-              <View key={appointment.id} style={[commonStyles.card, { marginBottom: 12 }]}>
-                <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    {appointment.service}
-                  </Text>
-                  <Text style={[commonStyles.text, { color: colors.primary, fontSize: 18, fontWeight: 'bold' }]}>
-                    {appointment.time}
-                  </Text>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, position: 'relative' }]}>
+                {action.badge !== undefined && action.badge > 0 && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      backgroundColor: colors.error,
+                      borderRadius: 12,
+                      minWidth: 24,
+                      height: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      paddingHorizontal: 6,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: 'bold' }]}>
+                      {action.badge}
+                    </Text>
+                  </View>
+                )}
+                <View
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: action.color,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
                 </View>
-                <Text style={commonStyles.textSecondary}>
-                  Cliente: {appointment.user?.name || 'Sconosciuto'}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Telefono: {appointment.user?.phone || 'N/D'}
+                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
+                  {action.title}
                 </Text>
               </View>
-            ))}
-          </>
-        )}
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

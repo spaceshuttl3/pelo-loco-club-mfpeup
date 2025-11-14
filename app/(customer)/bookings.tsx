@@ -1,8 +1,7 @@
 
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Appointment } from '@/types';
 import {
   View,
   Text,
@@ -14,9 +13,11 @@ import {
   Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { IconSymbol } from '@/components/IconSymbol';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { supabase } from '@/lib/supabase';
+import { Appointment } from '@/types';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { useRouter } from 'expo-router';
 
 interface ExistingAppointment {
   id: string;
@@ -26,6 +27,7 @@ interface ExistingAppointment {
 }
 
 export default function BookingsScreen() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -305,7 +307,10 @@ export default function BookingsScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>Le Mie Prenotazioni</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Le Mie Prenotazioni</Text>
         <View style={{ width: 24 }} />
       </View>
 

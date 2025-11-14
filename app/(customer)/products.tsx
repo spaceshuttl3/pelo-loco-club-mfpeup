@@ -84,7 +84,10 @@ export default function ProductsScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>Prodotti</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Prodotti</Text>
         <TouchableOpacity onPress={handleCartPress} style={{ position: 'relative' }}>
           <IconSymbol name="bag.fill" size={24} color={colors.text} />
           {totalItems > 0 && (

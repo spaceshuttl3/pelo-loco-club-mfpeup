@@ -39,27 +39,43 @@ export default function SignupScreen() {
   };
 
   const checkDuplicates = async (email: string, phone: string) => {
-    const { data: emailCheck } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
+    try {
+      const { data: emailCheck, error: emailError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
 
-    if (emailCheck) {
-      return { duplicate: true, field: 'email' };
+      if (emailError && emailError.code !== 'PGRST116') {
+        console.error('Error checking email:', emailError);
+        throw emailError;
+      }
+
+      if (emailCheck) {
+        return { duplicate: true, field: 'email' };
+      }
+
+      const cleanPhone = phone.replace(/[\s-]/g, '');
+      const { data: phoneCheck, error: phoneError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone', cleanPhone)
+        .maybeSingle();
+
+      if (phoneError && phoneError.code !== 'PGRST116') {
+        console.error('Error checking phone:', phoneError);
+        throw phoneError;
+      }
+
+      if (phoneCheck) {
+        return { duplicate: true, field: 'phone' };
+      }
+
+      return { duplicate: false };
+    } catch (error) {
+      console.error('Error in checkDuplicates:', error);
+      throw error;
     }
-
-    const { data: phoneCheck } = await supabase
-      .from('users')
-      .select('id')
-      .eq('phone', phone)
-      .maybeSingle();
-
-    if (phoneCheck) {
-      return { duplicate: true, field: 'phone' };
-    }
-
-    return { duplicate: false };
   };
 
   const handleSignup = async () => {
@@ -88,16 +104,16 @@ export default function SignupScreen() {
       const duplicateCheck = await checkDuplicates(email, phone);
       if (duplicateCheck.duplicate) {
         Alert.alert(
-          'Errore',
+          'Account Già Esistente',
           duplicateCheck.field === 'email'
-            ? 'Questa email è già registrata'
-            : 'Questo numero di telefono è già registrato'
+            ? 'Questa email è già registrata. Prova ad accedere o usa un\'altra email.'
+            : 'Questo numero di telefono è già registrato. Prova ad accedere o usa un altro numero.'
         );
         setLoading(false);
         return;
       }
 
-      await signUp(email, password, name, phone, birthday.toISOString().split('T')[0], 'customer');
+      await signUp(email, password, name, phone.replace(/[\s-]/g, ''), birthday.toISOString().split('T')[0], 'customer');
       
       Alert.alert(
         'Registrazione Riuscita!',
@@ -111,7 +127,16 @@ export default function SignupScreen() {
       );
     } catch (error: any) {
       console.error('Signup error:', error);
-      Alert.alert('Errore', error.message || 'Impossibile creare l\'account. Riprova.');
+      
+      let errorMessage = 'Impossibile creare l\'account. Riprova.';
+      
+      if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+        errorMessage = 'Questa email o numero di telefono è già registrato.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Errore', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -155,7 +180,7 @@ export default function SignupScreen() {
 
             <TextInput
               style={commonStyles.input}
-              placeholder="Telefono"
+              placeholder="Telefono (es. 3331234567)"
               placeholderTextColor={colors.textSecondary}
               value={phone}
               onChangeText={setPhone}
@@ -165,7 +190,7 @@ export default function SignupScreen() {
 
             <TextInput
               style={commonStyles.input}
-              placeholder="Password"
+              placeholder="Password (minimo 6 caratteri)"
               placeholderTextColor={colors.textSecondary}
               value={password}
               onChangeText={setPassword}

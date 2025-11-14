@@ -38,6 +38,7 @@ export default function AdminLayout() {
         <Stack.Screen name="appointments" />
         <Stack.Screen name="orders" />
         <Stack.Screen name="products" />
+        <Stack.Screen name="services" />
         <Stack.Screen name="coupons" />
         <Stack.Screen name="birthdays" />
         <Stack.Screen name="notifications" />
