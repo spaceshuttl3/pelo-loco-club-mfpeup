@@ -122,7 +122,7 @@ export default function LoginScreen() {
               >
                 <Text style={commonStyles.textSecondary}>
                   Non hai un account?{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '600' }]}>
+                  <Text style={{ color: colors.primary, fontWeight: '600' }}>
                     Registrati
                   </Text>
                 </Text>
