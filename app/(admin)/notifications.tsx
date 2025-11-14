@@ -105,38 +105,40 @@ export default function NotificationsScreen() {
           Quick Notifications
         </Text>
 
-        {quickNotifications.map((notification) => (
-          <TouchableOpacity
-            key={notification.id}
-            style={commonStyles.card}
-            onPress={() => {
-              setNotificationTitle(notification.title);
-              setNotificationMessage(notification.message);
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: notification.color,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: 12,
-                }}
-              >
-                <IconSymbol name={notification.icon as any} size={20} color={colors.text} />
+        <React.Fragment>
+          {quickNotifications.map((notification, index) => (
+            <TouchableOpacity
+              key={`notification-${notification.id}-${index}`}
+              style={commonStyles.card}
+              onPress={() => {
+                setNotificationTitle(notification.title);
+                setNotificationMessage(notification.message);
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: notification.color,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <IconSymbol name={notification.icon as any} size={20} color={colors.text} />
+                </View>
+                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                  {notification.title}
+                </Text>
               </View>
-              <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                {notification.title}
+              <Text style={commonStyles.textSecondary}>
+                {notification.message}
               </Text>
-            </View>
-            <Text style={commonStyles.textSecondary}>
-              {notification.message}
-            </Text>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          ))}
+        </React.Fragment>
 
         <View style={{ marginTop: 30, padding: 16, backgroundColor: colors.card, borderRadius: 8 }}>
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>

@@ -94,15 +94,16 @@ export default function FloatingTabBar({
       {Platform.OS === 'ios' ? (
         <GlassView
           glassEffectStyle="regular"
-          tintColor="rgba(18, 18, 18, 0.7)"
+          tintColor="rgba(18, 18, 18, 0.5)"
           style={[
             styles.tabBar,
             {
               width: containerWidth,
               borderRadius,
-              borderWidth: 1.5,
-              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: 0.5,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
               overflow: 'hidden',
+              backgroundColor: 'transparent',
             },
           ]}
         >
@@ -111,17 +112,17 @@ export default function FloatingTabBar({
               styles.indicator,
               indicatorStyle,
               {
-                backgroundColor: colors.primary,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 borderRadius: borderRadius - 10,
               },
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab) => {
+          {tabs.map((tab, index) => {
             const isActive = pathname.includes(tab.name);
             return (
               <TouchableOpacity
-                key={tab.name}
+                key={`${tab.name}-${index}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
@@ -170,11 +171,11 @@ export default function FloatingTabBar({
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab) => {
+          {tabs.map((tab, index) => {
             const isActive = pathname.includes(tab.name);
             return (
               <TouchableOpacity
-                key={tab.name}
+                key={`${tab.name}-${index}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}

@@ -1,8 +1,7 @@
-
 {
   "expo": {
     "name": "Pelo Loco Club",
-    "slug": "pelo-loco-club",
+    "slug": "Pelo Loco Club",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/natively-dark.png",
@@ -48,5 +47,6 @@
     "extra": {
       "router": {}
     }
-  }
+  },
+  "scheme": "Pelo Loco Club"
 }

@@ -320,87 +320,89 @@ export default function BookingsScreen() {
             </Text>
           </View>
         ) : (
-          upcomingAppointments.map((appointment) => {
-            const { canModify } = canModifyAppointment(appointment);
-            
-            return (
-              <View key={appointment.id} style={[commonStyles.card, { marginBottom: 16 }]}>
-                <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    {appointment.service}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: getStatusColor(appointment.status),
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      {appointment.status.toUpperCase()}
+          <React.Fragment>
+            {upcomingAppointments.map((appointment, index) => {
+              const { canModify } = canModifyAppointment(appointment);
+              
+              return (
+                <View key={`upcoming-${appointment.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      {appointment.service}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: getStatusColor(appointment.status),
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        {appointment.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={commonStyles.textSecondary}>
+                      📅 {new Date(appointment.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      🕐 {appointment.time}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      💳 {appointment.payment_mode === 'pay_in_person' ? 'Pay in Person' : 'Paid Online'}
                     </Text>
                   </View>
-                </View>
 
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={commonStyles.textSecondary}>
-                    📅 {new Date(appointment.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    🕐 {appointment.time}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    💳 {appointment.payment_mode === 'pay_in_person' ? 'Pay in Person' : 'Paid Online'}
-                  </Text>
-                </View>
+                  {!canModify && (
+                    <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                      <Text style={[commonStyles.text, { fontSize: 12, textAlign: 'center' }]}>
+                        ⚠️ Cannot modify - less than 10 hours until appointment
+                      </Text>
+                    </View>
+                  )}
 
-                {!canModify && (
-                  <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
-                    <Text style={[commonStyles.text, { fontSize: 12, textAlign: 'center' }]}>
-                      ⚠️ Cannot modify - less than 10 hours until appointment
-                    </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={[
+                        buttonStyles.primary,
+                        { flex: 1, paddingVertical: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+                        !canModify && { opacity: 0.5 },
+                      ]}
+                      onPress={() => handleRescheduleAppointment(appointment)}
+                      disabled={!canModify}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[buttonStyles.text, { color: colors.text, fontSize: 14 }]}>
+                        Reschedule
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        buttonStyles.primary,
+                        { flex: 1, paddingVertical: 10, backgroundColor: colors.error },
+                        !canModify && { opacity: 0.5 },
+                      ]}
+                      onPress={() => handleDeleteAppointment(appointment)}
+                      disabled={!canModify}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>
+                        Delete
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                )}
-
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity
-                    style={[
-                      buttonStyles.primary,
-                      { flex: 1, paddingVertical: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-                      !canModify && { opacity: 0.5 },
-                    ]}
-                    onPress={() => handleRescheduleAppointment(appointment)}
-                    disabled={!canModify}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[buttonStyles.text, { color: colors.text, fontSize: 14 }]}>
-                      Reschedule
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      buttonStyles.primary,
-                      { flex: 1, paddingVertical: 10, backgroundColor: colors.error },
-                      !canModify && { opacity: 0.5 },
-                    ]}
-                    onPress={() => handleDeleteAppointment(appointment)}
-                    disabled={!canModify}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[buttonStyles.text, { fontSize: 14 }]}>
-                      Delete
-                    </Text>
-                  </TouchableOpacity>
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </React.Fragment>
         )}
 
         {pastAppointments.length > 0 && (
@@ -409,31 +411,33 @@ export default function BookingsScreen() {
               Past Appointments ({pastAppointments.length})
             </Text>
 
-            {pastAppointments.map((appointment) => (
-              <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    {appointment.service}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: getStatusColor(appointment.status),
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      {appointment.status.toUpperCase()}
+            <React.Fragment>
+              {pastAppointments.map((appointment, index) => (
+                <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      {appointment.service}
                     </Text>
+                    <View
+                      style={{
+                        backgroundColor: getStatusColor(appointment.status),
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        {appointment.status.toUpperCase()}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <Text style={commonStyles.textSecondary}>
-                  {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
-                </Text>
-              </View>
-            ))}
+                  <Text style={commonStyles.textSecondary}>
+                    {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                  </Text>
+                </View>
+              ))}
+            </React.Fragment>
           </>
         )}
       </ScrollView>
@@ -496,11 +500,11 @@ export default function BookingsScreen() {
             </Text>
             <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
-                {generateTimeSlots().map((slot) => {
+                {generateTimeSlots().map((slot, slotIndex) => {
                   const isAvailable = isTimeSlotAvailable(slot);
                   return (
                     <TouchableOpacity
-                      key={slot}
+                      key={`timeslot-${slot}-${slotIndex}`}
                       style={[
                         {
                           margin: 4,
