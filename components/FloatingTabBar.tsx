@@ -37,9 +37,9 @@ interface FloatingTabBarProps {
 
 export default function FloatingTabBar({
   tabs,
-  containerWidth = Dimensions.get('window').width - 40,
-  borderRadius = 30,
-  bottomMargin = 20,
+  containerWidth = Dimensions.get('window').width - 32,
+  borderRadius = 24,
+  bottomMargin = 12,
 }: FloatingTabBarProps) {
   const theme = useTheme();
   const router = useRouter();
@@ -85,8 +85,8 @@ export default function FloatingTabBar({
       style={[
         styles.container,
         {
-          bottom: Math.max(insets.bottom, bottomMargin),
-          paddingBottom: insets.bottom > 0 ? 0 : 10,
+          bottom: Math.max(insets.bottom + 8, bottomMargin),
+          paddingBottom: 0,
         },
       ]}
       pointerEvents="box-none"
@@ -94,15 +94,15 @@ export default function FloatingTabBar({
       {Platform.OS === 'ios' ? (
         <GlassView
           glassEffectStyle="regular"
-          tintColor="rgba(18, 18, 18, 0.6)"
+          tintColor="rgba(10, 10, 10, 0.75)"
           isInteractive={true}
           style={[
             styles.tabBar,
             {
               width: containerWidth,
               borderRadius,
-              borderWidth: 0.5,
-              borderColor: 'rgba(255, 255, 255, 0.18)',
+              borderWidth: 0.33,
+              borderColor: 'rgba(255, 255, 255, 0.12)',
               overflow: 'hidden',
               backgroundColor: 'transparent',
             },
@@ -113,8 +113,8 @@ export default function FloatingTabBar({
               styles.indicator,
               indicatorStyle,
               {
-                backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                borderRadius: borderRadius - 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: borderRadius - 6,
               },
             ]}
             pointerEvents="none"
@@ -130,15 +130,15 @@ export default function FloatingTabBar({
               >
                 <IconSymbol
                   name={tab.icon as any}
-                  size={26}
-                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                  size={22}
+                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)'}
                 />
                 <Text
                   style={[
                     styles.label,
                     {
-                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
-                      fontWeight: isActive ? '700' : '500',
+                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)',
+                      fontWeight: isActive ? '600' : '500',
                     },
                   ]}
                 >
@@ -155,9 +155,9 @@ export default function FloatingTabBar({
             {
               width: containerWidth,
               borderRadius,
-              backgroundColor: 'rgba(18, 18, 18, 0.95)',
-              borderWidth: 1.5,
-              borderColor: 'rgba(255, 255, 255, 0.2)',
+              backgroundColor: 'rgba(10, 10, 10, 0.92)',
+              borderWidth: 0.5,
+              borderColor: 'rgba(255, 255, 255, 0.15)',
             },
           ]}
         >
@@ -166,8 +166,8 @@ export default function FloatingTabBar({
               styles.indicator,
               indicatorStyle,
               {
-                backgroundColor: colors.primary,
-                borderRadius: borderRadius - 10,
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                borderRadius: borderRadius - 6,
               },
             ]}
             pointerEvents="none"
@@ -183,15 +183,15 @@ export default function FloatingTabBar({
               >
                 <IconSymbol
                   name={tab.icon as any}
-                  size={26}
-                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                  size={22}
+                  color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)'}
                 />
                 <Text
                   style={[
                     styles.label,
                     {
-                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
-                      fontWeight: isActive ? '700' : '500',
+                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)',
+                      fontWeight: isActive ? '600' : '500',
                     },
                   ]}
                 >
@@ -217,32 +217,32 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 20,
+      height: 8,
     },
-    shadowOpacity: 0.7,
-    shadowRadius: 30,
-    elevation: 25,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
   indicator: {
     position: 'absolute',
-    height: '75%',
-    top: '12.5%',
-    left: 10,
+    height: '80%',
+    top: '10%',
+    left: 6,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     zIndex: 2,
   },
   label: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 2,
   },
 });
