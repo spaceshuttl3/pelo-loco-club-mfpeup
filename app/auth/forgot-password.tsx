@@ -36,7 +36,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://natively.dev/email-confirmed',
+        redirectTo: 'https://natively.dev/reset-password',
       });
 
       if (error) {

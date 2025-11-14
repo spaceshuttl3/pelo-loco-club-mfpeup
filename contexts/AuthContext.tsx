@@ -75,51 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Fetching user profile for:', userId);
       
-      // Retry logic for profile fetching (in case trigger hasn't completed yet)
-      let retries = 5;
-      let data = null;
-      let error = null;
-
-      while (retries > 0 && !data) {
-        const result = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single();
-
-        data = result.data;
-        error = result.error;
-
-        if (error) {
-          // Check for specific error codes
-          if (error.code === 'PGRST116') {
-            // Profile doesn't exist yet, wait and retry
-            console.log(`Profile not found, retrying... (${retries} attempts left)`);
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-            }
-          } else if (error.code === '42P17') {
-            // Infinite recursion error - this should not happen anymore
-            console.error('Infinite recursion detected in RLS policy. Please check database policies.');
-            setLoading(false);
-            return;
-          } else {
-            // Other errors
-            console.error('Error fetching user profile:', error);
-            break;
-          }
-        } else {
-          break;
-        }
-      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
       if (error) {
-        console.error('Error fetching user profile after retries:', error);
+        console.error('Error fetching user profile:', error);
         
-        // If profile still doesn't exist after retries
+        // If profile doesn't exist, it means the trigger failed
         if (error.code === 'PGRST116') {
-          console.error('User profile was not created. The database trigger may not be working correctly.');
+          console.error('User profile not found. The database trigger may have failed.');
         }
         
         setLoading(false);
