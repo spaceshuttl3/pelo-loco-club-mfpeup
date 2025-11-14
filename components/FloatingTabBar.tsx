@@ -149,15 +149,13 @@ export default function FloatingTabBar({
     return pathname.includes(tab.name);
   };
 
-  // Calculate padding to extend to bottom of screen
-  const bottomPadding = Math.max(insets.bottom, 8);
-
   return (
     <View
       style={[
         styles.container,
         {
-          bottom: 0,
+          bottom: Math.max(insets.bottom + 8, bottomMargin),
+          paddingBottom: 0,
         },
       ]}
       pointerEvents="box-none"
@@ -176,8 +174,6 @@ export default function FloatingTabBar({
               borderColor: 'rgba(255, 255, 255, 0.12)',
               overflow: 'hidden',
               backgroundColor: 'transparent',
-              paddingBottom: bottomPadding,
-              marginBottom: bottomMargin,
             },
           ]}
         >
@@ -231,8 +227,6 @@ export default function FloatingTabBar({
               backgroundColor: 'rgba(10, 10, 10, 0.92)',
               borderWidth: 0.5,
               borderColor: 'rgba(255, 255, 255, 0.15)',
-              paddingBottom: bottomPadding,
-              marginBottom: bottomMargin,
             },
           ]}
         >
