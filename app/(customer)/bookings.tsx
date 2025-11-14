@@ -83,7 +83,7 @@ export default function BookingsScreen() {
         .eq('barber_id', barberId)
         .eq('date', selectedDate)
         .eq('status', 'booked')
-        .neq('id', selectedAppointment?.id || ''); // Exclude current appointment
+        .neq('id', selectedAppointment?.id || '');
 
       if (error) {
         console.error('Error fetching existing appointments:', error);
@@ -110,7 +110,7 @@ export default function BookingsScreen() {
     if (hoursUntilAppointment < 10) {
       return {
         canModify: false,
-        reason: 'You can only modify appointments at least 10 hours in advance.',
+        reason: 'Puoi modificare gli appuntamenti solo con almeno 10 ore di anticipo.',
       };
     }
 
@@ -121,20 +121,20 @@ export default function BookingsScreen() {
     const { canModify, reason } = canModifyAppointment(appointment);
 
     if (!canModify) {
-      Alert.alert('Cannot Delete', reason);
+      Alert.alert('Impossibile Eliminare', reason);
       return;
     }
 
     Alert.alert(
-      'Delete Appointment',
-      'Are you sure you want to delete this appointment?',
+      'Elimina Appuntamento',
+      'Sei sicuro di voler eliminare questo appuntamento?',
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: 'Elimina',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -145,11 +145,11 @@ export default function BookingsScreen() {
 
               if (error) throw error;
 
-              Alert.alert('Success', 'Appointment deleted successfully');
+              Alert.alert('Successo', 'Appuntamento eliminato con successo');
               fetchAppointments();
             } catch (error) {
               console.error('Error deleting appointment:', error);
-              Alert.alert('Error', 'Failed to delete appointment');
+              Alert.alert('Errore', 'Impossibile eliminare l\'appuntamento');
             }
           },
         },
@@ -161,7 +161,7 @@ export default function BookingsScreen() {
     const { canModify, reason } = canModifyAppointment(appointment);
 
     if (!canModify) {
-      Alert.alert('Cannot Reschedule', reason);
+      Alert.alert('Impossibile Riprogrammare', reason);
       return;
     }
 
@@ -178,23 +178,19 @@ export default function BookingsScreen() {
     const serviceName = selectedAppointment.service;
     const serviceDuration = getServiceDuration(serviceName);
 
-    // Check if this time slot conflicts with any existing appointment
     for (const appointment of existingAppointments) {
       const appointmentTime = appointment.time;
       const appointmentDuration = getServiceDuration(appointment.service);
 
-      // Convert times to minutes for easier comparison
       const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
       const slotTimeInMinutes = slotHour * 60 + slotMinute;
 
       const [aptHour, aptMinute] = appointmentTime.split(':').map(Number);
       const aptTimeInMinutes = aptHour * 60 + aptMinute;
 
-      // Check if the new appointment would overlap with existing appointment
       const newAppointmentEnd = slotTimeInMinutes + serviceDuration;
       const existingAppointmentEnd = aptTimeInMinutes + appointmentDuration;
 
-      // Check for overlap
       if (
         (slotTimeInMinutes >= aptTimeInMinutes && slotTimeInMinutes < existingAppointmentEnd) ||
         (newAppointmentEnd > aptTimeInMinutes && newAppointmentEnd <= existingAppointmentEnd) ||
@@ -221,11 +217,10 @@ export default function BookingsScreen() {
   const handleUpdateAppointment = async () => {
     if (!selectedAppointment) return;
 
-    // Check if the selected time slot is available
     if (!isTimeSlotAvailable(editTime)) {
       Alert.alert(
-        'Time Slot Unavailable',
-        'This time slot conflicts with another appointment. Please select a different time.',
+        'Orario Non Disponibile',
+        'Questo orario è in conflitto con un altro appuntamento. Seleziona un orario diverso.',
         [{ text: 'OK' }]
       );
       return;
@@ -243,14 +238,14 @@ export default function BookingsScreen() {
 
       if (error) throw error;
 
-      Alert.alert('Success', 'Appointment rescheduled successfully');
+      Alert.alert('Successo', 'Appuntamento riprogrammato con successo');
       setEditModalVisible(false);
       setSelectedAppointment(null);
       setExistingAppointments([]);
       fetchAppointments();
     } catch (error) {
       console.error('Error updating appointment:', error);
-      Alert.alert('Error', 'Failed to reschedule appointment');
+      Alert.alert('Errore', 'Impossibile riprogrammare l\'appuntamento');
     } finally {
       setUpdating(false);
     }
@@ -278,6 +273,19 @@ export default function BookingsScreen() {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'booked':
+        return 'PRENOTATO';
+      case 'completed':
+        return 'COMPLETATO';
+      case 'cancelled':
+        return 'ANNULLATO';
+      default:
+        return status.toUpperCase();
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
@@ -297,7 +305,7 @@ export default function BookingsScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>My Bookings</Text>
+        <Text style={commonStyles.headerTitle}>Le Mie Prenotazioni</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -309,14 +317,14 @@ export default function BookingsScreen() {
         }
       >
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Upcoming ({upcomingAppointments.length})
+          Prossimi ({upcomingAppointments.length})
         </Text>
 
         {upcomingAppointments.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="calendar" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              No upcoming appointments
+              Nessun appuntamento in programma
             </Text>
           </View>
         ) : (
@@ -339,14 +347,14 @@ export default function BookingsScreen() {
                       }}
                     >
                       <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {appointment.status.toUpperCase()}
+                        {getStatusText(appointment.status)}
                       </Text>
                     </View>
                   </View>
 
                   <View style={{ marginBottom: 12 }}>
                     <Text style={commonStyles.textSecondary}>
-                      📅 {new Date(appointment.date).toLocaleDateString('en-US', {
+                      📅 {new Date(appointment.date).toLocaleDateString('it-IT', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
@@ -357,14 +365,14 @@ export default function BookingsScreen() {
                       🕐 {appointment.time}
                     </Text>
                     <Text style={commonStyles.textSecondary}>
-                      💳 {appointment.payment_mode === 'pay_in_person' ? 'Pay in Person' : 'Paid Online'}
+                      💳 {appointment.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Pagato Online'}
                     </Text>
                   </View>
 
                   {!canModify && (
                     <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
                       <Text style={[commonStyles.text, { fontSize: 12, textAlign: 'center' }]}>
-                        ⚠️ Cannot modify - less than 10 hours until appointment
+                        ⚠️ Non modificabile - meno di 10 ore all&apos;appuntamento
                       </Text>
                     </View>
                   )}
@@ -381,7 +389,7 @@ export default function BookingsScreen() {
                       activeOpacity={0.7}
                     >
                       <Text style={[buttonStyles.text, { color: colors.text, fontSize: 14 }]}>
-                        Reschedule
+                        Riprogramma
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -395,7 +403,7 @@ export default function BookingsScreen() {
                       activeOpacity={0.7}
                     >
                       <Text style={[buttonStyles.text, { fontSize: 14 }]}>
-                        Delete
+                        Elimina
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -408,7 +416,7 @@ export default function BookingsScreen() {
         {pastAppointments.length > 0 && (
           <>
             <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Past Appointments ({pastAppointments.length})
+              Appuntamenti Passati ({pastAppointments.length})
             </Text>
 
             <React.Fragment>
@@ -427,13 +435,13 @@ export default function BookingsScreen() {
                       }}
                     >
                       <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {appointment.status.toUpperCase()}
+                        {getStatusText(appointment.status)}
                       </Text>
                     </View>
                   </View>
 
                   <Text style={commonStyles.textSecondary}>
-                    {new Date(appointment.date).toLocaleDateString()} at {appointment.time}
+                    {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
                   </Text>
                 </View>
               ))}
@@ -442,7 +450,6 @@ export default function BookingsScreen() {
         )}
       </ScrollView>
 
-      {/* Reschedule Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -452,7 +459,7 @@ export default function BookingsScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Reschedule Appointment
+              Riprogramma Appuntamento
             </Text>
 
             {selectedAppointment && (
@@ -461,13 +468,13 @@ export default function BookingsScreen() {
                   {selectedAppointment.service}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Current: {new Date(selectedAppointment.date).toLocaleDateString()} at {selectedAppointment.time}
+                  Attuale: {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
                 </Text>
               </View>
             )}
 
             <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
-              Select New Date
+              Seleziona Nuova Data
             </Text>
             <TouchableOpacity
               style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
@@ -476,7 +483,7 @@ export default function BookingsScreen() {
             >
               <IconSymbol name="calendar" size={24} color={colors.primary} />
               <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                {editDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {editDate.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </Text>
             </TouchableOpacity>
 
@@ -496,7 +503,7 @@ export default function BookingsScreen() {
             )}
 
             <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
-              Select New Time
+              Seleziona Nuovo Orario
             </Text>
             <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
@@ -521,7 +528,7 @@ export default function BookingsScreen() {
                         if (isAvailable) {
                           setEditTime(slot);
                         } else {
-                          Alert.alert('Unavailable', 'This time slot conflicts with another appointment');
+                          Alert.alert('Non disponibile', 'Questo orario è in conflitto con un altro appuntamento');
                         }
                       }}
                       disabled={!isAvailable}
@@ -544,7 +551,7 @@ export default function BookingsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
-                  {updating ? 'Updating...' : 'Reschedule'}
+                  {updating ? 'Aggiornamento...' : 'Riprogramma'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -557,7 +564,7 @@ export default function BookingsScreen() {
                 disabled={updating}
                 activeOpacity={0.7}
               >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
               </TouchableOpacity>
             </View>
           </View>

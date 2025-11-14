@@ -19,24 +19,23 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      'Esci',
+      'Sei sicuro di voler uscire?',
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Sign Out',
+          text: 'Esci',
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
               console.log('Signed out successfully');
-              // Navigation will be handled automatically by the auth state change
             } catch (error: any) {
               console.error('Sign out error:', error);
-              Alert.alert('Error', 'Could not sign out. Please try again.');
+              Alert.alert('Errore', 'Impossibile uscire. Riprova.');
             }
           },
         },
@@ -47,7 +46,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>Profile</Text>
+        <Text style={commonStyles.headerTitle}>Profilo</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -76,14 +75,14 @@ export default function ProfileScreen() {
 
         <View style={commonStyles.card}>
           <View style={[commonStyles.row, { marginBottom: 16 }]}>
-            <Text style={commonStyles.text}>Phone</Text>
+            <Text style={commonStyles.text}>Telefono</Text>
             <Text style={commonStyles.textSecondary}>{user?.phone}</Text>
           </View>
           {user?.birthday && (
             <View style={commonStyles.row}>
-              <Text style={commonStyles.text}>Birthday</Text>
+              <Text style={commonStyles.text}>Compleanno</Text>
               <Text style={commonStyles.textSecondary}>
-                {new Date(user.birthday).toLocaleDateString()}
+                {new Date(user.birthday).toLocaleDateString('it-IT')}
               </Text>
             </View>
           )}
@@ -97,7 +96,7 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <IconSymbol name="calendar" size={24} color={colors.primary} />
               <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                My Bookings
+                Le Mie Prenotazioni
               </Text>
             </View>
             <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
@@ -112,7 +111,7 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <IconSymbol name="gift.fill" size={24} color={colors.primary} />
               <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                My Coupons
+                I Miei Coupon
               </Text>
             </View>
             <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
@@ -123,7 +122,7 @@ export default function ProfileScreen() {
           style={[buttonStyles.primary, { backgroundColor: colors.error, marginTop: 24 }]}
           onPress={handleSignOut}
         >
-          <Text style={buttonStyles.text}>Sign Out</Text>
+          <Text style={buttonStyles.text}>Esci</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

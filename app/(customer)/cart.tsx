@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -9,44 +10,41 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { useCart } from '@/contexts/CartContext';
-import { IconSymbol } from '@/components/IconSymbol';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useCart } from '@/contexts/CartContext';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 
 const { width } = Dimensions.get('window');
 
 export default function CartScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { cartItems, removeFromCart, updateQuantity, clearCart, totalPrice, loading } = useCart();
+  const { cartItems, removeFromCart, totalPrice, clearCart } = useCart();
 
-  const handleCheckout = async () => {
-    console.log('Checkout - Button pressed');
-    
+  const handleCheckout = () => {
     if (cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Your cart is empty');
+      Alert.alert('Carrello Vuoto', 'Aggiungi prodotti al carrello prima di procedere');
       return;
     }
 
     Alert.alert(
-      'Checkout',
-      'How would you like to proceed?',
+      'Metodo di Pagamento',
+      'Come vuoi pagare?',
       [
         {
-          text: 'Reserve (Pay Later)',
+          text: 'Annulla',
+          style: 'cancel',
+        },
+        {
+          text: 'Paga di Persona',
           onPress: () => processOrder('pay_in_person'),
         },
         {
-          text: 'Pay Now',
+          text: 'Paga Online',
           onPress: () => processOrder('online'),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
         },
       ]
     );
@@ -56,7 +54,6 @@ export default function CartScreen() {
     try {
       const orderItems = cartItems.map(item => ({
         product_id: item.product_id,
-        product_name: item.product.name,
         quantity: item.quantity,
         price: item.product.price,
       }));
@@ -73,26 +70,17 @@ export default function CartScreen() {
 
       if (error) {
         console.error('Error creating order:', error);
-        Alert.alert('Error', 'Could not create order. Please try again.');
+        Alert.alert('Errore', 'Impossibile creare l\'ordine. Riprova.');
         return;
-      }
-
-      // Update product stock
-      for (const item of cartItems) {
-        const newStock = item.product.stock - item.quantity;
-        await supabase
-          .from('products')
-          .update({ stock: newStock })
-          .eq('id', item.product_id);
       }
 
       await clearCart();
 
       Alert.alert(
-        'Order Placed!',
+        'Ordine Confermato!',
         paymentMode === 'online'
-          ? 'Your order has been placed and paid successfully!'
-          : 'Your order has been reserved. Please pay at the shop when you pick up your items.',
+          ? 'Il tuo ordine è stato confermato e pagato.'
+          : 'Il tuo ordine è stato confermato. Paga al negozio.',
         [
           {
             text: 'OK',
@@ -101,24 +89,31 @@ export default function CartScreen() {
         ]
       );
     } catch (error) {
-      console.error('Error processing order:', error);
-      Alert.alert('Error', 'Could not process order. Please try again.');
+      console.error('Error in processOrder:', error);
+      Alert.alert('Errore', 'Impossibile completare l\'ordine. Riprova.');
     }
   };
 
   const handleRemove = (cartItemId: string, productName: string) => {
     Alert.alert(
-      'Remove Item',
-      `Remove ${productName} from cart?`,
+      'Rimuovi Prodotto',
+      `Rimuovere ${productName} dal carrello?`,
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Remove',
+          text: 'Rimuovi',
           style: 'destructive',
-          onPress: () => removeFromCart(cartItemId),
+          onPress: async () => {
+            try {
+              await removeFromCart(cartItemId);
+            } catch (error) {
+              console.error('Error removing from cart:', error);
+              Alert.alert('Errore', 'Impossibile rimuovere il prodotto');
+            }
+          },
         },
       ]
     );
@@ -127,172 +122,118 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity 
-          onPress={() => {
-            console.log('Back button pressed');
-            router.back();
-          }} 
-          style={{ marginRight: 16 }}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Shopping Cart</Text>
+        <Text style={commonStyles.headerTitle}>Carrello</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
-        {cartItems.length === 0 ? (
-          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <IconSymbol name="cart" size={48} color={colors.textSecondary} />
-            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              Your cart is empty
-            </Text>
-            <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 20 }]}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Text style={buttonStyles.text}>Continue Shopping</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <>
+      {cartItems.length === 0 ? (
+        <View style={[commonStyles.content, commonStyles.centerContent]}>
+          <IconSymbol name="bag" size={64} color={colors.textSecondary} />
+          <Text style={[commonStyles.text, { marginTop: 16, fontSize: 18 }]}>
+            Il tuo carrello è vuoto
+          </Text>
+          <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
+            Aggiungi prodotti per iniziare lo shopping
+          </Text>
+          <TouchableOpacity
+            style={[buttonStyles.primary, { marginTop: 24 }]}
+            onPress={() => router.back()}
+          >
+            <Text style={buttonStyles.text}>Continua lo Shopping</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
             {cartItems.map((item) => (
-              <View key={item.id} style={[commonStyles.card, { marginBottom: 16 }]}>
-                <View style={{ flexDirection: 'row' }}>
-                  {item.product.photo_url ? (
-                    <Image
-                      source={{ uri: item.product.photo_url }}
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 8,
-                        marginRight: 12,
-                      }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 8,
-                        marginRight: 12,
-                        backgroundColor: colors.background,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <IconSymbol name="photo" size={32} color={colors.textSecondary} />
-                    </View>
-                  )}
-                  
-                  <View style={{ flex: 1 }}>
+              <View key={item.id} style={[commonStyles.card, { flexDirection: 'row', padding: 12 }]}>
+                {item.product.photo_url ? (
+                  <Image
+                    source={{ uri: item.product.photo_url }}
+                    style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: colors.border }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 8,
+                      backgroundColor: colors.border,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <IconSymbol name="photo" size={32} color={colors.textSecondary} />
+                  </View>
+                )}
+
+                <View style={{ flex: 1, marginLeft: 12, justifyContent: 'space-between' }}>
+                  <View>
                     <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
                       {item.product.name}
                     </Text>
-                    <Text style={[commonStyles.textSecondary, { marginBottom: 8 }]}>
-                      ${item.product.price} each
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      Quantità: {item.quantity}
                     </Text>
-                    
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TouchableOpacity
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: colors.card,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                          }}
-                          onPress={() => updateQuantity(item.id, item.quantity - 1)}
-                          activeOpacity={0.7}
-                        >
-                          <IconSymbol name="minus" size={16} color={colors.text} />
-                        </TouchableOpacity>
-                        
-                        <Text style={[commonStyles.text, { marginHorizontal: 16, fontWeight: '600' }]}>
-                          {item.quantity}
-                        </Text>
-                        
-                        <TouchableOpacity
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: colors.card,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                          }}
-                          onPress={() => updateQuantity(item.id, item.quantity + 1)}
-                          disabled={item.quantity >= item.product.stock}
-                          activeOpacity={0.7}
-                        >
-                          <IconSymbol name="plus" size={16} color={colors.text} />
-                        </TouchableOpacity>
-                      </View>
-
-                      <TouchableOpacity
-                        onPress={() => handleRemove(item.id, item.product.name)}
-                        activeOpacity={0.7}
-                      >
-                        <IconSymbol name="trash" size={20} color={colors.error} />
-                      </TouchableOpacity>
-                    </View>
                   </View>
-                </View>
 
-                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                  <Text style={[commonStyles.text, { textAlign: 'right', fontWeight: 'bold' }]}>
-                    Subtotal: ${(item.product.price * item.quantity).toFixed(2)}
-                  </Text>
+                  <View style={[commonStyles.row, { marginTop: 8 }]}>
+                    <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
+                      €{(item.product.price * item.quantity).toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => handleRemove(item.id, item.product.name)}
+                      style={{ padding: 4 }}
+                    >
+                      <IconSymbol name="trash" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             ))}
 
-            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={[commonStyles.text, { fontSize: 18 }]}>Total:</Text>
-                <Text style={[commonStyles.text, { fontSize: 24, fontWeight: 'bold' }]}>
-                  ${totalPrice.toFixed(2)}
+            <View style={[commonStyles.card, { marginTop: 16 }]}>
+              <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                <Text style={commonStyles.text}>Subtotale</Text>
+                <Text style={commonStyles.text}>€{totalPrice.toFixed(2)}</Text>
+              </View>
+              <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                <Text style={commonStyles.text}>Spedizione</Text>
+                <Text style={commonStyles.text}>Gratis</Text>
+              </View>
+              <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12 }} />
+              <View style={commonStyles.row}>
+                <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+                  Totale
+                </Text>
+                <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18, color: colors.primary }]}>
+                  €{totalPrice.toFixed(2)}
                 </Text>
               </View>
-              <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items
-              </Text>
             </View>
-          </>
-        )}
-      </ScrollView>
+          </ScrollView>
 
-      {cartItems.length > 0 && (
-        <View style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: 20,
-          backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-        }}>
-          <TouchableOpacity
-            style={buttonStyles.primary}
-            onPress={handleCheckout}
-            disabled={loading}
-            activeOpacity={0.7}
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: 16,
+              backgroundColor: colors.background,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+            }}
           >
-            <Text style={buttonStyles.text}>
-              Proceed to Checkout
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity style={buttonStyles.primary} onPress={handleCheckout}>
+              <Text style={buttonStyles.text}>Procedi al Pagamento</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
     </SafeAreaView>
   );

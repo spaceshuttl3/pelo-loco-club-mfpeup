@@ -47,13 +47,6 @@ export default function CustomerHomeScreen() {
     },
   ];
 
-  const services = [
-    { id: 'service-1', name: 'Taglio Capelli', price: '€25', duration: '30 min' },
-    { id: 'service-2', name: 'Barba', price: '€15', duration: '20 min' },
-    { id: 'service-3', name: 'Taglio + Barba', price: '€35', duration: '45 min' },
-    { id: 'service-4', name: 'Rasatura', price: '€30', duration: '30 min' },
-  ];
-
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -72,7 +65,7 @@ export default function CustomerHomeScreen() {
         <View style={{ marginBottom: 30 }}>
           <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20 }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
-              Barbiere Premium
+              Pelo Loco Club
             </Text>
             <Text style={commonStyles.textSecondary}>
               Tagli esperti, stile classico, vibrazioni moderne
@@ -116,27 +109,6 @@ export default function CustomerHomeScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={{ marginTop: 30 }}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-            I Nostri Servizi
-          </Text>
-          {services.map((service) => (
-            <View key={service.id} style={[commonStyles.card, commonStyles.row]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                  {service.name}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  {service.duration}
-                </Text>
-              </View>
-              <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
-                {service.price}
-              </Text>
-            </View>
           ))}
         </View>
       </ScrollView>

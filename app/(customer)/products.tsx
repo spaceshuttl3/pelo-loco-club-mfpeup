@@ -1,4 +1,8 @@
 
+import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -10,23 +14,20 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Product } from '@/types';
-import { IconSymbol } from '@/components/IconSymbol';
 import { useCart } from '@/contexts/CartContext';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Product } from '@/types';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 
 const { width } = Dimensions.get('window');
+const cardWidth = (width - 48) / 2;
 
 export default function ProductsScreen() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { addToCart, totalItems } = useCart();
-  const router = useRouter();
 
   useEffect(() => {
     fetchProducts();
@@ -59,29 +60,17 @@ export default function ProductsScreen() {
   };
 
   const handleAddToCart = async (product: Product) => {
-    console.log('AddToCart - Button pressed for:', product.name);
-    
-    if (product.stock <= 0) {
-      Alert.alert('Out of Stock', 'This product is currently out of stock');
-      return;
-    }
-
     try {
-      await addToCart(product.id);
-      Alert.alert('Success', `${product.name} added to cart!`);
-    } catch (error: any) {
+      await addToCart(product.id, 1);
+      Alert.alert('Successo', `${product.name} aggiunto al carrello`);
+    } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert('Error', error.message || 'Could not add item to cart');
+      Alert.alert('Errore', 'Impossibile aggiungere al carrello');
     }
   };
 
   const handleCartPress = () => {
-    console.log('Cart - Button pressed, navigating to cart');
-    try {
-      router.push('/(customer)/cart' as any);
-    } catch (error) {
-      console.error('Cart navigation error:', error);
-    }
+    router.push('/(customer)/cart');
   };
 
   if (loading) {
@@ -94,27 +83,22 @@ export default function ProductsScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={[commonStyles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-        <Text style={commonStyles.headerTitle}>Shop</Text>
-        <TouchableOpacity
-          style={{ position: 'relative', padding: 8 }}
-          onPress={handleCartPress}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="cart.fill" size={28} color={colors.text} />
+      <View style={commonStyles.header}>
+        <Text style={commonStyles.headerTitle}>Prodotti</Text>
+        <TouchableOpacity onPress={handleCartPress} style={{ position: 'relative' }}>
+          <IconSymbol name="bag.fill" size={24} color={colors.text} />
           {totalItems > 0 && (
             <View
               style={{
                 position: 'absolute',
-                top: 0,
-                right: 0,
+                top: -8,
+                right: -8,
                 backgroundColor: colors.primary,
                 borderRadius: 10,
-                minWidth: 20,
+                width: 20,
                 height: 20,
                 justifyContent: 'center',
                 alignItems: 'center',
-                paddingHorizontal: 4,
               }}
             >
               <Text style={{ color: colors.text, fontSize: 12, fontWeight: 'bold' }}>
@@ -134,78 +118,76 @@ export default function ProductsScreen() {
       >
         {products.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-            <IconSymbol name="bag.fill" size={48} color={colors.textSecondary} />
+            <IconSymbol name="bag" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              No products available
+              Nessun prodotto disponibile
             </Text>
           </View>
         ) : (
-          products.map((product) => (
-            <View key={product.id} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
-              {product.photo_url ? (
-                <Image
-                  source={{ uri: product.photo_url }}
-                  style={{
-                    width: '100%',
-                    height: (width - 40) * (9 / 16),
-                    backgroundColor: colors.card,
-                  }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={{
-                    width: '100%',
-                    height: (width - 40) * (9 / 16),
-                    backgroundColor: colors.card,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <IconSymbol name="photo" size={48} color={colors.textSecondary} />
-                  <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
-                    No image
-                  </Text>
-                </View>
-              )}
-              
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+            {products.map((product) => (
+              <View
+                key={product.id}
+                style={{
+                  width: cardWidth,
+                  margin: 6,
+                }}
+              >
+                <View style={[commonStyles.card, { padding: 0, overflow: 'hidden' }]}>
+                  {product.photo_url ? (
+                    <Image
+                      source={{ uri: product.photo_url }}
+                      style={{ width: '100%', height: cardWidth, backgroundColor: colors.border }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: '100%',
+                        height: cardWidth,
+                        backgroundColor: colors.border,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <IconSymbol name="photo" size={48} color={colors.textSecondary} />
+                    </View>
+                  )}
+
+                  <View style={{ padding: 12 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
                       {product.name}
                     </Text>
-                    <Text style={commonStyles.textSecondary}>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]} numberOfLines={2}>
                       {product.description}
                     </Text>
-                  </View>
-                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 20, marginLeft: 12 }]}>
-                    ${product.price}
-                  </Text>
-                </View>
+                    <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                      <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
+                        €{product.price}
+                      </Text>
+                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                        Stock: {product.stock}
+                      </Text>
+                    </View>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                  <Text style={[commonStyles.textSecondary, { fontSize: 14 }]}>
-                    Stock: {product.stock}
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      buttonStyles.primary,
-                      { paddingVertical: 10, paddingHorizontal: 20 },
-                      product.stock <= 0 && { opacity: 0.5 },
-                    ]}
-                    onPress={() => handleAddToCart(product)}
-                    disabled={product.stock <= 0}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={buttonStyles.text}>
-                      {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        buttonStyles.primary,
+                        { paddingVertical: 8 },
+                        product.stock === 0 && { opacity: 0.5 },
+                      ]}
+                      onPress={() => handleAddToCart(product)}
+                      disabled={product.stock === 0}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>
+                        {product.stock === 0 ? 'Esaurito' : 'Aggiungi'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

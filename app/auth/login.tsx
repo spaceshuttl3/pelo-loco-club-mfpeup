@@ -59,6 +59,10 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = () => {
+    router.push('/auth/forgot-password' as any);
+  };
+
   return (
     <SafeAreaView style={[commonStyles.container, { flex: 1 }]} edges={['top']}>
       <KeyboardAvoidingView
@@ -106,7 +110,17 @@ export default function LoginScreen() {
               />
 
               <TouchableOpacity
-                style={[buttonStyles.primary, { marginTop: 8 }]}
+                style={{ marginTop: 8, marginBottom: 16, alignItems: 'flex-end' }}
+                onPress={handleForgotPassword}
+                disabled={loading}
+              >
+                <Text style={{ color: colors.primary, fontSize: 14 }}>
+                  Password dimenticata?
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={buttonStyles.primary}
                 onPress={handleLogin}
                 disabled={loading}
               >

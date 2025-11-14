@@ -1,11 +1,7 @@
 
-import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { supabase } from '@/lib/supabase';
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -16,6 +12,10 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 
 interface Coupon {
   id: string;
@@ -31,8 +31,8 @@ export default function SpinWheelScreen() {
   const { user } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [redeemCode, setRedeemCode] = useState('');
   const [redeemModalVisible, setRedeemModalVisible] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
 
   useEffect(() => {
@@ -54,7 +54,6 @@ export default function SpinWheelScreen() {
         return;
       }
 
-      console.log('Coupons fetched:', data?.length || 0);
       setCoupons(data || []);
     } catch (error) {
       console.error('Error in fetchCoupons:', error);
@@ -63,19 +62,17 @@ export default function SpinWheelScreen() {
     }
   };
 
-  const handleRedeemCoupon = async (coupon: Coupon) => {
-    console.log('RedeemCoupon - Button pressed for:', coupon.coupon_type);
-    
+  const handleRedeemCoupon = (coupon: Coupon) => {
     Alert.alert(
-      'Redeem Coupon',
-      `Redeem ${coupon.coupon_type} (${coupon.discount_value}% off)?`,
+      'Riscatta Coupon',
+      `Vuoi riscattare questo coupon?\n\n${coupon.coupon_type}\nSconto: ${coupon.discount_value}%\n\nMostra questo codice al barbiere:\n${coupon.coupon_code}`,
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Redeem',
+          text: 'Riscatta',
           onPress: async () => {
             try {
               const { error } = await supabase
@@ -83,17 +80,13 @@ export default function SpinWheelScreen() {
                 .update({ status: 'used' })
                 .eq('id', coupon.id);
 
-              if (error) {
-                console.error('Error redeeming coupon:', error);
-                Alert.alert('Error', 'Could not redeem coupon');
-                return;
-              }
+              if (error) throw error;
 
-              Alert.alert('Success', 'Coupon redeemed! Show this to the barber at checkout.');
+              Alert.alert('Successo', 'Coupon riscattato!');
               fetchCoupons();
             } catch (error) {
-              console.error('Error in handleRedeemCoupon:', error);
-              Alert.alert('Error', 'Could not redeem coupon');
+              console.error('Error redeeming coupon:', error);
+              Alert.alert('Errore', 'Impossibile riscattare il coupon');
             }
           },
         },
@@ -102,83 +95,48 @@ export default function SpinWheelScreen() {
   };
 
   const handleRedeemByCode = async () => {
-    if (!couponCode.trim()) {
-      Alert.alert('Error', 'Please enter a coupon code');
+    if (!redeemCode.trim()) {
+      Alert.alert('Errore', 'Inserisci un codice coupon');
       return;
     }
 
     setRedeeming(true);
     try {
-      const searchCode = couponCode.toUpperCase().trim();
-      console.log('Searching for coupon code:', searchCode);
-      
-      // Use ilike for case-insensitive search
-      const { data: couponData, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('coupons')
         .select('*')
-        .ilike('coupon_code', searchCode)
-        .eq('user_id', user?.id)
+        .eq('coupon_code', redeemCode.trim().toUpperCase())
+        .eq('status', 'active')
         .maybeSingle();
 
-      console.log('Coupon search result:', couponData);
-      console.log('Coupon search error:', fetchError);
-
-      if (fetchError) {
-        console.error('Database error:', fetchError);
-        Alert.alert('Error', 'Could not search for coupon. Please try again.');
+      if (error) {
+        console.error('Error finding coupon:', error);
+        Alert.alert('Errore', 'Codice coupon non valido');
         return;
       }
 
-      if (!couponData) {
-        Alert.alert('Invalid Coupon', 'This coupon code does not exist or does not belong to you.');
+      if (!data) {
+        Alert.alert('Errore', 'Codice coupon non valido o già utilizzato');
         return;
       }
 
-      // Check if already used
-      if (couponData.status === 'used') {
-        Alert.alert('Already Used', 'This coupon has already been redeemed.');
-        return;
-      }
-
-      // Check if coupon is expired
-      const expirationDate = new Date(couponData.expiration_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (expirationDate < today) {
-        Alert.alert('Expired', 'This coupon has expired.');
-        return;
-      }
-
-      // Mark coupon as used
       const { error: updateError } = await supabase
         .from('coupons')
-        .update({ status: 'used' })
-        .eq('id', couponData.id);
+        .update({ 
+          user_id: user?.id,
+          status: 'active'
+        })
+        .eq('id', data.id);
 
-      if (updateError) {
-        console.error('Error redeeming coupon:', updateError);
-        Alert.alert('Error', 'Could not redeem coupon. Please try again.');
-        return;
-      }
+      if (updateError) throw updateError;
 
-      Alert.alert(
-        'Success!',
-        `Coupon redeemed: ${couponData.coupon_type} (${couponData.discount_value}% off)`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setRedeemModalVisible(false);
-              setCouponCode('');
-              fetchCoupons();
-            },
-          },
-        ]
-      );
+      Alert.alert('Successo', 'Coupon aggiunto al tuo account!');
+      setRedeemModalVisible(false);
+      setRedeemCode('');
+      fetchCoupons();
     } catch (error) {
-      console.error('Error in handleRedeemByCode:', error);
-      Alert.alert('Error', 'Could not redeem coupon. Please try again.');
+      console.error('Error redeeming by code:', error);
+      Alert.alert('Errore', 'Impossibile riscattare il coupon');
     } finally {
       setRedeeming(false);
     }
@@ -198,91 +156,65 @@ export default function SpinWheelScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity 
-          onPress={() => {
-            console.log('Back button pressed');
-            router.back();
-          }} 
-          style={{ marginRight: 16 }}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="chevron.left" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>My Coupons</Text>
-        <TouchableOpacity
-          onPress={() => {
-            console.log('Redeem coupon button pressed');
-            setRedeemModalVisible(true);
-          }}
-          activeOpacity={0.7}
-        >
+        <Text style={commonStyles.headerTitle}>I Miei Coupon</Text>
+        <TouchableOpacity onPress={() => setRedeemModalVisible(true)}>
           <IconSymbol name="plus.circle.fill" size={28} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
-        <TouchableOpacity
-          style={[buttonStyles.primary, { marginBottom: 24 }]}
-          onPress={() => setRedeemModalVisible(true)}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="ticket.fill" size={20} color={colors.text} style={{ marginRight: 8 }} />
-          <Text style={buttonStyles.text}>Redeem Coupon Code</Text>
-        </TouchableOpacity>
-
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Active Coupons ({activeCoupons.length})
+          Coupon Attivi ({activeCoupons.length})
         </Text>
 
         {activeCoupons.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="gift" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16, textAlign: 'center' }]}>
-              No active coupons available
+              Nessun coupon attivo
             </Text>
-            <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
-              Check back later for special offers!
-            </Text>
+            <TouchableOpacity
+              style={[buttonStyles.primary, { marginTop: 16 }]}
+              onPress={() => setRedeemModalVisible(true)}
+            >
+              <Text style={buttonStyles.text}>Riscatta Codice</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <React.Fragment>
-            {activeCoupons.map((coupon, couponIndex) => (
-              <View key={`active-coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { backgroundColor: colors.primary, marginBottom: 16 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                  <View
-                    style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      backgroundColor: colors.card,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 16,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
-                      {coupon.discount_value}%
-                    </Text>
-                  </View>
+            {activeCoupons.map((coupon, index) => (
+              <View
+                key={`active-${coupon.id}-${index}`}
+                style={[commonStyles.card, { backgroundColor: colors.primary, marginBottom: 16 }]}
+              >
+                <View style={[commonStyles.row, { marginBottom: 12 }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                    <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
+                      {coupon.discount_value}% SCONTO
+                    </Text>
+                    <Text style={[commonStyles.textSecondary, { marginTop: 4 }]}>
                       {coupon.coupon_type}
                     </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Code: {coupon.coupon_code}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
-                    </Text>
                   </View>
+                  <IconSymbol name="gift.fill" size={32} color={colors.text} />
+                </View>
+
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                    Codice: {coupon.coupon_code}
+                  </Text>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                    Scade: {new Date(coupon.expiration_date).toLocaleDateString('it-IT')}
+                  </Text>
                 </View>
 
                 <TouchableOpacity
                   style={[buttonStyles.primary, { backgroundColor: colors.card }]}
                   onPress={() => handleRedeemCoupon(coupon)}
-                  activeOpacity={0.7}
                 >
-                  <Text style={buttonStyles.text}>Redeem Coupon</Text>
+                  <Text style={[buttonStyles.text, { color: colors.text }]}>
+                    Riscatta Coupon
+                  </Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -292,37 +224,35 @@ export default function SpinWheelScreen() {
         {usedCoupons.length > 0 && (
           <>
             <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Used Coupons ({usedCoupons.length})
+              Coupon Utilizzati ({usedCoupons.length})
             </Text>
 
             <React.Fragment>
-              {usedCoupons.map((coupon, couponIndex) => (
-                <View key={`used-coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { opacity: 0.5, marginBottom: 12 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {usedCoupons.map((coupon, index) => (
+                <View
+                  key={`used-${coupon.id}-${index}`}
+                  style={[commonStyles.card, { opacity: 0.6, marginBottom: 12 }]}
+                >
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      {coupon.discount_value}% SCONTO
+                    </Text>
                     <View
                       style={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 25,
-                        backgroundColor: colors.card,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginRight: 12,
+                        backgroundColor: colors.textSecondary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
                       }}
                     >
-                      <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
-                        {coupon.discount_value}%
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                        {coupon.coupon_type}
-                      </Text>
-                      <Text style={commonStyles.textSecondary}>
-                        Used
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        UTILIZZATO
                       </Text>
                     </View>
                   </View>
+                  <Text style={commonStyles.textSecondary}>
+                    {coupon.coupon_type}
+                  </Text>
                 </View>
               ))}
             </React.Fragment>
@@ -330,7 +260,6 @@ export default function SpinWheelScreen() {
         )}
       </ScrollView>
 
-      {/* Redeem Coupon Modal */}
       <Modal
         visible={redeemModalVisible}
         animationType="slide"
@@ -338,48 +267,44 @@ export default function SpinWheelScreen() {
         onRequestClose={() => setRedeemModalVisible(false)}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Redeem Coupon Code
+          <View style={[commonStyles.card, { width: '90%', padding: 24 }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
+              Riscatta Codice Coupon
             </Text>
 
-            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16 }]}>
-              <Text style={[commonStyles.text, { textAlign: 'center' }]}>
-                Enter your coupon code below to redeem your discount
-              </Text>
-            </View>
+            <Text style={[commonStyles.textSecondary, { marginBottom: 16, textAlign: 'center' }]}>
+              Inserisci il codice coupon che hai ricevuto
+            </Text>
 
             <TextInput
-              style={[commonStyles.input, { textTransform: 'uppercase' }]}
-              placeholder="Enter Coupon Code"
+              style={[commonStyles.input, { textAlign: 'center', textTransform: 'uppercase' }]}
+              placeholder="CODICE COUPON"
               placeholderTextColor={colors.textSecondary}
-              value={couponCode}
-              onChangeText={(text) => setCouponCode(text.toUpperCase())}
+              value={redeemCode}
+              onChangeText={setRedeemCode}
               autoCapitalize="characters"
-              autoCorrect={false}
+              editable={!redeeming}
             />
 
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
               <TouchableOpacity
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={handleRedeemByCode}
                 disabled={redeeming}
-                activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
-                  {redeeming ? 'Redeeming...' : 'Redeem'}
+                  {redeeming ? 'Riscatto...' : 'Riscatta'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
                 onPress={() => {
                   setRedeemModalVisible(false);
-                  setCouponCode('');
+                  setRedeemCode('');
                 }}
                 disabled={redeeming}
-                activeOpacity={0.7}
               >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
               </TouchableOpacity>
             </View>
           </View>

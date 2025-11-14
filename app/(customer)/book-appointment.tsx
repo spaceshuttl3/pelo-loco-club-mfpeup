@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { SERVICES } from '@/types';
@@ -52,7 +53,6 @@ export default function BookAppointmentScreen() {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'pay_in_person' | 'online'>('pay_in_person');
   const [loading, setLoading] = useState(false);
   const [loadingBarbers, setLoadingBarbers] = useState(true);
@@ -163,24 +163,20 @@ export default function BookAppointmentScreen() {
 
     const serviceDuration = service.duration;
 
-    // Check if this time slot conflicts with any existing appointment
     for (const appointment of existingAppointments) {
       const appointmentTime = appointment.time;
       const appointmentService = SERVICES.find(s => s.name === appointment.service);
       const appointmentDuration = appointmentService?.duration || 30;
 
-      // Convert times to minutes for easier comparison
       const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
       const slotTimeInMinutes = slotHour * 60 + slotMinute;
 
       const [aptHour, aptMinute] = appointmentTime.split(':').map(Number);
       const aptTimeInMinutes = aptHour * 60 + aptMinute;
 
-      // Check if the new appointment would overlap with existing appointment
       const newAppointmentEnd = slotTimeInMinutes + serviceDuration;
       const existingAppointmentEnd = aptTimeInMinutes + appointmentDuration;
 
-      // Check for overlap
       if (
         (slotTimeInMinutes >= aptTimeInMinutes && slotTimeInMinutes < existingAppointmentEnd) ||
         (newAppointmentEnd > aptTimeInMinutes && newAppointmentEnd <= existingAppointmentEnd) ||
@@ -197,12 +193,12 @@ export default function BookAppointmentScreen() {
     console.log('BookAppointment - Button pressed');
     
     if (!selectedService) {
-      Alert.alert('Error', 'Please select a service');
+      Alert.alert('Errore', 'Seleziona un servizio');
       return;
     }
 
     if (!selectedBarber) {
-      Alert.alert('Error', 'Please select a barber');
+      Alert.alert('Errore', 'Seleziona un barbiere');
       return;
     }
 
@@ -212,7 +208,7 @@ export default function BookAppointmentScreen() {
     today.setHours(0, 0, 0, 0);
 
     if (selectedDate < today) {
-      Alert.alert('Error', 'Please select a future date');
+      Alert.alert('Errore', 'Seleziona una data futura');
       return;
     }
 
@@ -220,15 +216,14 @@ export default function BookAppointmentScreen() {
     const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
     
     if (selectedBarberData && !selectedBarberData.available_days.includes(dayName)) {
-      Alert.alert('Error', `The selected barber is not available on ${dayName}`);
+      Alert.alert('Errore', `Il barbiere selezionato non è disponibile di ${dayName}`);
       return;
     }
 
     const selectedTimeSlot = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     
-    // Check if the selected time slot is available
     if (!isTimeSlotAvailable(selectedTimeSlot)) {
-      Alert.alert('Error', 'This time slot is not available. Please select another time.');
+      Alert.alert('Errore', 'Questo orario non è disponibile. Seleziona un altro orario.');
       return;
     }
 
@@ -251,13 +246,13 @@ export default function BookAppointmentScreen() {
 
       if (error) {
         console.error('Error booking appointment:', error);
-        Alert.alert('Error', 'Could not book appointment. Please try again.');
+        Alert.alert('Errore', 'Impossibile prenotare l\'appuntamento. Riprova.');
         return;
       }
 
       Alert.alert(
-        'Success!',
-        `Your appointment has been booked for ${date.toLocaleDateString()} at ${time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+        'Successo!',
+        `Il tuo appuntamento è stato prenotato per il ${date.toLocaleDateString('it-IT')} alle ${time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
         [
           {
             text: 'OK',
@@ -267,7 +262,7 @@ export default function BookAppointmentScreen() {
       );
     } catch (error) {
       console.error('Error in handleBookAppointment:', error);
-      Alert.alert('Error', 'Could not book appointment. Please try again.');
+      Alert.alert('Errore', 'Impossibile prenotare l\'appuntamento. Riprova.');
     } finally {
       setLoading(false);
     }
@@ -304,12 +299,12 @@ export default function BookAppointmentScreen() {
         >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Book Appointment</Text>
+        <Text style={commonStyles.headerTitle}>Prenota Appuntamento</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>Select Service</Text>
+        <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>Seleziona Servizio</Text>
         {SERVICES.map((service) => (
           <TouchableOpacity
             key={service.id}
@@ -329,7 +324,7 @@ export default function BookAppointmentScreen() {
                 {service.name}
               </Text>
               <Text style={commonStyles.textSecondary}>
-                {service.duration} min • ${service.price}
+                {service.duration} min • €{service.price}
               </Text>
             </View>
             {selectedService === service.id && (
@@ -338,10 +333,10 @@ export default function BookAppointmentScreen() {
           </TouchableOpacity>
         ))}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Barber</Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Barbiere</Text>
         {allBarbers.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
-            <Text style={commonStyles.textSecondary}>No barbers available</Text>
+            <Text style={commonStyles.textSecondary}>Nessun barbiere disponibile</Text>
           </View>
         ) : (
           allBarbers.map((barber) => (
@@ -363,10 +358,10 @@ export default function BookAppointmentScreen() {
                   {barber.name}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Available: {barber.available_days.join(', ')}
+                  Disponibile: {barber.available_days.join(', ')}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Hours: {barber.available_hours.start} - {barber.available_hours.end}
+                  Orari: {barber.available_hours.start} - {barber.available_hours.end}
                 </Text>
               </View>
               {selectedBarber === barber.id && (
@@ -376,7 +371,7 @@ export default function BookAppointmentScreen() {
           ))
         )}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Date</Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Data</Text>
         
         <TouchableOpacity
           style={[commonStyles.card, commonStyles.row]}
@@ -388,27 +383,45 @@ export default function BookAppointmentScreen() {
         >
           <IconSymbol name="calendar" size={24} color={colors.primary} />
           <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-            {date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {date.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </Text>
         </TouchableOpacity>
 
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (selectedDate) {
-                console.log('Date selected:', selectedDate);
-                setDate(selectedDate);
-              }
-            }}
-            minimumDate={new Date()}
-          />
-        )}
+        <Modal
+          visible={showDatePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <View style={[commonStyles.card, { width: '90%', padding: 20 }]}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
+                Seleziona Data
+              </Text>
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="spinner"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) {
+                    console.log('Date selected:', selectedDate);
+                    setDate(selectedDate);
+                  }
+                }}
+                minimumDate={new Date()}
+                textColor={colors.text}
+              />
+              <TouchableOpacity
+                style={[buttonStyles.primary, { marginTop: 16 }]}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={buttonStyles.text}>Conferma</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Select Time</Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Orario</Text>
         
         {availableTimeSlots.length > 0 ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
@@ -439,7 +452,7 @@ export default function BookAppointmentScreen() {
                       console.log('Time slot selected:', slot);
                       setTime(slotTime);
                     } else {
-                      Alert.alert('Unavailable', 'This time slot is already booked');
+                      Alert.alert('Non disponibile', 'Questo orario è già prenotato');
                     }
                   }}
                   disabled={!isAvailable}
@@ -453,37 +466,12 @@ export default function BookAppointmentScreen() {
             })}
           </View>
         ) : (
-          <TouchableOpacity
-            style={[commonStyles.card, commonStyles.row]}
-            onPress={() => {
-              console.log('Time picker opened');
-              setShowTimePicker(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="clock" size={24} color={colors.primary} />
-            <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-              {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          </TouchableOpacity>
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+            <Text style={commonStyles.textSecondary}>Seleziona prima un barbiere</Text>
+          </View>
         )}
 
-        {showTimePicker && (
-          <DateTimePicker
-            value={time}
-            mode="time"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedTime) => {
-              setShowTimePicker(Platform.OS === 'ios');
-              if (selectedTime) {
-                console.log('Time selected:', selectedTime);
-                setTime(selectedTime);
-              }
-            }}
-          />
-        )}
-
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Payment Method</Text>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Metodo di Pagamento</Text>
         
         <TouchableOpacity
           style={[
@@ -499,10 +487,10 @@ export default function BookAppointmentScreen() {
         >
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-              Pay in Person
+              Paga di Persona
             </Text>
             <Text style={commonStyles.textSecondary}>
-              Pay at the shop
+              Paga al negozio
             </Text>
           </View>
           {paymentMode === 'pay_in_person' && (
@@ -524,10 +512,10 @@ export default function BookAppointmentScreen() {
         >
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-              Pay Online
+              Paga Online
             </Text>
             <Text style={commonStyles.textSecondary}>
-              Pay now with card
+              Paga ora con carta
             </Text>
           </View>
           {paymentMode === 'online' && (
@@ -542,7 +530,7 @@ export default function BookAppointmentScreen() {
           activeOpacity={0.7}
         >
           <Text style={buttonStyles.text}>
-            {loading ? 'Booking...' : 'Book Appointment'}
+            {loading ? 'Prenotazione...' : 'Prenota Appuntamento'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
