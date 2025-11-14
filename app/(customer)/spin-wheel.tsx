@@ -245,46 +245,48 @@ export default function SpinWheelScreen() {
             </Text>
           </View>
         ) : (
-          activeCoupons.map((coupon) => (
-            <View key={coupon.id} style={[commonStyles.card, { backgroundColor: colors.primary, marginBottom: 16 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <View
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: colors.card,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: 16,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
-                    {coupon.discount_value}%
-                  </Text>
+          <React.Fragment>
+            {activeCoupons.map((coupon, couponIndex) => (
+              <View key={`active-coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { backgroundColor: colors.primary, marginBottom: 16 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: colors.card,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 16,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
+                      {coupon.discount_value}%
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                      {coupon.coupon_type}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Code: {coupon.coupon_code}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                    {coupon.coupon_type}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Code: {coupon.coupon_code}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
 
-              <TouchableOpacity
-                style={[buttonStyles.primary, { backgroundColor: colors.card }]}
-                onPress={() => handleRedeemCoupon(coupon)}
-                activeOpacity={0.7}
-              >
-                <Text style={buttonStyles.text}>Redeem Coupon</Text>
-              </TouchableOpacity>
-            </View>
-          ))
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { backgroundColor: colors.card }]}
+                  onPress={() => handleRedeemCoupon(coupon)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={buttonStyles.text}>Redeem Coupon</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </React.Fragment>
         )}
 
         {usedCoupons.length > 0 && (
@@ -293,35 +295,37 @@ export default function SpinWheelScreen() {
               Used Coupons ({usedCoupons.length})
             </Text>
 
-            {usedCoupons.map((coupon) => (
-              <View key={coupon.id} style={[commonStyles.card, { opacity: 0.5, marginBottom: 12 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      backgroundColor: colors.card,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
-                      {coupon.discount_value}%
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                      {coupon.coupon_type}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Used
-                    </Text>
+            <React.Fragment>
+              {usedCoupons.map((coupon, couponIndex) => (
+                <View key={`used-coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { opacity: 0.5, marginBottom: 12 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 25,
+                        backgroundColor: colors.card,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
+                        {coupon.discount_value}%
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                        {coupon.coupon_type}
+                      </Text>
+                      <Text style={commonStyles.textSecondary}>
+                        Used
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </React.Fragment>
           </>
         )}
       </ScrollView>

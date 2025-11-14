@@ -385,6 +385,9 @@ export default function CouponsScreen() {
               setCouponText('');
               setDiscountValue('');
               setIsSpinWheel(false);
+              const defaultExpiration = new Date();
+              defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+              setExpirationDate(defaultExpiration);
               setModalVisible(true);
             }}
             activeOpacity={0.7}
@@ -409,88 +412,93 @@ export default function CouponsScreen() {
             </Text>
           </View>
         ) : (
-          configs.map((config) => (
-            <View key={config.id} style={[commonStyles.card, { marginBottom: 16 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <View
-                  style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 25,
-                    backgroundColor: colors.primary,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: 12,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
-                    {config.discount_value}%
-                  </Text>
+          <React.Fragment>
+            {configs.map((config, configIndex) => (
+              <View key={`config-${config.id}-${configIndex}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <View
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
+                      backgroundColor: colors.primary,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
+                      {config.discount_value}%
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                      {config.coupon_text}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      {config.is_spin_wheel ? 'Spin Wheel Coupon' : 'Direct Coupon'}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                      backgroundColor: config.is_active ? colors.primary : colors.card,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      {config.is_active ? 'Active' : 'Inactive'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                    {config.coupon_text}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    {config.is_spin_wheel ? 'Spin Wheel Coupon' : 'Direct Coupon'}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 12,
-                    backgroundColor: config.is_active ? colors.primary : colors.card,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                    {config.is_active ? 'Active' : 'Inactive'}
-                  </Text>
-                </View>
-              </View>
 
-              <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
+                      onPress={() => {
+                        console.log('Send to users button pressed for config:', config.id);
+                        setSelectedConfig(config);
+                        setSelectedUsers([]);
+                        const defaultExpiration = new Date();
+                        defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+                        setExpirationDate(defaultExpiration);
+                        setSendModalVisible(true);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={buttonStyles.text}>Send to Users</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.card }]}
+                      onPress={() => {
+                        console.log('Edit button pressed for config:', config.id);
+                        setEditingConfig(config);
+                        setCouponText(config.coupon_text);
+                        setDiscountValue(config.discount_value.toString());
+                        setIsSpinWheel(config.is_spin_wheel);
+                        const defaultExpiration = new Date();
+                        defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+                        setExpirationDate(defaultExpiration);
+                        setModalVisible(true);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <IconSymbol name="pencil" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
-                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
-                    onPress={() => {
-                      console.log('Send to users button pressed for config:', config.id);
-                      setSelectedConfig(config);
-                      setSelectedUsers([]);
-                      const defaultExpiration = new Date();
-                      defaultExpiration.setDate(defaultExpiration.getDate() + 30);
-                      setExpirationDate(defaultExpiration);
-                      setSendModalVisible(true);
-                    }}
+                    style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 10 }]}
+                    onPress={() => handleDeleteConfig(config)}
                     activeOpacity={0.7}
                   >
-                    <Text style={buttonStyles.text}>Send to Users</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.card }]}
-                    onPress={() => {
-                      console.log('Edit button pressed for config:', config.id);
-                      setEditingConfig(config);
-                      setCouponText(config.coupon_text);
-                      setDiscountValue(config.discount_value.toString());
-                      setIsSpinWheel(config.is_spin_wheel);
-                      setModalVisible(true);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <IconSymbol name="pencil" size={20} color={colors.text} />
+                    <Text style={buttonStyles.text}>Delete Config</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 10 }]}
-                  onPress={() => handleDeleteConfig(config)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={buttonStyles.text}>Delete Config</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          ))
+            ))}
+          </React.Fragment>
         )}
       </ScrollView>
 
@@ -523,6 +531,32 @@ export default function CouponsScreen() {
               onChangeText={setDiscountValue}
               keyboardType="number-pad"
             />
+
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Default Expiration</Text>
+              <Text style={[commonStyles.text, { color: colors.primary }]}>
+                {expirationDate.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={expirationDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    setExpirationDate(selectedDate);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
+            )}
 
             <View style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}>
               <Text style={commonStyles.text}>Link to Spin the Wheel</Text>
@@ -635,9 +669,9 @@ export default function CouponsScreen() {
                 </TouchableOpacity>
 
                 <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
-                  {users.map((user) => (
+                  {users.map((user, userIndex) => (
                     <TouchableOpacity
-                      key={user.id}
+                      key={`user-${user.id}-${userIndex}`}
                       style={[
                         commonStyles.card,
                         commonStyles.row,
@@ -722,48 +756,50 @@ export default function CouponsScreen() {
                   </Text>
                 </View>
               ) : (
-                issuedCoupons.map((coupon) => (
-                  <View key={coupon.id} style={[commonStyles.card, { marginBottom: 12 }]}>
-                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                          {coupon.coupon_type}
-                        </Text>
-                        <Text style={commonStyles.textSecondary}>
-                          {coupon.user?.name} - {coupon.user?.email}
-                        </Text>
+                <React.Fragment>
+                  {issuedCoupons.map((coupon, couponIndex) => (
+                    <View key={`coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { marginBottom: 12 }]}>
+                      <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                            {coupon.coupon_type}
+                          </Text>
+                          <Text style={commonStyles.textSecondary}>
+                            {coupon.user?.name} - {coupon.user?.email}
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 4,
+                            borderRadius: 12,
+                            backgroundColor: coupon.status === 'active' ? colors.primary : colors.card,
+                          }}
+                        >
+                          <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                            {coupon.status.toUpperCase()}
+                          </Text>
+                        </View>
                       </View>
-                      <View
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                          backgroundColor: coupon.status === 'active' ? colors.primary : colors.card,
-                        }}
+                      <Text style={commonStyles.textSecondary}>
+                        Code: {coupon.coupon_code}
+                      </Text>
+                      <Text style={commonStyles.textSecondary}>
+                        Discount: {coupon.discount_value}%
+                      </Text>
+                      <Text style={commonStyles.textSecondary}>
+                        Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
+                      </Text>
+                      <TouchableOpacity
+                        style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 8, marginTop: 8 }]}
+                        onPress={() => handleDeleteCoupon(coupon)}
+                        activeOpacity={0.7}
                       >
-                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                          {coupon.status.toUpperCase()}
-                        </Text>
-                      </View>
+                        <Text style={[buttonStyles.text, { fontSize: 14 }]}>Delete</Text>
+                      </TouchableOpacity>
                     </View>
-                    <Text style={commonStyles.textSecondary}>
-                      Code: {coupon.coupon_code}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Discount: {coupon.discount_value}%
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
-                    </Text>
-                    <TouchableOpacity
-                      style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 8, marginTop: 8 }]}
-                      onPress={() => handleDeleteCoupon(coupon)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
+                  ))}
+                </React.Fragment>
               )}
             </ScrollView>
           </View>

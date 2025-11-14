@@ -94,14 +94,15 @@ export default function FloatingTabBar({
       {Platform.OS === 'ios' ? (
         <GlassView
           glassEffectStyle="regular"
-          tintColor="rgba(18, 18, 18, 0.5)"
+          tintColor="rgba(18, 18, 18, 0.6)"
+          isInteractive={true}
           style={[
             styles.tabBar,
             {
               width: containerWidth,
               borderRadius,
               borderWidth: 0.5,
-              borderColor: 'rgba(255, 255, 255, 0.15)',
+              borderColor: 'rgba(255, 255, 255, 0.18)',
               overflow: 'hidden',
               backgroundColor: 'transparent',
             },
@@ -112,7 +113,7 @@ export default function FloatingTabBar({
               styles.indicator,
               indicatorStyle,
               {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
                 borderRadius: borderRadius - 10,
               },
             ]}
@@ -122,7 +123,7 @@ export default function FloatingTabBar({
             const isActive = pathname.includes(tab.name);
             return (
               <TouchableOpacity
-                key={`${tab.name}-${index}`}
+                key={`tab-${tab.name}-${index}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
@@ -175,7 +176,7 @@ export default function FloatingTabBar({
             const isActive = pathname.includes(tab.name);
             return (
               <TouchableOpacity
-                key={`${tab.name}-${index}`}
+                key={`tab-${tab.name}-${index}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
@@ -216,28 +217,28 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 15,
+      height: 20,
     },
-    shadowOpacity: 0.6,
-    shadowRadius: 25,
-    elevation: 20,
+    shadowOpacity: 0.7,
+    shadowRadius: 30,
+    elevation: 25,
   },
   indicator: {
     position: 'absolute',
-    height: '80%',
-    top: '10%',
-    left: 8,
+    height: '75%',
+    top: '12.5%',
+    left: 10,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     zIndex: 2,
   },
   label: {
