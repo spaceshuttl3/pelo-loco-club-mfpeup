@@ -56,27 +56,21 @@ export default function FloatingTabBar({
     }
   };
 
-  // Find the active tab index based on exact route matching
   React.useEffect(() => {
     console.log('FloatingTabBar - Current pathname:', pathname);
     
-    // Find exact match first
     let index = tabs.findIndex((tab) => {
-      // Normalize routes for comparison
       const normalizedRoute = tab.route.replace(/^\//, '');
       const normalizedPathname = pathname.replace(/^\//, '');
       
-      // Check for exact match
       if (normalizedPathname === normalizedRoute) {
         return true;
       }
       
-      // Check if pathname starts with the route (for nested routes)
       if (normalizedPathname.startsWith(normalizedRoute + '/')) {
         return true;
       }
       
-      // Special case for index routes
       if (tab.route === '/(admin)' && normalizedPathname === '(admin)') {
         return true;
       }
@@ -87,12 +81,10 @@ export default function FloatingTabBar({
       return false;
     });
     
-    // If no exact match, try to match by tab name
     if (index === -1) {
       index = tabs.findIndex((tab) => pathname.includes(tab.name));
     }
     
-    // Default to first tab if still no match
     if (index === -1) {
       index = 0;
     }
@@ -122,22 +114,18 @@ export default function FloatingTabBar({
     };
   });
 
-  // Determine active tab for styling
   const getIsActive = (tab: TabBarItem) => {
     const normalizedRoute = tab.route.replace(/^\//, '');
     const normalizedPathname = pathname.replace(/^\//, '');
     
-    // Check for exact match
     if (normalizedPathname === normalizedRoute) {
       return true;
     }
     
-    // Check if pathname starts with the route
     if (normalizedPathname.startsWith(normalizedRoute + '/')) {
       return true;
     }
     
-    // Special case for index routes
     if (tab.route === '/(admin)' && normalizedPathname === '(admin)') {
       return true;
     }
@@ -145,7 +133,6 @@ export default function FloatingTabBar({
       return true;
     }
     
-    // Fallback to name matching
     return pathname.includes(tab.name);
   };
 
@@ -299,8 +286,8 @@ const styles = StyleSheet.create({
   },
   indicator: {
     position: 'absolute',
-    height: '100%',
-    top: 0,
+    height: '120%',
+    top: 2,
     left: 0,
   },
   tab: {

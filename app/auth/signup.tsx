@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function SignupScreen() {
@@ -22,7 +22,6 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [birthday, setBirthday] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,80 +34,74 @@ export default function SignupScreen() {
   };
 
   const validatePhone = (phone: string) => {
-    // Basic phone validation - at least 10 digits
-    const phoneRegex = /^\d{10,}$/;
-    return phoneRegex.test(phone.replace(/\D/g, ''));
+    const phoneRegex = /^[0-9]{10,}$/;
+    return phoneRegex.test(phone.replace(/[\s-]/g, ''));
   };
 
   const checkDuplicates = async (email: string, phone: string) => {
-    // Check for duplicate email
-    const { data: emailData, error: emailError } = await supabase
+    const { data: emailCheck } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
-    if (emailData) {
-      throw new Error('An account with this email already exists');
+    if (emailCheck) {
+      return { duplicate: true, field: 'email' };
     }
 
-    // Check for duplicate phone
-    const { data: phoneData, error: phoneError } = await supabase
+    const { data: phoneCheck } = await supabase
       .from('users')
       .select('id')
       .eq('phone', phone)
-      .single();
+      .maybeSingle();
 
-    if (phoneData) {
-      throw new Error('An account with this phone number already exists');
+    if (phoneCheck) {
+      return { duplicate: true, field: 'phone' };
     }
+
+    return { duplicate: false };
   };
 
   const handleSignup = async () => {
-    // Validate all fields are filled
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'All fields are mandatory. Please fill in all fields.');
+    if (!name || !email || !phone || !password) {
+      Alert.alert('Errore', 'Compila tutti i campi');
       return;
     }
 
-    // Validate email format
     if (!validateEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      Alert.alert('Errore', 'Inserisci un indirizzo email valido');
       return;
     }
 
-    // Validate phone format
     if (!validatePhone(phone)) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number (at least 10 digits)');
+      Alert.alert('Errore', 'Inserisci un numero di telefono valido (almeno 10 cifre)');
       return;
     }
 
-    // Validate password length
     if (password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long');
-      return;
-    }
-
-    // Validate password match
-    if (password !== confirmPassword) {
-      Alert.alert('Password Mismatch', 'Passwords do not match');
+      Alert.alert('Errore', 'La password deve essere di almeno 6 caratteri');
       return;
     }
 
     setLoading(true);
     try {
-      // Check for duplicates
-      await checkDuplicates(email, phone);
+      const duplicateCheck = await checkDuplicates(email, phone);
+      if (duplicateCheck.duplicate) {
+        Alert.alert(
+          'Errore',
+          duplicateCheck.field === 'email'
+            ? 'Questa email è già registrata'
+            : 'Questo numero di telefono è già registrato'
+        );
+        setLoading(false);
+        return;
+      }
 
-      // Format birthday as YYYY-MM-DD
-      const birthdayStr = birthday.toISOString().split('T')[0];
-
-      // Sign up with birthday in metadata
-      await signUp(email, password, name, phone, birthdayStr);
+      await signUp(email, password, name, phone, birthday.toISOString().split('T')[0], 'customer');
       
       Alert.alert(
-        'Success!',
-        'Account created successfully!\n\nPlease check your email and click the verification link to activate your account.\n\nAfter verification, you can sign in.',
+        'Registrazione Riuscita!',
+        'Controlla la tua email per verificare il tuo account prima di accedere.\n\nSe non vedi l\'email, controlla la cartella spam.',
         [
           {
             text: 'OK',
@@ -118,17 +111,7 @@ export default function SignupScreen() {
       );
     } catch (error: any) {
       console.error('Signup error:', error);
-      
-      let errorMessage = error.message || 'Could not create account';
-      
-      // Handle specific error cases
-      if (error.message?.includes('already registered')) {
-        errorMessage = 'This email is already registered. Please sign in instead.';
-      } else if (error.message?.includes('duplicate')) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Signup Failed', errorMessage);
+      Alert.alert('Errore', error.message || 'Impossibile creare l\'account. Riprova.');
     } finally {
       setLoading(false);
     }
@@ -142,116 +125,102 @@ export default function SignupScreen() {
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           <View style={[commonStyles.content, { paddingTop: 40 }]}>
-            <View style={{ width: '100%', maxWidth: 400 }}>
-              <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 8 }]}>
-                Join Pelo Loco Club
+            <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 16 }]}>
+              Pelo Loco Club
+            </Text>
+
+            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 40 }]}>
+              Crea il tuo account
+            </Text>
+
+            <TextInput
+              style={commonStyles.input}
+              placeholder="Nome Completo"
+              placeholderTextColor={colors.textSecondary}
+              value={name}
+              onChangeText={setName}
+              editable={!loading}
+            />
+
+            <TextInput
+              style={commonStyles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.textSecondary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!loading}
+            />
+
+            <TextInput
+              style={commonStyles.input}
+              placeholder="Telefono"
+              placeholderTextColor={colors.textSecondary}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              editable={!loading}
+            />
+
+            <TextInput
+              style={commonStyles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
+
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+              onPress={() => setShowDatePicker(true)}
+              disabled={loading}
+            >
+              <Text style={commonStyles.text}>Data di Nascita</Text>
+              <Text style={[commonStyles.text, { color: colors.primary }]}>
+                {birthday.toLocaleDateString('it-IT')}
               </Text>
-              <Text style={[commonStyles.textSecondary, { textAlign: 'center', marginBottom: 30 }]}>
-                Create your account
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={birthday}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    setBirthday(selectedDate);
+                  }
+                }}
+                maximumDate={new Date()}
+              />
+            )}
+
+            <TouchableOpacity
+              style={[buttonStyles.primary, { marginTop: 8 }]}
+              onPress={handleSignup}
+              disabled={loading}
+            >
+              <Text style={buttonStyles.text}>
+                {loading ? 'Registrazione...' : 'Registrati'}
               </Text>
+            </TouchableOpacity>
 
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Full Name *"
-                placeholderTextColor={colors.textSecondary}
-                value={name}
-                onChangeText={setName}
-                editable={!loading}
-              />
-
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Email *"
-                placeholderTextColor={colors.textSecondary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!loading}
-              />
-
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Phone Number *"
-                placeholderTextColor={colors.textSecondary}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                editable={!loading}
-              />
-
-              <TouchableOpacity
-                style={[commonStyles.input, { justifyContent: 'center' }]}
-                onPress={() => setShowDatePicker(true)}
-                disabled={loading}
-              >
-                <Text style={{ color: birthday ? colors.text : colors.textSecondary }}>
-                  {birthday ? `Birthday: ${birthday.toLocaleDateString()}` : 'Date of Birth *'}
+            <TouchableOpacity
+              style={{ marginTop: 20, alignItems: 'center' }}
+              onPress={() => router.back()}
+              disabled={loading}
+            >
+              <Text style={commonStyles.textSecondary}>
+                Hai già un account?{' '}
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>
+                  Accedi
                 </Text>
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={birthday}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) {
-                      setBirthday(selectedDate);
-                    }
-                  }}
-                  maximumDate={new Date()}
-                />
-              )}
-
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Password *"
-                placeholderTextColor={colors.textSecondary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-              />
-
-              <TextInput
-                style={commonStyles.input}
-                placeholder="Confirm Password *"
-                placeholderTextColor={colors.textSecondary}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                editable={!loading}
-              />
-
-              <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 16 }]}>
-                * All fields are mandatory
               </Text>
-
-              <TouchableOpacity
-                style={buttonStyles.primary}
-                onPress={handleSignup}
-                disabled={loading}
-              >
-                <Text style={buttonStyles.text}>
-                  {loading ? 'Creating Account...' : 'Sign Up'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{ marginTop: 20, alignItems: 'center' }}
-                onPress={() => router.back()}
-                disabled={loading}
-              >
-                <Text style={commonStyles.textSecondary}>
-                  Already have an account?{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '600' }}>
-                    Sign In
-                  </Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -25,7 +25,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Errore', 'Compila tutti i campi');
       return;
     }
 
@@ -36,18 +36,18 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('Login error:', error);
       
-      let errorTitle = 'Login Failed';
-      let errorMessage = 'Invalid credentials';
+      let errorTitle = 'Accesso Fallito';
+      let errorMessage = 'Credenziali non valide';
       
       if (error.message) {
         if (error.message.includes('Email not confirmed')) {
-          errorTitle = 'Email Not Verified';
-          errorMessage = 'Please check your email and click the verification link before signing in.\n\nIf you don\'t see the email, check your spam folder.';
+          errorTitle = 'Email Non Verificata';
+          errorMessage = 'Controlla la tua email e clicca sul link di verifica prima di accedere.\n\nSe non vedi l\'email, controlla la cartella spam.';
         } else if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please try again.';
+          errorMessage = 'Email o password non validi. Riprova.';
         } else if (error.message.includes('Email link is invalid or has expired')) {
-          errorTitle = 'Verification Link Expired';
-          errorMessage = 'Your verification link has expired. Please sign up again to receive a new verification email.';
+          errorTitle = 'Link di Verifica Scaduto';
+          errorMessage = 'Il tuo link di verifica è scaduto. Registrati di nuovo per ricevere una nuova email di verifica.';
         } else {
           errorMessage = error.message;
         }
@@ -81,7 +81,7 @@ export default function LoginScreen() {
               </View>
 
               <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 40 }]}>
-                Welcome Back
+                Bentornato
               </Text>
 
               <TextInput
@@ -111,7 +111,7 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <Text style={buttonStyles.text}>
-                  {loading ? 'Signing In...' : 'Sign In'}
+                  {loading ? 'Accesso...' : 'Accedi'}
                 </Text>
               </TouchableOpacity>
 
@@ -121,9 +121,9 @@ export default function LoginScreen() {
                 disabled={loading}
               >
                 <Text style={commonStyles.textSecondary}>
-                  Don&apos;t have an account?{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '600' }}>
-                    Sign Up
+                  Non hai un account?{' '}
+                  <Text style={{ color: colors.primary, fontWeight: '600' }]}>
+                    Registrati
                   </Text>
                 </Text>
               </TouchableOpacity>

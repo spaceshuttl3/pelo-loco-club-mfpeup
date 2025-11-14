@@ -19,28 +19,28 @@ export default function CustomerHomeScreen() {
   const quickActions = [
     {
       id: 'book-appointment',
-      title: 'Book Appointment',
+      title: 'Prenota',
       icon: 'calendar.badge.plus',
       color: colors.primary,
       route: '/(customer)/book-appointment',
     },
     {
       id: 'redeem-coupon',
-      title: 'Redeem Coupon',
+      title: 'Coupon',
       icon: 'gift.fill',
       color: colors.accent,
       route: '/(customer)/spin-wheel',
     },
     {
       id: 'shop-products',
-      title: 'Shop Products',
+      title: 'Prodotti',
       icon: 'bag.fill',
       color: colors.secondary,
       route: '/(customer)/products',
     },
     {
       id: 'my-bookings',
-      title: 'My Bookings',
+      title: 'Prenotazioni',
       icon: 'list.bullet',
       color: colors.primary,
       route: '/(customer)/bookings',
@@ -48,10 +48,10 @@ export default function CustomerHomeScreen() {
   ];
 
   const services = [
-    { id: 'service-1', name: 'Haircut', price: '$25', duration: '30 min' },
-    { id: 'service-2', name: 'Beard Trim', price: '$15', duration: '20 min' },
-    { id: 'service-3', name: 'Haircut + Beard', price: '$35', duration: '45 min' },
-    { id: 'service-4', name: 'Hot Towel Shave', price: '$30', duration: '30 min' },
+    { id: 'service-1', name: 'Taglio Capelli', price: '€25', duration: '30 min' },
+    { id: 'service-2', name: 'Barba', price: '€15', duration: '20 min' },
+    { id: 'service-3', name: 'Taglio + Barba', price: '€35', duration: '45 min' },
+    { id: 'service-4', name: 'Rasatura', price: '€30', duration: '30 min' },
   ];
 
   return (
@@ -59,29 +59,29 @@ export default function CustomerHomeScreen() {
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={{ marginBottom: 30, marginTop: 20 }}>
           <Text style={[commonStyles.title, { fontSize: 32 }]}>
-            Welcome back,
+            Bentornato,
           </Text>
           <Text style={[commonStyles.title, { fontSize: 32, color: colors.primary }]}>
-            {user?.name?.split(' ')[0] || 'Guest'}!
+            {user?.name?.split(' ')[0] || 'Ospite'}!
           </Text>
           <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
-            Ready for your next fresh cut?
+            Pronto per il tuo prossimo taglio?
           </Text>
         </View>
 
         <View style={{ marginBottom: 30 }}>
           <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20 }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
-              Premium Barbershop
+              Barbiere Premium
             </Text>
             <Text style={commonStyles.textSecondary}>
-              Expert cuts, classic style, modern vibes
+              Tagli esperti, stile classico, vibrazioni moderne
             </Text>
           </View>
         </View>
 
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Quick Actions
+          Azioni Rapide
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
@@ -121,7 +121,7 @@ export default function CustomerHomeScreen() {
 
         <View style={{ marginTop: 30 }}>
           <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-            Our Services
+            I Nostri Servizi
           </Text>
           {services.map((service) => (
             <View key={service.id} style={[commonStyles.card, commonStyles.row]}>
