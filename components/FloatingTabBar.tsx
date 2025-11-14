@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
   },
   indicator: {
     position: 'absolute',
-    height: '80%',
-    top: '10%',
+    height: '100%',
+    top: 0,
     left: 0,
   },
   tab: {
