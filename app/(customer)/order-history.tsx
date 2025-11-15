@@ -69,6 +69,7 @@ export default function OrderHistoryScreen() {
 
   const pendingOrders = orders.filter(o => o.payment_status === 'pending');
   const completedOrders = orders.filter(o => o.payment_status === 'paid');
+  const cancelledOrders = orders.filter(o => o.payment_status === 'cancelled');
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -116,13 +117,13 @@ export default function OrderHistoryScreen() {
 
                   <View style={{ marginBottom: 12 }}>
                     <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
-                      Totale: €{order.total_price}
+                      💰 Totale: €{order.total_price}
                     </Text>
                     <Text style={commonStyles.textSecondary}>
-                      Modalità: {order.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Online'}
+                      💳 Modalità: {order.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Online'}
                     </Text>
                     <Text style={commonStyles.textSecondary}>
-                      Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
+                      📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
                       {new Date(order.created_at || '').toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
@@ -178,10 +179,67 @@ export default function OrderHistoryScreen() {
                   </View>
 
                   <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
-                    Totale: €{order.total_price}
+                    💰 Totale: €{order.total_price}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                  </Text>
+
+                  {order.items && Array.isArray(order.items) && (
+                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                        Articoli:
+                      </Text>
+                      {order.items.map((item: any, itemIndex: number) => (
+                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={commonStyles.textSecondary}>
+                            {item.name} x {item.quantity}
+                          </Text>
+                          <Text style={commonStyles.textSecondary}>
+                            €{(item.price * item.quantity).toFixed(2)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </React.Fragment>
+          </>
+        )}
+
+        {cancelledOrders.length > 0 && (
+          <>
+            <Text style={[commonStyles.subtitle, { marginTop: (pendingOrders.length > 0 || completedOrders.length > 0) ? 30 : 0, marginBottom: 16 }]}>
+              Ordini Annullati ({cancelledOrders.length})
+            </Text>
+
+            <React.Fragment>
+              {cancelledOrders.map((order, index) => (
+                <View key={`cancelled-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.6, marginBottom: 12 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      Ordine #{order.id.substring(0, 8)}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: colors.error,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        ANNULLATO
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
+                    💰 Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
                   </Text>
 
                   {order.items && Array.isArray(order.items) && (

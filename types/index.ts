@@ -41,7 +41,7 @@ export interface Order {
   items: OrderItem[];
   total_price: number;
   payment_mode: 'pay_in_person' | 'online';
-  payment_status: 'pending' | 'paid';
+  payment_status: 'pending' | 'paid' | 'cancelled';
   created_at?: string;
   user?: User;
 }

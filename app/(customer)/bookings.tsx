@@ -105,9 +105,19 @@ export default function BookingsScreen() {
   };
 
   const canModifyAppointment = (appointment: Appointment): { canModify: boolean; reason?: string } => {
-    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
+    // Create a proper Date object from the appointment date and time
+    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}:00`);
     const now = new Date();
-    const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    // Calculate the difference in milliseconds
+    const timeDifference = appointmentDateTime.getTime() - now.getTime();
+    
+    // Convert to hours
+    const hoursUntilAppointment = timeDifference / (1000 * 60 * 60);
+
+    console.log('Appointment date/time:', appointmentDateTime);
+    console.log('Current date/time:', now);
+    console.log('Hours until appointment:', hoursUntilAppointment);
 
     if (hoursUntilAppointment < 24) {
       return {
@@ -296,13 +306,25 @@ export default function BookingsScreen() {
     );
   }
 
-  const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === 'booked' && new Date(apt.date) >= new Date()
-  );
+  // Filter upcoming appointments - only booked appointments that are in the future
+  const upcomingAppointments = appointments.filter((apt) => {
+    if (apt.status !== 'booked') return false;
+    
+    const appointmentDateTime = new Date(`${apt.date}T${apt.time}:00`);
+    const now = new Date();
+    
+    return appointmentDateTime >= now;
+  });
 
-  const pastAppointments = appointments.filter(
-    (apt) => apt.status !== 'booked' || new Date(apt.date) < new Date()
-  );
+  // Past appointments include completed, cancelled, or past booked appointments
+  const pastAppointments = appointments.filter((apt) => {
+    if (apt.status === 'completed' || apt.status === 'cancelled') return true;
+    
+    const appointmentDateTime = new Date(`${apt.date}T${apt.time}:00`);
+    const now = new Date();
+    
+    return appointmentDateTime < now;
+  });
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>

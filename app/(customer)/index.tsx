@@ -69,7 +69,7 @@ export default function CustomerHomeScreen() {
           </Text>
         </View>
 
-        <Text style={[commonStyles.textSecondary, { marginTop: 45 }]}>
+        <Text style={[commonStyles.textSecondary, { marginTop: -25 }]}>
           <Text style={[commonStyles.subtitle, { marginBottom: 80 }]}>
             
           </Text>

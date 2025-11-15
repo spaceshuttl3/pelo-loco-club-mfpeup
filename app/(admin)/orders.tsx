@@ -26,11 +26,17 @@ export default function OrdersScreen() {
     try {
       console.log('Fetching orders...');
       
+      // Fetch orders with user details using a proper join
       const { data, error } = await supabase
         .from('orders')
         .select(`
           *,
-          user:users!orders_user_id_fkey(id, name, email, phone)
+          users!orders_user_id_fkey (
+            id,
+            name,
+            email,
+            phone
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -41,7 +47,20 @@ export default function OrdersScreen() {
 
       console.log('Orders fetched:', data?.length || 0);
       console.log('Sample order with user:', data?.[0]);
-      setOrders(data || []);
+      
+      // Transform the data to match our Order type
+      const transformedOrders = (data || []).map(order => ({
+        ...order,
+        user: order.users ? {
+          id: order.users.id,
+          name: order.users.name,
+          email: order.users.email,
+          phone: order.users.phone,
+          role: 'customer' as const,
+        } : undefined,
+      }));
+      
+      setOrders(transformedOrders);
     } catch (error) {
       console.error('Error in fetchOrders:', error);
       Alert.alert('Errore', 'Impossibile caricare gli ordini');
@@ -82,10 +101,48 @@ export default function OrdersScreen() {
     }
   };
 
+  const handleCancelOrder = (order: Order) => {
+    Alert.alert(
+      'Annulla Ordine',
+      `Sei sicuro di voler annullare l\'ordine #${order.id.substring(0, 8)}?`,
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Sì, Annulla',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Cancelling order:', order.id);
+              
+              const { error } = await supabase
+                .from('orders')
+                .update({ payment_status: 'cancelled' })
+                .eq('id', order.id);
+
+              if (error) {
+                console.error('Error cancelling order:', error);
+                throw error;
+              }
+              
+              Alert.alert('Successo', 'Ordine annullato con successo');
+              fetchOrders();
+            } catch (error) {
+              console.error('Error cancelling order:', error);
+              Alert.alert('Errore', 'Impossibile annullare l\'ordine');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
       'Elimina Ordine',
-      `Sei sicuro di voler eliminare l\'ordine #${order.id.substring(0, 8)}?`,
+      `Sei sicuro di voler eliminare definitivamente l\'ordine #${order.id.substring(0, 8)}?`,
       [
         {
           text: 'Annulla',
@@ -130,6 +187,7 @@ export default function OrdersScreen() {
 
   const pendingOrders = orders.filter(o => o.payment_status === 'pending');
   const completedOrders = orders.filter(o => o.payment_status === 'paid');
+  const cancelledOrders = orders.filter(o => o.payment_status === 'cancelled');
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -182,23 +240,26 @@ export default function OrdersScreen() {
                 </View>
 
                 <View style={{ marginBottom: 12 }}>
-                  <Text style={commonStyles.textSecondary}>
-                    Cliente: {order.user?.name || 'Sconosciuto'}
+                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                    Dettagli Cliente:
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Telefono: {order.user?.phone || 'N/D'}
+                    👤 Nome: {order.user?.name || 'Non disponibile'}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Email: {order.user?.email || 'N/D'}
+                    📞 Telefono: {order.user?.phone || 'Non disponibile'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📧 Email: {order.user?.email || 'Non disponibile'}
                   </Text>
                   <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 8 }]}>
-                    Totale: €{order.total_price}
+                    💰 Totale: €{order.total_price}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Modalità: {order.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'}
+                    💳 Modalità: {order.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Online'}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
                     {new Date(order.created_at || '').toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
@@ -244,12 +305,12 @@ export default function OrdersScreen() {
                       borderRadius: 6,
                       alignItems: 'center',
                       borderWidth: 1,
-                      borderColor: colors.error,
+                      borderColor: colors.accent,
                     }}
-                    onPress={() => handleDeleteOrder(order)}
+                    onPress={() => handleCancelOrder(order)}
                   >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                      Elimina
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.accent }]}>
+                      Annulla
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -286,13 +347,96 @@ export default function OrdersScreen() {
                   </View>
 
                   <Text style={commonStyles.textSecondary}>
-                    Cliente: {order.user?.name || 'Sconosciuto'}
-                  </Text>
-                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
-                    Totale: €{order.total_price}
+                    👤 Cliente: {order.user?.name || 'Non disponibile'}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                    📞 Telefono: {order.user?.phone || 'Non disponibile'}
+                  </Text>
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
+                    💰 Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                  </Text>
+
+                  {order.items && Array.isArray(order.items) && (
+                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                        Articoli:
+                      </Text>
+                      {order.items.map((item: any, itemIndex: number) => (
+                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={commonStyles.textSecondary}>
+                            {item.name} x {item.quantity}
+                          </Text>
+                          <Text style={commonStyles.textSecondary}>
+                            €{(item.price * item.quantity).toFixed(2)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={{
+                      marginTop: 12,
+                      backgroundColor: colors.card,
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.error,
+                    }}
+                    onPress={() => handleDeleteOrder(order)}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                      Elimina Ordine
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </React.Fragment>
+          </>
+        )}
+
+        {cancelledOrders.length > 0 && (
+          <>
+            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
+              Ordini Annullati ({cancelledOrders.length})
+            </Text>
+
+            <React.Fragment>
+              {cancelledOrders.map((order, index) => (
+                <View key={`cancelled-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.6 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      Ordine #{order.id.substring(0, 8)}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: colors.error,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        ANNULLATO
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={commonStyles.textSecondary}>
+                    👤 Cliente: {order.user?.name || 'Non disponibile'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📞 Telefono: {order.user?.phone || 'Non disponibile'}
+                  </Text>
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
+                    💰 Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
                   </Text>
 
                   {order.items && Array.isArray(order.items) && (
