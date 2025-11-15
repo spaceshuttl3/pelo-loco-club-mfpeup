@@ -1,37 +1,22 @@
 
-import { User as SupabaseUser } from '@supabase/supabase-js';
-import { useRouter, useSegments } from 'expo-router';
-import { User, UserRole } from '@/types';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User, UserRole } from '@/types';
+import { useRouter, useSegments } from 'expo-router';
 
 interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (
-    email: string,
-    password: string,
-    name: string,
-    phone: string,
-    birthday?: string,
-    role?: UserRole
-  ) => Promise<void>;
+  signUp: (email: string, password: string, name: string, phone: string, birthday?: string, role?: UserRole) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,44 +26,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
 
   useEffect(() => {
-    const inAuthGroup = segments[0] === 'auth';
-
-    if (loading) {
-      return;
-    }
-
-    if (!user && !inAuthGroup) {
-      router.replace('/auth/login');
-    } else if (user && inAuthGroup) {
-      if (user.role === 'admin') {
-        router.replace('/(admin)');
-      } else {
-        router.replace('/(customer)');
-      }
-    }
-  }, [user, segments, loading]);
-
-  useEffect(() => {
+    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.id);
+      console.log('Initial session:', session?.user?.email);
+      setSupabaseUser(session?.user ?? null);
       if (session?.user) {
-        setSupabaseUser(session.user);
         fetchUserProfile(session.user.id);
       } else {
         setLoading(false);
       }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.id);
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session?.user?.email);
+      setSupabaseUser(session?.user ?? null);
       if (session?.user) {
-        setSupabaseUser(session.user);
         fetchUserProfile(session.user.id);
       } else {
         setUser(null);
-        setSupabaseUser(null);
         setLoading(false);
       }
     });
@@ -86,9 +52,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Handle navigation based on auth state
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!user && !inAuthGroup) {
+      // Redirect to login if not authenticated
+      router.replace('/auth/login');
+    } else if (user && inAuthGroup) {
+      // Redirect to appropriate dashboard after login
+      if (user.role === 'admin') {
+        router.replace('/(admin)/');
+      } else {
+        router.replace('/(customer)/');
+      }
+    }
+  }, [user, segments, loading]);
+
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching user profile for:', userId);
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -97,27 +83,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        
+        // If profile doesn't exist, it means the trigger failed
+        if (error.code === 'PGRST116') {
+          console.error('User profile not found. The database trigger may have failed.');
+        }
+        
         setLoading(false);
         return;
       }
 
-      console.log('User profile fetched:', data?.email, data?.role);
+      console.log('User profile fetched successfully:', data);
       setUser(data);
+      setLoading(false);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-    } finally {
       setLoading(false);
     }
   };
 
   const refreshUser = async () => {
-    if (!supabaseUser) return;
-    console.log('Refreshing user data...');
-    await fetchUserProfile(supabaseUser.id);
+    if (supabaseUser) {
+      // Refresh the session to get updated JWT with role in app_metadata
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+      } else if (session) {
+        console.log('Session refreshed successfully');
+      }
+      
+      await fetchUserProfile(supabaseUser.id);
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('Signing in:', email);
+    console.log('Attempting to sign in:', email);
+    setLoading(true);
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -125,69 +127,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) {
       console.error('Sign in error:', error);
+      setLoading(false);
       throw error;
     }
 
-    console.log('Sign in successful:', data.user?.id);
+    console.log('Sign in successful:', data);
+    
+    // Refresh the session to ensure JWT has the latest role in app_metadata
+    await supabase.auth.refreshSession();
+    
+    // The auth state change listener will handle fetching the profile and navigation
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    name: string,
-    phone: string,
-    birthday?: string,
-    role: UserRole = 'customer'
-  ) => {
-    console.log('Signing up:', email);
+  const signUp = async (email: string, password: string, name: string, phone: string, birthday?: string, role: UserRole = 'customer') => {
+    console.log('Attempting to sign up:', email, 'with role:', role);
+    
+    // Create auth user with metadata that will be used by the trigger
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: 'https://natively.dev/email-confirmed',
-      },
+        data: {
+          name,
+          phone,
+          birthday,
+          role,
+        }
+      }
     });
 
     if (authError) {
-      console.error('Sign up error:', authError);
+      console.error('Auth signup error:', authError);
       throw authError;
     }
 
-    if (!authData.user) {
-      throw new Error('No user returned from signup');
-    }
-
-    console.log('Auth signup successful, creating user profile...');
-
-    const { error: profileError } = await supabase.from('users').insert({
-      id: authData.user.id,
-      email,
-      name,
-      phone,
-      birthday: birthday || null,
-      role,
-      loyalty_points: 0,
-      badges: [],
-    });
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
-      throw profileError;
-    }
-
-    console.log('User profile created successfully');
+    console.log('Auth user created successfully:', authData);
+    
+    // The database trigger will automatically create the user profile
+    // No need to manually insert into the users table
   };
 
   const signOut = async () => {
     console.log('Signing out...');
+    setLoading(true);
+    
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Sign out error:', error);
+      setLoading(false);
       throw error;
     }
+    
+    console.log('Sign out successful');
     setUser(null);
     setSupabaseUser(null);
-    console.log('Sign out successful');
+    setLoading(false);
+    
+    // Navigate to login
+    router.replace('/auth/login');
   };
 
   const isAdmin = user?.role === 'admin';
@@ -208,4 +206,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

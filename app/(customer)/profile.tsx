@@ -12,7 +12,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GlassView } from 'expo-glass-effect';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -47,7 +46,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }} activeOpacity={0.7}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Profilo</Text>
@@ -55,7 +54,7 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <GlassView style={[commonStyles.card, { alignItems: 'center', padding: 24 }]} intensity={80}>
+        <View style={[commonStyles.card, { alignItems: 'center', padding: 24 }]}>
           <View
             style={{
               width: 80,
@@ -78,38 +77,11 @@ export default function ProfileScreen() {
           {user?.phone && (
             <Text style={commonStyles.textSecondary}>{user.phone}</Text>
           )}
-          
-          {/* Loyalty Points Display */}
-          {user?.loyalty_points !== undefined && (
-            <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <IconSymbol name="star.fill" size={24} color={colors.primary} />
-                <Text style={[commonStyles.text, { fontSize: 24, fontWeight: 'bold' }]}>
-                  {user.loyalty_points}
-                </Text>
-              </View>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4 }]}>
-                Punti Fedeltà
-              </Text>
-            </View>
-          )}
-        </GlassView>
+        </View>
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
           Account
         </Text>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row]}
-          onPress={() => router.push('/(customer)/rewards')}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="star.fill" size={24} color={colors.primary} />
-          <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
-            Premi & Traguardi
-          </Text>
-          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[commonStyles.card, commonStyles.row]}
@@ -131,6 +103,18 @@ export default function ProfileScreen() {
           <IconSymbol name="bag" size={24} color={colors.primary} />
           <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
             I Miei Ordini
+          </Text>
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[commonStyles.card, commonStyles.row]}
+          onPress={() => router.push('/(customer)/spin-wheel')}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="gift" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+            I Miei Coupon
           </Text>
           <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>

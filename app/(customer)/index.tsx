@@ -11,7 +11,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GlassView } from 'expo-glass-effect';
 
 export default function CustomerHomeScreen() {
   const { user } = useAuth();
@@ -26,11 +25,11 @@ export default function CustomerHomeScreen() {
       route: '/(customer)/book-appointment',
     },
     {
-      id: 'rewards',
-      title: 'Premi',
-      icon: 'star.fill',
+      id: 'redeem-coupon',
+      title: 'Coupon',
+      icon: 'gift.fill',
       color: colors.primary,
-      route: '/(customer)/rewards',
+      route: '/(customer)/spin-wheel',
     },
     {
       id: 'shop-products',
@@ -70,57 +69,14 @@ export default function CustomerHomeScreen() {
           </Text>
         </View>
 
-        {/* Loyalty Points Card */}
-        {user?.loyalty_points !== undefined && (
-          <GlassView
-            style={[
-              commonStyles.card,
-              {
-                backgroundColor: colors.primary,
-                padding: 20,
-                marginBottom: 24,
-                flexDirection: 'row',
-                alignItems: 'center',
-              },
-            ]}
-            intensity={80}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontSize: 16, marginBottom: 4 }]}>
-                I Tuoi Punti Fedeltà
-              </Text>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {user.loyalty_points}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(customer)/rewards')}
-              activeOpacity={0.7}
-            >
-              <View
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 30,
-                  backgroundColor: colors.card,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <IconSymbol name="star.fill" size={28} color={colors.primary} />
-              </View>
-            </TouchableOpacity>
-          </GlassView>
-        )}
-
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Azioni Rapide
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-          {quickActions.map((action, index) => (
+          {quickActions.map((action) => (
             <TouchableOpacity
-              key={`action-${action.id}-${index}`}
+              key={action.id}
               style={{
                 width: '50%',
                 padding: 6,
@@ -129,7 +85,6 @@ export default function CustomerHomeScreen() {
                 console.log('Quick action pressed:', action.title);
                 router.push(action.route as any);
               }}
-              activeOpacity={0.7}
             >
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <View
