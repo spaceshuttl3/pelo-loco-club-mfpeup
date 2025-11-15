@@ -70,33 +70,45 @@ export default function ManageProductsScreen() {
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'We need camera roll permissions to select an image');
-      return;
-    }
+    try {
+      console.log('Requesting media library permissions...');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permesso Negato', 'Abbiamo bisogno del permesso per accedere alla galleria');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
+      console.log('Launching image picker...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
-      setPhotoUrl('');
+      console.log('Image picker result:', result);
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected:', result.assets[0].uri);
+        setPhotoUri(result.assets[0].uri);
+        setPhotoUrl('');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Errore', 'Impossibile selezionare l\'immagine');
     }
   };
 
   const uploadImage = async (uri: string): Promise<string | null> => {
     try {
-      console.log('Uploading image from URI:', uri);
+      console.log('Starting image upload from URI:', uri);
       
       // Fetch the image as a blob
       const response = await fetch(uri);
       const blob = await response.blob();
+      
+      console.log('Blob created, size:', blob.size, 'type:', blob.type);
       
       // Generate a unique filename
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
@@ -114,7 +126,7 @@ export default function ManageProductsScreen() {
         });
 
       if (error) {
-        console.error('Error uploading image:', error);
+        console.error('Storage upload error:', error);
         throw error;
       }
 
@@ -125,23 +137,23 @@ export default function ManageProductsScreen() {
         .from('product-images')
         .getPublicUrl(filePath);
 
-      console.log('Public URL:', urlData.publicUrl);
+      console.log('Public URL generated:', urlData.publicUrl);
       return urlData.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);
-      Alert.alert('Error', 'Failed to upload image. Please try again.');
+      Alert.alert('Errore', 'Impossibile caricare l\'immagine. Riprova.');
       return null;
     }
   };
 
   const handleAddProduct = async () => {
     if (!name || !price || !stock) {
-      Alert.alert('Error', 'Please fill in all required fields (name, price, stock)');
+      Alert.alert('Errore', 'Compila tutti i campi obbligatori (nome, prezzo, stock)');
       return;
     }
 
     if (!photoUri && !photoUrl) {
-      Alert.alert('Error', 'Product image is required. Please select an image.');
+      Alert.alert('Errore', 'L\'immagine del prodotto è obbligatoria. Seleziona un\'immagine.');
       return;
     }
 
@@ -149,12 +161,12 @@ export default function ManageProductsScreen() {
     const stockNum = parseInt(stock);
 
     if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid price');
+      Alert.alert('Errore', 'Inserisci un prezzo valido');
       return;
     }
 
     if (isNaN(stockNum) || stockNum < 0) {
-      Alert.alert('Error', 'Please enter a valid stock quantity');
+      Alert.alert('Errore', 'Inserisci una quantità di stock valida');
       return;
     }
 
@@ -164,12 +176,14 @@ export default function ManageProductsScreen() {
 
       // Upload new image if a new one was selected
       if (photoUri) {
+        console.log('Uploading new image...');
         const uploadedUrl = await uploadImage(photoUri);
         if (!uploadedUrl) {
           setSaving(false);
           return;
         }
         finalPhotoUrl = uploadedUrl;
+        console.log('Image uploaded, URL:', finalPhotoUrl);
       }
 
       const productData = {
@@ -180,6 +194,8 @@ export default function ManageProductsScreen() {
         photo_url: finalPhotoUrl,
       };
 
+      console.log('Saving product data:', productData);
+
       if (editingProduct) {
         const { error } = await supabase
           .from('products')
@@ -188,11 +204,11 @@ export default function ManageProductsScreen() {
 
         if (error) {
           console.error('Error updating product:', error);
-          Alert.alert('Error', 'Could not update product');
+          Alert.alert('Errore', 'Impossibile aggiornare il prodotto');
           return;
         }
 
-        Alert.alert('Success', 'Product updated successfully');
+        Alert.alert('Successo', 'Prodotto aggiornato con successo');
       } else {
         const { error } = await supabase
           .from('products')
@@ -200,11 +216,11 @@ export default function ManageProductsScreen() {
 
         if (error) {
           console.error('Error adding product:', error);
-          Alert.alert('Error', 'Could not add product');
+          Alert.alert('Errore', 'Impossibile aggiungere il prodotto');
           return;
         }
 
-        Alert.alert('Success', 'Product added successfully');
+        Alert.alert('Successo', 'Prodotto aggiunto con successo');
       }
 
       setModalVisible(false);
@@ -218,7 +234,7 @@ export default function ManageProductsScreen() {
       fetchProducts();
     } catch (error) {
       console.error('Error in handleAddProduct:', error);
-      Alert.alert('Error', 'Could not save product');
+      Alert.alert('Errore', 'Impossibile salvare il prodotto');
     } finally {
       setSaving(false);
     }
@@ -237,15 +253,15 @@ export default function ManageProductsScreen() {
 
   const handleDeleteProduct = (id: string) => {
     Alert.alert(
-      'Delete Product',
-      'Are you sure you want to delete this product?',
+      'Elimina Prodotto',
+      'Sei sicuro di voler eliminare questo prodotto?',
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: 'Elimina',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -256,15 +272,15 @@ export default function ManageProductsScreen() {
 
               if (error) {
                 console.error('Error deleting product:', error);
-                Alert.alert('Error', 'Could not delete product');
+                Alert.alert('Errore', 'Impossibile eliminare il prodotto');
                 return;
               }
 
-              Alert.alert('Success', 'Product deleted successfully');
+              Alert.alert('Successo', 'Prodotto eliminato con successo');
               fetchProducts();
             } catch (error) {
               console.error('Error in handleDeleteProduct:', error);
-              Alert.alert('Error', 'Could not delete product');
+              Alert.alert('Errore', 'Impossibile eliminare il prodotto');
             }
           },
         },
@@ -319,8 +335,8 @@ export default function ManageProductsScreen() {
           </View>
         ) : (
           <React.Fragment>
-            {products.map((product, productIndex) => (
-              <View key={`product-${product.id}-${productIndex}`} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
+            {products.map((product) => (
+              <View key={product.id} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
                 {product.photo_url ? (
                   <Image
                     source={{ uri: product.photo_url }}
@@ -396,7 +412,7 @@ export default function ManageProductsScreen() {
           <ScrollView style={{ width: '100%' }} contentContainerStyle={{ alignItems: 'center', paddingVertical: 40 }}>
             <View style={[commonStyles.card, { width: '90%' }]}>
               <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-                {editingProduct ? 'Edit Product' : 'Add Product'}
+                {editingProduct ? 'Modifica Prodotto' : 'Aggiungi Prodotto'}
               </Text>
 
               <TouchableOpacity
@@ -430,7 +446,7 @@ export default function ManageProductsScreen() {
 
               <TextInput
                 style={commonStyles.input}
-                placeholder="Product Name *"
+                placeholder="Nome Prodotto *"
                 placeholderTextColor={colors.textSecondary}
                 value={name}
                 onChangeText={setName}
@@ -438,7 +454,7 @@ export default function ManageProductsScreen() {
 
               <TextInput
                 style={commonStyles.input}
-                placeholder="Price *"
+                placeholder="Prezzo *"
                 placeholderTextColor={colors.textSecondary}
                 value={price}
                 onChangeText={setPrice}
@@ -447,7 +463,7 @@ export default function ManageProductsScreen() {
 
               <TextInput
                 style={commonStyles.input}
-                placeholder="Stock Quantity *"
+                placeholder="Quantità Stock *"
                 placeholderTextColor={colors.textSecondary}
                 value={stock}
                 onChangeText={setStock}
@@ -456,7 +472,7 @@ export default function ManageProductsScreen() {
 
               <TextInput
                 style={[commonStyles.input, { height: 100, textAlignVertical: 'top' }]}
-                placeholder="Description"
+                placeholder="Descrizione"
                 placeholderTextColor={colors.textSecondary}
                 value={description}
                 onChangeText={setDescription}
@@ -470,7 +486,7 @@ export default function ManageProductsScreen() {
                   disabled={saving}
                 >
                   <Text style={buttonStyles.text}>
-                    {saving ? 'Saving...' : editingProduct ? 'Update' : 'Add'}
+                    {saving ? 'Salvataggio...' : editingProduct ? 'Aggiorna' : 'Aggiungi'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity

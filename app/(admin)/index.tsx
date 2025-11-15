@@ -256,7 +256,7 @@ export default function AdminDashboardScreen() {
           </View>
           <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
             <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.accent }]}>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.black }]}>
               €{todayEarnings.toFixed(2)}
             </Text>
           </View>
