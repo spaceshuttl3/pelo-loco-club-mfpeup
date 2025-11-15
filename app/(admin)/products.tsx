@@ -226,7 +226,7 @@ export default function ManageProductsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Manage Products</Text>
+        <Text style={commonStyles.headerTitle}>Gestione prodotti</Text>
         <TouchableOpacity
           onPress={() => {
             setEditingProduct(null);
@@ -253,7 +253,7 @@ export default function ManageProductsScreen() {
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="bag.fill" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              No products yet
+             Ancora nessun prodotto
             </Text>
           </View>
         ) : (
@@ -294,7 +294,7 @@ export default function ManageProductsScreen() {
                     </Text>
                   </View>
                   <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 18, marginLeft: 12 }]}>
-                    ${product.price}
+                    €{product.price}
                   </Text>
                 </View>
 
@@ -307,13 +307,13 @@ export default function ManageProductsScreen() {
                     style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
                     onPress={() => handleEditProduct(product)}
                   >
-                    <Text style={buttonStyles.text}>Edit</Text>
+                    <Text style={buttonStyles.text}>Modifica</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[buttonStyles.primary, { flex: 1, paddingVertical: 10, backgroundColor: colors.error }]}
                     onPress={() => handleDeleteProduct(product.id)}
                   >
-                    <Text style={buttonStyles.text}>Delete</Text>
+                    <Text style={buttonStyles.text}>Cancella</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -359,7 +359,7 @@ export default function ManageProductsScreen() {
                   <>
                     <IconSymbol name="photo" size={48} color={colors.textSecondary} />
                     <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
-                      Tap to select image *
+                      Clicca per aggiungere una foto *
                     </Text>
                   </>
                 )}
@@ -418,7 +418,7 @@ export default function ManageProductsScreen() {
                   }}
                   disabled={saving}
                 >
-                  <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+                  <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
                 </TouchableOpacity>
               </View>
             </View>

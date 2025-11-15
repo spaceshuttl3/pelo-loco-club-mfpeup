@@ -15,7 +15,6 @@ import {
   Modal,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { SERVICES } from '@/types';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,11 +28,13 @@ interface Barber {
   is_active: boolean;
 }
 
-interface AdminUser {
+interface Service {
   id: string;
   name: string;
-  email: string;
-  role: string;
+  duration: number;
+  price: number;
+  description: string;
+  is_active: boolean;
 }
 
 interface ExistingAppointment {
@@ -48,20 +49,20 @@ export default function BookAppointmentScreen() {
   const { user } = useAuth();
   const [selectedService, setSelectedService] = useState('');
   const [selectedBarber, setSelectedBarber] = useState('');
+  const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [paymentMode, setPaymentMode] = useState<'pay_in_person' | 'online'>('pay_in_person');
   const [loading, setLoading] = useState(false);
-  const [loadingBarbers, setLoadingBarbers] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
   useEffect(() => {
+    fetchServices();
     fetchBarbers();
-    fetchAdminUsers();
   }, []);
 
   useEffect(() => {
@@ -70,6 +71,27 @@ export default function BookAppointmentScreen() {
       fetchExistingAppointments();
     }
   }, [selectedBarber, date]);
+
+  const fetchServices = async () => {
+    try {
+      console.log('Fetching services from database...');
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching services:', error);
+        return;
+      }
+
+      console.log('Services fetched:', data?.length || 0);
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error in fetchServices:', error);
+    }
+  };
 
   const fetchBarbers = async () => {
     try {
@@ -91,28 +113,8 @@ export default function BookAppointmentScreen() {
       }
     } catch (error) {
       console.error('Error in fetchBarbers:', error);
-    }
-  };
-
-  const fetchAdminUsers = async () => {
-    try {
-      console.log('Fetching admin users...');
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, email, role')
-        .eq('role', 'admin');
-
-      if (error) {
-        console.error('Error fetching admin users:', error);
-        return;
-      }
-
-      console.log('Admin users fetched:', data?.length || 0);
-      setAdminUsers(data || []);
-    } catch (error) {
-      console.error('Error in fetchAdminUsers:', error);
     } finally {
-      setLoadingBarbers(false);
+      setLoadingData(false);
     }
   };
 
@@ -158,14 +160,14 @@ export default function BookAppointmentScreen() {
   const isTimeSlotAvailable = (timeSlot: string): boolean => {
     if (!selectedService) return true;
 
-    const service = SERVICES.find(s => s.id === selectedService);
+    const service = services.find(s => s.id === selectedService);
     if (!service) return true;
 
     const serviceDuration = service.duration;
 
     for (const appointment of existingAppointments) {
       const appointmentTime = appointment.time;
-      const appointmentService = SERVICES.find(s => s.name === appointment.service);
+      const appointmentService = services.find(s => s.name === appointment.service);
       const appointmentDuration = appointmentService?.duration || 30;
 
       const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
@@ -229,7 +231,7 @@ export default function BookAppointmentScreen() {
 
     setLoading(true);
     try {
-      const service = SERVICES.find(s => s.id === selectedService);
+      const service = services.find(s => s.id === selectedService);
       
       const { error } = await supabase
         .from('appointments')
@@ -268,23 +270,13 @@ export default function BookAppointmentScreen() {
     }
   };
 
-  if (loadingBarbers) {
+  if (loadingData) {
     return (
       <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
-
-  const allBarbers = [...barbers, ...adminUsers.map(admin => ({
-    id: admin.id,
-    name: admin.name,
-    email: admin.email,
-    phone: '',
-    available_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    available_hours: { start: '09:00', end: '18:00' },
-    is_active: true,
-  }))];
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -305,41 +297,52 @@ export default function BookAppointmentScreen() {
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={[commonStyles.subtitle, { marginBottom: 12 }]}>Seleziona Servizio</Text>
-        {SERVICES.map((service) => (
-          <TouchableOpacity
-            key={service.id}
-            style={[
-              commonStyles.card,
-              commonStyles.row,
-              selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
-            ]}
-            onPress={() => {
-              console.log('Service selected:', service.name);
-              setSelectedService(service.id);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                {service.name}
-              </Text>
-              <Text style={commonStyles.textSecondary}>
-                {service.duration} min • €{service.price}
-              </Text>
-            </View>
-            {selectedService === service.id && (
-              <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-        ))}
+        {services.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+            <Text style={commonStyles.textSecondary}>Nessun servizio disponibile</Text>
+          </View>
+        ) : (
+          services.map((service) => (
+            <TouchableOpacity
+              key={service.id}
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                console.log('Service selected:', service.name);
+                setSelectedService(service.id);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                  {service.name}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  {service.duration} min • €{service.price}
+                </Text>
+                {service.description && (
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
+                    {service.description}
+                  </Text>
+                )}
+              </View>
+              {selectedService === service.id && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          ))
+        )}
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Barbiere</Text>
-        {allBarbers.length === 0 ? (
+        {barbers.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
             <Text style={commonStyles.textSecondary}>Nessun barbiere disponibile</Text>
           </View>
         ) : (
-          allBarbers.map((barber) => (
+          barbers.map((barber) => (
             <TouchableOpacity
               key={barber.id}
               style={[

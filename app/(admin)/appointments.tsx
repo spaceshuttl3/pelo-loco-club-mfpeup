@@ -136,6 +136,7 @@ export default function ManageAppointmentsScreen() {
 
   useEffect(() => {
     fetchBarbers();
+    fetchAppointments();
   }, []);
 
   useEffect(() => {
@@ -167,39 +168,6 @@ export default function ManageAppointmentsScreen() {
       console.error('Error updating appointment:', error);
       Alert.alert('Errore', 'Impossibile aggiornare l\'appuntamento');
     }
-  };
-
-  const handleDeleteAppointment = (appointment: Appointment) => {
-    Alert.alert(
-      'Elimina Appuntamento',
-      `Sei sicuro di voler eliminare questo appuntamento per ${appointment.user?.name}?`,
-      [
-        {
-          text: 'Annulla',
-          style: 'cancel',
-        },
-        {
-          text: 'Elimina',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('appointments')
-                .delete()
-                .eq('id', appointment.id);
-
-              if (error) throw error;
-              
-              Alert.alert('Successo', 'Appuntamento eliminato');
-              fetchAppointments();
-            } catch (error) {
-              console.error('Error deleting appointment:', error);
-              Alert.alert('Errore', 'Impossibile eliminare l\'appuntamento');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -344,7 +312,7 @@ export default function ManageAppointmentsScreen() {
         <GlassView
           style={{
             marginHorizontal: 16,
-            marginBottom: 16,
+            marginBottom: 14,
             borderRadius: 16,
             overflow: 'hidden',
           }}
@@ -505,7 +473,7 @@ export default function ManageAppointmentsScreen() {
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
                   <TouchableOpacity
                     style={{
                       flex: 1,
@@ -520,23 +488,6 @@ export default function ManageAppointmentsScreen() {
                       Completa
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.error,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => updateAppointmentStatus(appointment.id, 'cancelled')}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Annulla
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TouchableOpacity
                     style={{
                       flex: 1,
@@ -556,17 +507,15 @@ export default function ManageAppointmentsScreen() {
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: colors.card,
+                      backgroundColor: colors.error,
                       paddingVertical: 10,
                       borderRadius: 6,
                       alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: colors.error,
                     }}
-                    onPress={() => handleDeleteAppointment(appointment)}
+                    onPress={() => updateAppointmentStatus(appointment.id, 'cancelled')}
                   >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                      Elimina
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                      Annulla
                     </Text>
                   </TouchableOpacity>
                 </View>

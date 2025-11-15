@@ -109,49 +109,49 @@ export default function BookingsScreen() {
     const now = new Date();
     const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    if (hoursUntilAppointment < 10) {
+    if (hoursUntilAppointment < 24) {
       return {
         canModify: false,
-        reason: 'Puoi modificare gli appuntamenti solo con almeno 10 ore di anticipo.',
+        reason: 'Puoi modificare gli appuntamenti solo con almeno 24 ore di anticipo.',
       };
     }
 
     return { canModify: true };
   };
 
-  const handleDeleteAppointment = (appointment: Appointment) => {
+  const handleCancelAppointment = (appointment: Appointment) => {
     const { canModify, reason } = canModifyAppointment(appointment);
 
     if (!canModify) {
-      Alert.alert('Impossibile Eliminare', reason);
+      Alert.alert('Impossibile Annullare', reason);
       return;
     }
 
     Alert.alert(
-      'Elimina Appuntamento',
-      'Sei sicuro di voler eliminare questo appuntamento?',
+      'Annulla Appuntamento',
+      'Sei sicuro di voler annullare questo appuntamento?',
       [
         {
-          text: 'Annulla',
+          text: 'No',
           style: 'cancel',
         },
         {
-          text: 'Elimina',
+          text: 'Sì, Annulla',
           style: 'destructive',
           onPress: async () => {
             try {
               const { error } = await supabase
                 .from('appointments')
-                .delete()
+                .update({ status: 'cancelled' })
                 .eq('id', appointment.id);
 
               if (error) throw error;
 
-              Alert.alert('Successo', 'Appuntamento eliminato con successo');
+              Alert.alert('Successo', 'Appuntamento annullato con successo');
               fetchAppointments();
             } catch (error) {
-              console.error('Error deleting appointment:', error);
-              Alert.alert('Errore', 'Impossibile eliminare l\'appuntamento');
+              console.error('Error cancelling appointment:', error);
+              Alert.alert('Errore', 'Impossibile annullare l\'appuntamento');
             }
           },
         },
@@ -377,7 +377,7 @@ export default function BookingsScreen() {
                   {!canModify && (
                     <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
                       <Text style={[commonStyles.text, { fontSize: 12, textAlign: 'center' }]}>
-                        ⚠️ Non modificabile - meno di 10 ore all&apos;appuntamento
+                        ⚠️ Non modificabile - meno di 24 ore all&apos;appuntamento
                       </Text>
                     </View>
                   )}
@@ -403,12 +403,12 @@ export default function BookingsScreen() {
                         { flex: 1, paddingVertical: 10, backgroundColor: colors.error },
                         !canModify && { opacity: 0.5 },
                       ]}
-                      onPress={() => handleDeleteAppointment(appointment)}
+                      onPress={() => handleCancelAppointment(appointment)}
                       disabled={!canModify}
                       activeOpacity={0.7}
                     >
                       <Text style={[buttonStyles.text, { fontSize: 14 }]}>
-                        Elimina
+                        Annulla
                       </Text>
                     </TouchableOpacity>
                   </View>

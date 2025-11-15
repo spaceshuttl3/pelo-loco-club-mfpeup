@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '@/lib/supabase';
+import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import {
   View,
   Text,
@@ -11,11 +11,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { useRouter } from 'expo-router';
 import { useCart } from '@/contexts/CartContext';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import React from 'react';
+import { IconSymbol } from '@/components/IconSymbol';
 
 const { width } = Dimensions.get('window');
 
@@ -32,19 +32,15 @@ export default function CartScreen() {
 
     Alert.alert(
       'Metodo di Pagamento',
-      'Come vuoi pagare?',
+      'I prodotti possono essere pagati solo di persona al negozio.',
       [
         {
           text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Paga di Persona',
+          text: 'Conferma Ordine',
           onPress: () => processOrder('pay_in_person'),
-        },
-        {
-          text: 'Paga Online',
-          onPress: () => processOrder('online'),
         },
       ]
     );
@@ -52,52 +48,68 @@ export default function CartScreen() {
 
   const processOrder = async (paymentMode: 'pay_in_person' | 'online') => {
     try {
-      const orderItems = cartItems.map(item => ({
+      console.log('Processing order...');
+      
+      const orderItems = cartItems.map((item) => ({
         product_id: item.product_id,
+        name: item.product.name,
         quantity: item.quantity,
         price: item.product.price,
       }));
 
-      const { error } = await supabase
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user?.id,
           items: orderItems,
           total_price: totalPrice,
           payment_mode: paymentMode,
-          payment_status: paymentMode === 'online' ? 'paid' : 'pending',
-        });
+          payment_status: 'pending',
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error creating order:', error);
-        Alert.alert('Errore', 'Impossibile creare l\'ordine. Riprova.');
-        return;
+      if (orderError) {
+        console.error('Error creating order:', orderError);
+        throw orderError;
+      }
+
+      console.log('Order created:', orderData);
+
+      for (const item of cartItems) {
+        const newStock = item.product.stock - item.quantity;
+        const { error: stockError } = await supabase
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.product_id);
+
+        if (stockError) {
+          console.error('Error updating stock:', stockError);
+        }
       }
 
       await clearCart();
 
       Alert.alert(
         'Ordine Confermato!',
-        paymentMode === 'online'
-          ? 'Il tuo ordine è stato confermato e pagato.'
-          : 'Il tuo ordine è stato confermato. Paga al negozio.',
+        'Il tuo ordine è stato ricevuto. Paga al negozio quando ritiri i prodotti.',
         [
           {
             text: 'OK',
-            onPress: () => router.back(),
+            onPress: () => router.push('/(customer)/order-history'),
           },
         ]
       );
     } catch (error) {
-      console.error('Error in processOrder:', error);
+      console.error('Error processing order:', error);
       Alert.alert('Errore', 'Impossibile completare l\'ordine. Riprova.');
     }
   };
 
-  const handleRemove = (cartItemId: string, productName: string) => {
+  const handleRemove = async (cartItemId: string, productName: string) => {
     Alert.alert(
       'Rimuovi Prodotto',
-      `Rimuovere ${productName} dal carrello?`,
+      `Vuoi rimuovere ${productName} dal carrello?`,
       [
         {
           text: 'Annulla',
@@ -109,6 +121,7 @@ export default function CartScreen() {
           onPress: async () => {
             try {
               await removeFromCart(cartItemId);
+              Alert.alert('Successo', 'Prodotto rimosso dal carrello');
             } catch (error) {
               console.error('Error removing from cart:', error);
               Alert.alert('Errore', 'Impossibile rimuovere il prodotto');
@@ -125,116 +138,95 @@ export default function CartScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Carrello</Text>
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Carrello</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      {cartItems.length === 0 ? (
-        <View style={[commonStyles.content, commonStyles.centerContent]}>
-          <IconSymbol name="bag" size={64} color={colors.textSecondary} />
-          <Text style={[commonStyles.text, { marginTop: 16, fontSize: 18 }]}>
-            Il tuo carrello è vuoto
-          </Text>
-          <Text style={[commonStyles.textSecondary, { marginTop: 8, textAlign: 'center' }]}>
-            Aggiungi prodotti per iniziare lo shopping
-          </Text>
-          <TouchableOpacity
-            style={[buttonStyles.primary, { marginTop: 24 }]}
-            onPress={() => router.back()}
-          >
-            <Text style={buttonStyles.text}>Continua lo Shopping</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
-            {cartItems.map((item) => (
-              <View key={item.id} style={[commonStyles.card, { flexDirection: 'row', padding: 12 }]}>
-                {item.product.photo_url ? (
-                  <Image
-                    source={{ uri: item.product.photo_url }}
-                    style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: colors.border }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 8,
-                      backgroundColor: colors.border,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <IconSymbol name="photo" size={32} color={colors.textSecondary} />
-                  </View>
-                )}
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 120 }}>
+        {cartItems.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
+            <IconSymbol name="bag" size={48} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
+              Il tuo carrello è vuoto
+            </Text>
+            <TouchableOpacity
+              style={[buttonStyles.primary, { marginTop: 20 }]}
+              onPress={() => router.push('/(customer)/products')}
+            >
+              <Text style={buttonStyles.text}>Vai ai Prodotti</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <React.Fragment>
+            {cartItems.map((item, index) => (
+              <View key={`cart-${item.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                <View style={commonStyles.row}>
+                  {item.product.photo_url ? (
+                    <Image
+                      source={{ uri: item.product.photo_url }}
+                      style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: colors.border }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 8,
+                        backgroundColor: colors.border,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <IconSymbol name="photo" size={32} color={colors.textSecondary} />
+                    </View>
+                  )}
 
-                <View style={{ flex: 1, marginLeft: 12, justifyContent: 'space-between' }}>
-                  <View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
                       {item.product.name}
                     </Text>
-                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
                       Quantità: {item.quantity}
                     </Text>
-                  </View>
-
-                  <View style={[commonStyles.row, { marginTop: 8 }]}>
                     <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold' }]}>
                       €{(item.product.price * item.quantity).toFixed(2)}
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => handleRemove(item.id, item.product.name)}
-                      style={{ padding: 4 }}
-                    >
-                      <IconSymbol name="trash" size={20} color={colors.error} />
-                    </TouchableOpacity>
                   </View>
+
+                  <TouchableOpacity
+                    onPress={() => handleRemove(item.id, item.product.name)}
+                    style={{ padding: 8 }}
+                  >
+                    <IconSymbol name="trash" size={24} color={colors.error} />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))}
 
-            <View style={[commonStyles.card, { marginTop: 16 }]}>
-              <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                <Text style={commonStyles.text}>Subtotale</Text>
-                <Text style={commonStyles.text}>€{totalPrice.toFixed(2)}</Text>
-              </View>
-              <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                <Text style={commonStyles.text}>Spedizione</Text>
-                <Text style={commonStyles.text}>Gratis</Text>
-              </View>
-              <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12 }} />
-              <View style={commonStyles.row}>
-                <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20 }]}>
+              <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
                   Totale
                 </Text>
-                <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18, color: colors.primary }]}>
+                <Text style={[commonStyles.text, { fontSize: 24, fontWeight: 'bold' }]}>
                   €{totalPrice.toFixed(2)}
                 </Text>
               </View>
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, textAlign: 'center' }]}>
+                💳 Pagamento di persona al negozio
+              </Text>
             </View>
-          </ScrollView>
 
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: 16,
-              backgroundColor: colors.background,
-              borderTopWidth: 1,
-              borderTopColor: colors.border,
-            }}
-          >
-            <TouchableOpacity style={buttonStyles.primary} onPress={handleCheckout}>
-              <Text style={buttonStyles.text}>Procedi al Pagamento</Text>
+            <TouchableOpacity
+              style={[buttonStyles.primary, { marginTop: 20 }]}
+              onPress={handleCheckout}
+            >
+              <Text style={buttonStyles.text}>Conferma Ordine</Text>
             </TouchableOpacity>
-          </View>
-        </>
-      )}
+          </React.Fragment>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }

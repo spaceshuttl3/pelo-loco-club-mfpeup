@@ -40,10 +40,11 @@ export default function OrdersScreen() {
       }
 
       console.log('Orders fetched:', data?.length || 0);
+      console.log('Sample order with user:', data?.[0]);
       setOrders(data || []);
     } catch (error) {
       console.error('Error in fetchOrders:', error);
-      Alert.alert('Error', 'Could not load orders');
+      Alert.alert('Errore', 'Impossibile caricare gli ordini');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -73,25 +74,25 @@ export default function OrdersScreen() {
         throw error;
       }
       
-      Alert.alert('Success', `Order marked as ${paymentStatus}`);
+      Alert.alert('Successo', `Ordine segnato come ${paymentStatus === 'paid' ? 'pagato' : 'in attesa'}`);
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
-      Alert.alert('Error', 'Failed to update order');
+      Alert.alert('Errore', 'Impossibile aggiornare l\'ordine');
     }
   };
 
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
-      'Delete Order',
-      `Are you sure you want to delete order #${order.id.substring(0, 8)}?`,
+      'Elimina Ordine',
+      `Sei sicuro di voler eliminare l\'ordine #${order.id.substring(0, 8)}?`,
       [
         {
-          text: 'Cancel',
+          text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Delete',
+          text: 'Elimina',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -107,11 +108,11 @@ export default function OrdersScreen() {
                 throw error;
               }
               
-              Alert.alert('Success', 'Order deleted successfully');
+              Alert.alert('Successo', 'Ordine eliminato con successo');
               fetchOrders();
             } catch (error) {
               console.error('Error deleting order:', error);
-              Alert.alert('Error', 'Failed to delete order. Please check your permissions.');
+              Alert.alert('Errore', 'Impossibile eliminare l\'ordine');
             }
           },
         },
@@ -136,7 +137,7 @@ export default function OrdersScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Product Orders</Text>
+        <Text style={commonStyles.headerTitle}>Ordini</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -148,167 +149,189 @@ export default function OrdersScreen() {
         }
       >
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Pending Orders ({pendingOrders.length})
+          Ordini in Attesa ({pendingOrders.length})
         </Text>
 
         {pendingOrders.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="bag" size={48} color={colors.textSecondary} />
             <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              No pending orders
+              Nessun ordine in attesa
             </Text>
           </View>
         ) : (
-          pendingOrders.map((order) => (
-            <View key={order.id} style={commonStyles.card}>
-              <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                  Order #{order.id.substring(0, 8)}
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: colors.accent,
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 12,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                    PENDING
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ marginBottom: 12 }}>
-                <Text style={commonStyles.textSecondary}>
-                  Customer: {order.user?.name || 'Unknown'}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Phone: {order.user?.phone || 'N/A'}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Email: {order.user?.email || 'N/A'}
-                </Text>
-                <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 8 }]}>
-                  Total: ${order.total_price}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Payment: {order.payment_mode === 'pay_in_person' ? 'In Person' : 'Online'}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Date: {new Date(order.created_at).toLocaleDateString()} at{' '}
-                  {new Date(order.created_at).toLocaleTimeString()}
-                </Text>
-              </View>
-
-              {order.items && Array.isArray(order.items) && (
-                <View style={{ marginBottom: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                    Items:
-                  </Text>
-                  {order.items.map((item: any, index: number) => (
-                    <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={commonStyles.textSecondary}>
-                        {item.name} x {item.quantity}
-                      </Text>
-                      <Text style={commonStyles.textSecondary}>
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.primary,
-                    paddingVertical: 10,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                  }}
-                  onPress={() => updateOrderStatus(order.id, 'paid')}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                    Mark as Paid
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.card,
-                    paddingVertical: 10,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.error,
-                  }}
-                  onPress={() => handleDeleteOrder(order)}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-
-        {completedOrders.length > 0 && (
-          <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Completed Orders ({completedOrders.length})
-            </Text>
-
-            {completedOrders.map((order) => (
-              <View key={order.id} style={[commonStyles.card, { opacity: 0.7 }]}>
-                <View style={[commonStyles.row, { marginBottom: 8 }]}>
+          <React.Fragment>
+            {pendingOrders.map((order, index) => (
+              <View key={`pending-${order.id}-${index}`} style={commonStyles.card}>
+                <View style={[commonStyles.row, { marginBottom: 12 }]}>
                   <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    Order #{order.id.substring(0, 8)}
+                    Ordine #{order.id.substring(0, 8)}
                   </Text>
                   <View
                     style={{
-                      backgroundColor: colors.primary,
+                      backgroundColor: colors.accent,
                       paddingHorizontal: 12,
                       paddingVertical: 4,
                       borderRadius: 12,
                     }}
                   >
                     <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      PAID
+                      IN ATTESA
                     </Text>
                   </View>
                 </View>
 
-                <Text style={commonStyles.textSecondary}>
-                  Customer: {order.user?.name || 'Unknown'}
-                </Text>
-                <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
-                  Total: ${order.total_price}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Date: {new Date(order.created_at).toLocaleDateString()}
-                </Text>
-
-                <TouchableOpacity
-                  style={{
-                    marginTop: 12,
-                    backgroundColor: colors.card,
-                    paddingVertical: 8,
-                    borderRadius: 6,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: colors.error,
-                  }}
-                  onPress={() => handleDeleteOrder(order)}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                    Delete Order
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={commonStyles.textSecondary}>
+                    Cliente: {order.user?.name || 'Sconosciuto'}
                   </Text>
-                </TouchableOpacity>
+                  <Text style={commonStyles.textSecondary}>
+                    Telefono: {order.user?.phone || 'N/D'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Email: {order.user?.email || 'N/D'}
+                  </Text>
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 8 }]}>
+                    Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Modalità: {order.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
+                    {new Date(order.created_at || '').toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+
+                {order.items && Array.isArray(order.items) && (
+                  <View style={{ marginBottom: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                      Articoli:
+                    </Text>
+                    {order.items.map((item: any, itemIndex: number) => (
+                      <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={commonStyles.textSecondary}>
+                          {item.name} x {item.quantity}
+                        </Text>
+                        <Text style={commonStyles.textSecondary}>
+                          €{(item.price * item.quantity).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.primary,
+                      paddingVertical: 10,
+                      borderRadius: 6,
+                      alignItems: 'center',
+                    }}
+                    onPress={() => updateOrderStatus(order.id, 'paid')}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                      Segna Pagato
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.card,
+                      paddingVertical: 10,
+                      borderRadius: 6,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.error,
+                    }}
+                    onPress={() => handleDeleteOrder(order)}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                      Elimina
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
+          </React.Fragment>
+        )}
+
+        {completedOrders.length > 0 && (
+          <>
+            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
+              Ordini Completati ({completedOrders.length})
+            </Text>
+
+            <React.Fragment>
+              {completedOrders.map((order, index) => (
+                <View key={`completed-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.7 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      Ordine #{order.id.substring(0, 8)}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: colors.primary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        PAGATO
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={commonStyles.textSecondary}>
+                    Cliente: {order.user?.name || 'Sconosciuto'}
+                  </Text>
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
+                    Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                  </Text>
+
+                  {order.items && Array.isArray(order.items) && (
+                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                        Articoli:
+                      </Text>
+                      {order.items.map((item: any, itemIndex: number) => (
+                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={commonStyles.textSecondary}>
+                            {item.name} x {item.quantity}
+                          </Text>
+                          <Text style={commonStyles.textSecondary}>
+                            €{(item.price * item.quantity).toFixed(2)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={{
+                      marginTop: 12,
+                      backgroundColor: colors.card,
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: colors.error,
+                    }}
+                    onPress={() => handleDeleteOrder(order)}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                      Elimina Ordine
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </React.Fragment>
           </>
         )}
       </ScrollView>

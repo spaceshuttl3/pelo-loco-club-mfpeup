@@ -14,10 +14,10 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
   const router = useRouter();
+  const { user, signOut } = useAuth();
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     Alert.alert(
       'Esci',
       'Sei sicuro di voler uscire?',
@@ -32,9 +32,9 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await signOut();
-              console.log('Signed out successfully');
-            } catch (error: any) {
-              console.error('Sign out error:', error);
+              router.replace('/auth/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
               Alert.alert('Errore', 'Impossibile uscire. Riprova.');
             }
           },
@@ -46,81 +46,83 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+          <IconSymbol name="chevron.left" size={24} color={colors.text} />
+        </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Profilo</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 24 }]}>
+        <View style={[commonStyles.card, { alignItems: 'center', padding: 24 }]}>
           <View
             style={{
               width: 80,
               height: 80,
               borderRadius: 40,
-              backgroundColor: colors.card,
+              backgroundColor: colors.primary,
               justifyContent: 'center',
               alignItems: 'center',
               marginBottom: 16,
             }}
           >
-            <IconSymbol name="person.fill" size={40} color={colors.text} />
+            <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
+              {user?.name?.charAt(0).toUpperCase()}
+            </Text>
           </View>
-          <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
+          <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold', marginBottom: 4 }]}>
             {user?.name}
           </Text>
-          <Text style={commonStyles.textSecondary}>
-            {user?.email}
-          </Text>
-        </View>
-
-        <View style={commonStyles.card}>
-          <View style={[commonStyles.row, { marginBottom: 16 }]}>
-            <Text style={commonStyles.text}>Telefono</Text>
-            <Text style={commonStyles.textSecondary}>{user?.phone}</Text>
-          </View>
-          {user?.birthday && (
-            <View style={commonStyles.row}>
-              <Text style={commonStyles.text}>Compleanno</Text>
-              <Text style={commonStyles.textSecondary}>
-                {new Date(user.birthday).toLocaleDateString('it-IT')}
-              </Text>
-            </View>
+          <Text style={commonStyles.textSecondary}>{user?.email}</Text>
+          {user?.phone && (
+            <Text style={commonStyles.textSecondary}>{user.phone}</Text>
           )}
         </View>
 
-        <View style={commonStyles.card}>
-          <TouchableOpacity
-            style={[commonStyles.row, { paddingVertical: 8 }]}
-            onPress={() => router.push('/(customer)/bookings')}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconSymbol name="calendar" size={24} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                Le Mie Prenotazioni
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8 }} />
-
-          <TouchableOpacity
-            style={[commonStyles.row, { paddingVertical: 8 }]}
-            onPress={() => router.push('/(customer)/spin-wheel')}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <IconSymbol name="gift.fill" size={24} color={colors.primary} />
-              <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-                I Miei Coupon
-              </Text>
-            </View>
-            <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>
+          Account
+        </Text>
 
         <TouchableOpacity
-          style={[buttonStyles.primary, { backgroundColor: colors.error, marginTop: 24 }]}
+          style={[commonStyles.card, commonStyles.row]}
+          onPress={() => router.push('/(customer)/bookings')}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="calendar" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+            Le Mie Prenotazioni
+          </Text>
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[commonStyles.card, commonStyles.row]}
+          onPress={() => router.push('/(customer)/order-history')}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="bag" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+            I Miei Ordini
+          </Text>
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[commonStyles.card, commonStyles.row]}
+          onPress={() => router.push('/(customer)/spin-wheel')}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="gift" size={24} color={colors.primary} />
+          <Text style={[commonStyles.text, { marginLeft: 12, flex: 1 }]}>
+            I Miei Coupon
+          </Text>
+          <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[buttonStyles.primary, { marginTop: 32, backgroundColor: colors.error }]}
           onPress={handleSignOut}
+          activeOpacity={0.7}
         >
           <Text style={buttonStyles.text}>Esci</Text>
         </TouchableOpacity>

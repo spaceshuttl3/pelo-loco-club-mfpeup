@@ -45,36 +45,34 @@ export default function CustomerHomeScreen() {
       color: colors.primary,
       route: '/(customer)/bookings',
     },
+    {
+      id: 'order-history',
+      title: 'I Miei Ordini',
+      icon: 'bag.badge.checkmark',
+      color: colors.secondary,
+      route: '/(customer)/order-history',
+    },
   ];
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={{ marginBottom: 30, marginTop: 20 }}>
-          <Text style={[commonStyles.title, { fontSize: 32 }]}>
-            Bentornato,
+          <Text style={[commonStyles.title, { fontSize: 28 }]}>
+            Bentornato/a da Pelo Loco,
           </Text>
           <Text style={[commonStyles.title, { fontSize: 32, color: colors.primary }]}>
             {user?.name?.split(' ')[0] || 'Ospite'}!
           </Text>
           <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
-            Pronto per il tuo prossimo taglio?
+            Pronto/a per il tuo prossimo taglio?
           </Text>
         </View>
 
-        <View style={{ marginBottom: 30 }}>
-          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20 }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 8 }]}>
-              Pelo Loco Club
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Tagli esperti, stile classico, vibrazioni moderne
-            </Text>
-          </View>
-        </View>
-
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Azioni Rapide
+        <Text style={[commonStyles.textSecondary, { marginTop: 45 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 80 }]}>
+            
+          </Text>
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
@@ -82,7 +80,7 @@ export default function CustomerHomeScreen() {
             <TouchableOpacity
               key={action.id}
               style={{
-                width: '50%',
+                width: action.id === 'order-history' ? '100%' : '50%',
                 padding: 6,
               }}
               onPress={() => {
