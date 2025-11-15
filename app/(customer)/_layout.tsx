@@ -41,6 +41,7 @@ export default function CustomerLayout() {
         <Stack.Screen name="cart" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="spin-wheel" />
+        <Stack.Screen name="rewards" />
         <Stack.Screen name="order-history" />
       </Stack>
       <FloatingTabBar tabs={customerTabs} />

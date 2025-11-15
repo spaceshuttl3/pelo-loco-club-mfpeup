@@ -9,24 +9,26 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '@/lib/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function ForgotPasswordScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert('Errore', 'Inserisci il tuo indirizzo email');
+      Alert.alert('Errore', 'Inserisci la tua email');
       return;
     }
 
+    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Errore', 'Inserisci un indirizzo email valido');
@@ -35,20 +37,21 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      // Use the app's custom scheme for deep linking
+      console.log('Sending password reset email to:', email);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'pelolococlub://reset-password',
       });
 
       if (error) {
-        console.error('Password reset error:', error);
-        Alert.alert('Errore', 'Impossibile inviare l\'email di reset. Riprova.');
+        console.error('Error sending reset email:', error);
+        Alert.alert('Errore', error.message || 'Impossibile inviare l\'email di reset');
         return;
       }
 
       Alert.alert(
-        'Email Inviata!',
-        'Controlla la tua email per il link di reset della password.\n\nSe non vedi l\'email, controlla la cartella spam.',
+        'Email Inviata',
+        'Controlla la tua email per il link di reset della password. Il link scadrà tra 24 ore.',
         [
           {
             text: 'OK',
@@ -65,63 +68,68 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={[commonStyles.container, { flex: 1 }]} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-          <View style={[commonStyles.content, { paddingTop: 40 }]}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{ marginBottom: 24 }}
-              disabled={loading}
-            >
-              <IconSymbol name="chevron.left" size={28} color={colors.text} />
+        <ScrollView
+          style={commonStyles.content}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40 }}
+        >
+          <View style={{ marginBottom: 32 }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 24 }} activeOpacity={0.7}>
+              <IconSymbol name="chevron.left" size={24} color={colors.text} />
             </TouchableOpacity>
-
-            <Text style={[commonStyles.title, { marginBottom: 16 }]}>
-              Reimposta Password
+            
+            <Text style={[commonStyles.title, { marginBottom: 8 }]}>
+              Reset Password
             </Text>
-
-            <Text style={[commonStyles.textSecondary, { marginBottom: 32, fontSize: 16 }]}>
-              Inserisci il tuo indirizzo email e ti invieremo un link per reimpostare la tua password.
+            <Text style={[commonStyles.textSecondary, { fontSize: 16 }]}>
+              Inserisci la tua email per ricevere il link di reset
             </Text>
+          </View>
 
+          <View style={{ marginBottom: 24 }}>
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Email
+            </Text>
             <TextInput
               style={commonStyles.input}
-              placeholder="Email"
+              placeholder="email@esempio.com"
               placeholderTextColor={colors.textSecondary}
               value={email}
               onChangeText={setEmail}
-              autoCapitalize="none"
               keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
               editable={!loading}
             />
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 8 }]}
-              onPress={handleResetPassword}
-              disabled={loading}
-            >
-              <Text style={buttonStyles.text}>
-                {loading ? 'Invio...' : 'Invia Link di Reset'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{ marginTop: 20, alignItems: 'center' }}
-              onPress={() => router.back()}
-              disabled={loading}
-            >
-              <Text style={commonStyles.textSecondary}>
-                Ricordi la password?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>
-                  Accedi
-                </Text>
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[buttonStyles.primary, { marginBottom: 16 }]}
+            onPress={handleResetPassword}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text style={buttonStyles.text}>Invia Link di Reset</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[buttonStyles.primary, { backgroundColor: colors.card }]}
+            onPress={() => router.back()}
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <Text style={[buttonStyles.text, { color: colors.text }]}>
+              Torna al Login
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

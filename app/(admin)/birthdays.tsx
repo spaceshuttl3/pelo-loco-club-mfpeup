@@ -16,7 +16,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Picker } from '@react-native-picker/picker';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Birthday {
   id: string;
@@ -29,14 +29,14 @@ interface Birthday {
 
 export default function BirthdaysScreen() {
   const router = useRouter();
+  const { user: adminUser } = useAuth();
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Birthday | null>(null);
-  const [couponCode, setCouponCode] = useState('');
-  const [discountValue, setDiscountValue] = useState('');
-  const [discountMethod, setDiscountMethod] = useState<'percentage' | 'euros' | 'spin'>('percentage');
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -115,107 +115,56 @@ export default function BirthdaysScreen() {
     fetchBirthdays();
   };
 
-  const handleSendCoupon = (user: Birthday) => {
-    console.log('SendCoupon - Button pressed for:', user.name);
+  const handleSendNotification = (user: Birthday) => {
+    console.log('SendNotification - Button pressed for:', user.name);
     setSelectedUser(user);
-    setCouponCode(`BDAY${Math.random().toString(36).substring(2, 8).toUpperCase()}`);
-    setDiscountValue('20');
-    setDiscountMethod('percentage');
+    setNotificationTitle(`Buon Compleanno ${user.name}!`);
+    setNotificationMessage(`Ciao ${user.name}! Ti auguriamo un felicissimo compleanno! 🎉🎂`);
     setModalVisible(true);
   };
 
-  const sendCoupon = async () => {
-    if (!selectedUser || !couponCode || !discountValue) {
+  const sendNotification = async () => {
+    if (!selectedUser || !notificationTitle || !notificationMessage) {
       Alert.alert('Errore', 'Compila tutti i campi');
-      return;
-    }
-
-    const discount = parseFloat(discountValue);
-    if (isNaN(discount) || discount <= 0) {
-      Alert.alert('Errore', 'Inserisci un valore di sconto valido');
-      return;
-    }
-
-    if (discountMethod === 'percentage' && discount > 100) {
-      Alert.alert('Errore', 'La percentuale di sconto non può superare il 100%');
       return;
     }
 
     setSending(true);
     try {
-      // Check if coupon code already exists
-      const { data: existingCoupon, error: checkError } = await supabase
-        .from('coupons')
-        .select('id')
-        .eq('coupon_code', couponCode)
-        .single();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking coupon code:', checkError);
-        Alert.alert('Errore', 'Impossibile verificare il codice coupon');
-        setSending(false);
-        return;
-      }
-
-      if (existingCoupon) {
-        Alert.alert(
-          'Codice Duplicato',
-          'Esiste già un coupon con questo codice. Scegli un codice diverso.',
-          [{ text: 'OK' }]
-        );
-        setSending(false);
-        return;
-      }
-
-      const expirationDate = new Date();
-      expirationDate.setDate(expirationDate.getDate() + 30);
-
-      // Determine coupon type based on discount method
-      let couponType = 'Compleanno Speciale';
-      if (discountMethod === 'euros') {
-        couponType = `Compleanno - €${discount} di sconto`;
-      } else if (discountMethod === 'spin') {
-        couponType = 'Compleanno - Gira la Ruota';
-      } else {
-        couponType = `Compleanno - ${discount}% di sconto`;
-      }
-
       const { error } = await supabase
-        .from('coupons')
+        .from('custom_notifications')
         .insert({
           user_id: selectedUser.id,
-          coupon_type: couponType,
-          discount_value: discount,
-          expiration_date: expirationDate.toISOString().split('T')[0],
-          status: 'active',
-          coupon_code: couponCode,
+          title: notificationTitle.trim(),
+          message: notificationMessage.trim(),
+          notification_type: 'birthday',
+          created_by: adminUser?.id,
         });
 
       if (error) {
-        console.error('Error sending coupon:', error);
-        Alert.alert('Errore', 'Impossibile inviare il coupon');
+        console.error('Error sending notification:', error);
+        Alert.alert('Errore', 'Impossibile inviare la notifica');
         return;
       }
 
       Alert.alert(
         'Successo',
-        `Coupon di compleanno inviato a ${selectedUser.name}!`,
+        `Notifica inviata a ${selectedUser.name}!`,
         [
           {
             text: 'OK',
             onPress: () => {
               setModalVisible(false);
               setSelectedUser(null);
-              setCouponCode('');
-              setDiscountValue('');
-              setDiscountMethod('percentage');
+              setNotificationTitle('');
+              setNotificationMessage('');
             },
           },
         ]
       );
     } catch (error) {
-      console.error('Error in sendCoupon:', error);
-      Alert.alert('Errore', 'Impossibile inviare il coupon');
+      console.error('Error in sendNotification:', error);
+      Alert.alert('Errore', 'Impossibile inviare la notifica');
     } finally {
       setSending(false);
     }
@@ -339,10 +288,10 @@ export default function BirthdaysScreen() {
 
                   <TouchableOpacity
                     style={[buttonStyles.primary, { paddingVertical: 10 }]}
-                    onPress={() => handleSendCoupon(user)}
+                    onPress={() => handleSendNotification(user)}
                     activeOpacity={0.7}
                   >
-                    <Text style={buttonStyles.text}>Crea Coupon Personalizzato</Text>
+                    <Text style={buttonStyles.text}>Invia Notifica Personalizzata</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -351,7 +300,7 @@ export default function BirthdaysScreen() {
         )}
       </ScrollView>
 
-      {/* Send Coupon Modal */}
+      {/* Send Notification Modal */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -362,7 +311,7 @@ export default function BirthdaysScreen() {
           <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
             <ScrollView>
               <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-                Crea Coupon Personalizzato
+                Invia Notifica Personalizzata
               </Text>
 
               {selectedUser && (
@@ -377,53 +326,38 @@ export default function BirthdaysScreen() {
               )}
 
               <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
-                Codice Coupon
+                Titolo Notifica
               </Text>
               <TextInput
                 style={commonStyles.input}
-                placeholder="Codice Coupon (es. BDAY2024)"
+                placeholder="Titolo"
                 placeholderTextColor={colors.textSecondary}
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
+                value={notificationTitle}
+                onChangeText={setNotificationTitle}
               />
 
               <Text style={[commonStyles.text, { marginBottom: 8, marginTop: 16, fontWeight: '600' }]}>
-                Metodo di Sconto
-              </Text>
-              <View style={[commonStyles.card, { marginBottom: 16 }]}>
-                <Picker
-                  selectedValue={discountMethod}
-                  onValueChange={(itemValue) => setDiscountMethod(itemValue)}
-                  style={{ color: colors.text }}
-                >
-                  <Picker.Item label="Percentuale (%)" value="percentage" />
-                  <Picker.Item label="Euro (€)" value="euros" />
-                  <Picker.Item label="Gira la Ruota" value="spin" />
-                </Picker>
-              </View>
-
-              <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
-                {discountMethod === 'percentage' ? 'Percentuale di Sconto' : discountMethod === 'euros' ? 'Sconto in Euro' : 'Valore Gira la Ruota'}
+                Messaggio
               </Text>
               <TextInput
-                style={commonStyles.input}
-                placeholder={discountMethod === 'percentage' ? 'Es. 20' : discountMethod === 'euros' ? 'Es. 10' : 'Es. 1'}
+                style={[commonStyles.input, { height: 120 }]}
+                placeholder="Scrivi il tuo messaggio personalizzato..."
                 placeholderTextColor={colors.textSecondary}
-                value={discountValue}
-                onChangeText={setDiscountValue}
-                keyboardType="number-pad"
+                value={notificationMessage}
+                onChangeText={setNotificationMessage}
+                multiline
+                textAlignVertical="top"
               />
 
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
                 <TouchableOpacity
                   style={[buttonStyles.primary, { flex: 1 }]}
-                  onPress={sendCoupon}
+                  onPress={sendNotification}
                   disabled={sending}
                   activeOpacity={0.7}
                 >
                   <Text style={buttonStyles.text}>
-                    {sending ? 'Invio...' : 'Crea Coupon'}
+                    {sending ? 'Invio...' : 'Invia Notifica'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -431,9 +365,8 @@ export default function BirthdaysScreen() {
                   onPress={() => {
                     setModalVisible(false);
                     setSelectedUser(null);
-                    setCouponCode('');
-                    setDiscountValue('');
-                    setDiscountMethod('percentage');
+                    setNotificationTitle('');
+                    setNotificationMessage('');
                   }}
                   disabled={sending}
                   activeOpacity={0.7}

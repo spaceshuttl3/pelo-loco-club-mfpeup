@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GlassView } from 'expo-glass-effect';
 
 const { width } = Dimensions.get('window');
 
@@ -152,9 +153,30 @@ export default function BookAppointmentScreen() {
     const startHour = parseInt(selectedBarberData.available_hours.start.split(':')[0]);
     const endHour = parseInt(selectedBarberData.available_hours.end.split(':')[0]);
 
+    // Check if selected date is today
+    const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+    const currentHour = new Date().getHours();
+    const currentMinute = new Date().getMinutes();
+
     for (let hour = startHour; hour < endHour; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+      const slot1 = `${hour.toString().padStart(2, '0')}:00`;
+      const slot2 = `${hour.toString().padStart(2, '0')}:30`;
+
+      // Only add slots that are in the future if it's today
+      if (isToday) {
+        // For :00 slot
+        if (hour > currentHour || (hour === currentHour && 0 > currentMinute)) {
+          slots.push(slot1);
+        }
+        // For :30 slot
+        if (hour > currentHour || (hour === currentHour && 30 > currentMinute)) {
+          slots.push(slot2);
+        }
+      } else {
+        // For future dates, add all slots
+        slots.push(slot1);
+        slots.push(slot2);
+      }
     }
 
     setAvailableTimeSlots(slots);
@@ -281,7 +303,6 @@ export default function BookAppointmentScreen() {
     );
   }
 
-  // Check if the selected date is today
   const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
 
   return (
@@ -308,38 +329,40 @@ export default function BookAppointmentScreen() {
             <Text style={commonStyles.textSecondary}>Nessun servizio disponibile</Text>
           </View>
         ) : (
-          services.map((service) => (
-            <TouchableOpacity
-              key={service.id}
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                console.log('Service selected:', service.name);
-                setSelectedService(service.id);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                  {service.name}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  {service.duration} min • €{service.price}
-                </Text>
-                {service.description && (
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
-                    {service.description}
+          <React.Fragment>
+            {services.map((service, index) => (
+              <TouchableOpacity
+                key={`service-${service.id}-${index}`}
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  selectedService === service.id && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  console.log('Service selected:', service.name);
+                  setSelectedService(service.id);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                    {service.name}
                   </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    {service.duration} min • €{service.price}
+                  </Text>
+                  {service.description && (
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
+                      {service.description}
+                    </Text>
+                  )}
+                </View>
+                {selectedService === service.id && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
                 )}
-              </View>
-              {selectedService === service.id && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))
+              </TouchableOpacity>
+            ))}
+          </React.Fragment>
         )}
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Barbiere</Text>
@@ -348,46 +371,48 @@ export default function BookAppointmentScreen() {
             <Text style={commonStyles.textSecondary}>Nessun barbiere disponibile</Text>
           </View>
         ) : (
-          barbers.map((barber) => (
-            <TouchableOpacity
-              key={barber.id}
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                console.log('Barber selected:', barber.name);
-                setSelectedBarber(barber.id);
-              }}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                  {barber.name}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Disponibile: {barber.available_days.join(', ')}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Orari: {barber.available_hours.start} - {barber.available_hours.end}
-                </Text>
-              </View>
-              {selectedBarber === barber.id && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-          ))
+          <React.Fragment>
+            {barbers.map((barber, index) => (
+              <TouchableOpacity
+                key={`barber-${barber.id}-${index}`}
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  selectedBarber === barber.id && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  console.log('Barber selected:', barber.name);
+                  setSelectedBarber(barber.id);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                    {barber.name}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Disponibile: {barber.available_days.join(', ')}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Orari: {barber.available_hours.start} - {barber.available_hours.end}
+                  </Text>
+                </View>
+                {selectedBarber === barber.id && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </React.Fragment>
         )}
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Data e Orario</Text>
 
         {isToday && (
-          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
+          <GlassView style={[commonStyles.card, { padding: 12, marginBottom: 12 }]} intensity={80}>
             <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
               ⭐ Prenotazioni per oggi disponibili!
             </Text>
-          </View>
+          </GlassView>
         )}
 
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
@@ -416,7 +441,7 @@ export default function BookAppointmentScreen() {
           onRequestClose={() => setShowDatePicker(false)}
         >
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <View style={[commonStyles.card, { width: '90%', padding: 20 }]}>
+            <GlassView style={[commonStyles.card, { width: '90%', padding: 20 }]} intensity={100}>
               <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
                 Seleziona Data
               </Text>
@@ -439,7 +464,7 @@ export default function BookAppointmentScreen() {
               >
                 <Text style={buttonStyles.text}>Conferma</Text>
               </TouchableOpacity>
-            </View>
+            </GlassView>
           </View>
         </Modal>
 
@@ -448,8 +473,8 @@ export default function BookAppointmentScreen() {
         </Text>
         
         {availableTimeSlots.length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 20 }}>
-            {availableTimeSlots.map((slot) => {
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 20 }}>
+            {availableTimeSlots.map((slot, index) => {
               const [hours, minutes] = slot.split(':');
               const slotTime = new Date();
               slotTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -458,21 +483,11 @@ export default function BookAppointmentScreen() {
               
               return (
                 <TouchableOpacity
-                  key={slot}
-                  style={[
-                    {
-                      width: (width - 48) / 3,
-                      margin: 6,
-                      paddingVertical: 20,
-                      borderRadius: 12,
-                      backgroundColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.card),
-                      borderWidth: 2,
-                      borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
-                      opacity: !isAvailable ? 0.4 : 1,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                  ]}
+                  key={`slot-${slot}-${index}`}
+                  style={{
+                    width: (width - 56) / 4,
+                    margin: 4,
+                  }}
                   onPress={() => {
                     if (isAvailable) {
                       console.log('Time slot selected:', slot);
@@ -484,14 +499,27 @@ export default function BookAppointmentScreen() {
                   disabled={!isAvailable}
                   activeOpacity={0.7}
                 >
-                  <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
-                    {slot}
-                  </Text>
-                  {!isAvailable && (
-                    <Text style={[commonStyles.textSecondary, { fontSize: 10, marginTop: 4 }]}>
-                      Occupato
+                  <GlassView
+                    style={{
+                      paddingVertical: 12,
+                      borderRadius: 10,
+                      borderWidth: 2,
+                      borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
+                      opacity: !isAvailable ? 0.4 : 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    intensity={isSelected ? 100 : 40}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
+                      {slot}
                     </Text>
-                  )}
+                    {!isAvailable && (
+                      <Text style={[commonStyles.textSecondary, { fontSize: 9, marginTop: 2 }]}>
+                        Occupato
+                      </Text>
+                    )}
+                  </GlassView>
                 </TouchableOpacity>
               );
             })}

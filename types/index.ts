@@ -8,7 +8,66 @@ export interface User {
   phone: string;
   birthday?: string;
   role: UserRole;
+  loyalty_points?: number;
+  badges?: Badge[];
   created_at?: string;
+}
+
+export interface Badge {
+  badge_id: string;
+  badge_name: string;
+  badge_description: string;
+  badge_icon: string;
+  earned_at: string;
+}
+
+export interface LoyaltyReward {
+  id: string;
+  points_required: number;
+  reward_type: 'free_service' | 'discount_percentage' | 'discount_euros' | 'custom';
+  reward_value: number;
+  reward_description: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BadgeRule {
+  id: string;
+  badge_name: string;
+  badge_description: string;
+  badge_icon: string;
+  rule_type: 'visits_count' | 'visits_timeframe' | 'total_spent' | 'custom';
+  rule_config: {
+    required_visits?: number;
+    timeframe_days?: number;
+    required_amount?: number;
+  };
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LoyaltyTransaction {
+  id: string;
+  user_id: string;
+  points_change: number;
+  transaction_type: 'earned' | 'redeemed' | 'adjusted';
+  reference_type?: string;
+  reference_id?: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface CustomNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  sent_at: string;
+  read_at?: string;
+  created_by?: string;
 }
 
 export interface Appointment {
