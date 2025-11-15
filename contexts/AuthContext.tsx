@@ -104,6 +104,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     if (supabaseUser) {
+      // Refresh the session to get updated JWT with role in app_metadata
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+      } else if (session) {
+        console.log('Session refreshed successfully');
+      }
+      
       await fetchUserProfile(supabaseUser.id);
     }
   };
@@ -124,6 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('Sign in successful:', data);
+    
+    // Refresh the session to ensure JWT has the latest role in app_metadata
+    await supabase.auth.refreshSession();
+    
     // The auth state change listener will handle fetching the profile and navigation
   };
 
