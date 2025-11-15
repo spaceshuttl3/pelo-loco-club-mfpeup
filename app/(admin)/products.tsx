@@ -36,6 +36,7 @@ export default function ManageProductsScreen() {
   const [stock, setStock] = useState('');
   const [description, setDescription] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUri, setPhotoUri] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -84,7 +85,52 @@ export default function ManageProductsScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setPhotoUrl(result.assets[0].uri);
+      setPhotoUri(result.assets[0].uri);
+      setPhotoUrl('');
+    }
+  };
+
+  const uploadImage = async (uri: string): Promise<string | null> => {
+    try {
+      console.log('Uploading image from URI:', uri);
+      
+      // Fetch the image as a blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      // Generate a unique filename
+      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      console.log('Uploading to path:', filePath);
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, blob, {
+          contentType: `image/${fileExt}`,
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+      }
+
+      console.log('Image uploaded successfully:', data);
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      console.log('Public URL:', urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+      return null;
     }
   };
 
@@ -94,7 +140,7 @@ export default function ManageProductsScreen() {
       return;
     }
 
-    if (!photoUrl) {
+    if (!photoUri && !photoUrl) {
       Alert.alert('Error', 'Product image is required. Please select an image.');
       return;
     }
@@ -114,12 +160,24 @@ export default function ManageProductsScreen() {
 
     setSaving(true);
     try {
+      let finalPhotoUrl = photoUrl;
+
+      // Upload new image if a new one was selected
+      if (photoUri) {
+        const uploadedUrl = await uploadImage(photoUri);
+        if (!uploadedUrl) {
+          setSaving(false);
+          return;
+        }
+        finalPhotoUrl = uploadedUrl;
+      }
+
       const productData = {
         name,
         price: priceNum,
         stock: stockNum,
         description,
-        photo_url: photoUrl,
+        photo_url: finalPhotoUrl,
       };
 
       if (editingProduct) {
@@ -155,6 +213,7 @@ export default function ManageProductsScreen() {
       setStock('');
       setDescription('');
       setPhotoUrl('');
+      setPhotoUri('');
       setEditingProduct(null);
       fetchProducts();
     } catch (error) {
@@ -172,6 +231,7 @@ export default function ManageProductsScreen() {
     setStock(product.stock.toString());
     setDescription(product.description || '');
     setPhotoUrl(product.photo_url || '');
+    setPhotoUri('');
     setModalVisible(true);
   };
 
@@ -235,6 +295,7 @@ export default function ManageProductsScreen() {
             setStock('');
             setDescription('');
             setPhotoUrl('');
+            setPhotoUri('');
             setModalVisible(true);
           }}
         >
@@ -257,68 +318,70 @@ export default function ManageProductsScreen() {
             </Text>
           </View>
         ) : (
-          products.map((product) => (
-            <View key={product.id} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
-              {product.photo_url ? (
-                <Image
-                  source={{ uri: product.photo_url }}
-                  style={{
-                    width: '100%',
-                    height: (width - 40) * (9 / 16),
-                    backgroundColor: colors.card,
-                  }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={{
-                    width: '100%',
-                    height: (width - 40) * (9 / 16),
-                    backgroundColor: colors.card,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <IconSymbol name="photo" size={48} color={colors.textSecondary} />
-                </View>
-              )}
-              
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                      {product.name}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      {product.description}
+          <React.Fragment>
+            {products.map((product, productIndex) => (
+              <View key={`product-${product.id}-${productIndex}`} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
+                {product.photo_url ? (
+                  <Image
+                    source={{ uri: product.photo_url }}
+                    style={{
+                      width: '100%',
+                      height: (width - 40) * (9 / 16),
+                      backgroundColor: colors.card,
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: '100%',
+                      height: (width - 40) * (9 / 16),
+                      backgroundColor: colors.card,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <IconSymbol name="photo" size={48} color={colors.textSecondary} />
+                  </View>
+                )}
+                
+                <View style={{ padding: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                        {product.name}
+                      </Text>
+                      <Text style={commonStyles.textSecondary}>
+                        {product.description}
+                      </Text>
+                    </View>
+                    <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 18, marginLeft: 12 }]}>
+                      €{product.price}
                     </Text>
                   </View>
-                  <Text style={[commonStyles.text, { color: colors.primary, fontWeight: 'bold', fontSize: 18, marginLeft: 12 }]}>
-                    €{product.price}
+
+                  <Text style={[commonStyles.textSecondary, { marginBottom: 12 }]}>
+                    Stock: {product.stock}
                   </Text>
-                </View>
 
-                <Text style={[commonStyles.textSecondary, { marginBottom: 12 }]}>
-                  Stock: {product.stock}
-                </Text>
-
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
-                    onPress={() => handleEditProduct(product)}
-                  >
-                    <Text style={buttonStyles.text}>Modifica</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10, backgroundColor: colors.error }]}
-                    onPress={() => handleDeleteProduct(product.id)}
-                  >
-                    <Text style={buttonStyles.text}>Cancella</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
+                      onPress={() => handleEditProduct(product)}
+                    >
+                      <Text style={buttonStyles.text}>Modifica</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10, backgroundColor: colors.error }]}
+                      onPress={() => handleDeleteProduct(product.id)}
+                    >
+                      <Text style={buttonStyles.text}>Cancella</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))
+            ))}
+          </React.Fragment>
         )}
       </ScrollView>
 
@@ -349,9 +412,9 @@ export default function ManageProductsScreen() {
                 ]}
                 onPress={pickImage}
               >
-                {photoUrl ? (
+                {(photoUri || photoUrl) ? (
                   <Image
-                    source={{ uri: photoUrl }}
+                    source={{ uri: photoUri || photoUrl }}
                     style={{ width: '100%', height: '100%', borderRadius: 12 }}
                     resizeMode="cover"
                   />

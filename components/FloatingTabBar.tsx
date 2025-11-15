@@ -44,21 +44,10 @@ export default function FloatingTabBar({
   const theme = useTheme();
   const router = useRouter();
   const pathname = usePathname();
-  const activeIndex = useSharedValue(0);
+  const animatedValue = useSharedValue(0);
   const insets = useSafeAreaInsets();
 
-  const handleTabPress = (route: string) => {
-    console.log('FloatingTabBar - Tab pressed:', route);
-    try {
-      router.push(route as any);
-    } catch (error) {
-      console.error('FloatingTabBar - Navigation error:', error);
-    }
-  };
-
-  React.useEffect(() => {
-    console.log('FloatingTabBar - Current pathname:', pathname);
-    
+  const activeTabIndex = React.useMemo(() => {
     let index = tabs.findIndex((tab) => {
       const normalizedRoute = tab.route.replace(/^\//, '');
       const normalizedPathname = pathname.replace(/^\//, '');
@@ -89,12 +78,30 @@ export default function FloatingTabBar({
       index = 0;
     }
     
-    console.log('FloatingTabBar - Active index:', index, 'for tab:', tabs[index]?.name);
-    activeIndex.value = withSpring(index, {
-      damping: 20,
-      stiffness: 90,
-    });
+    return index;
   }, [pathname, tabs]);
+
+  const handleTabPress = (route: string) => {
+    console.log('FloatingTabBar - Tab pressed:', route);
+    try {
+      router.push(route as any);
+    } catch (error) {
+      console.error('FloatingTabBar - Navigation error:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    console.log('FloatingTabBar - Current pathname:', pathname);
+    console.log('FloatingTabBar - Active index:', activeTabIndex, 'for tab:', tabs[activeTabIndex]?.name);
+    
+    if (activeTabIndex >= 0) {
+      animatedValue.value = withSpring(activeTabIndex, {
+        damping: 20,
+        stiffness: 120,
+        mass: 1,
+      });
+    }
+  }, [activeTabIndex, animatedValue]);
 
   const indicatorStyle = useAnimatedStyle(() => {
     const horizontalPadding = 6;
@@ -104,7 +111,7 @@ export default function FloatingTabBar({
       transform: [
         {
           translateX: interpolate(
-            activeIndex.value,
+            animatedValue.value,
             tabs.map((_, i) => i),
             tabs.map((_, i) => horizontalPadding + i * tabWidth)
           ),
@@ -175,11 +182,11 @@ export default function FloatingTabBar({
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab, index) => {
+          {tabs.map((tab) => {
             const isActive = getIsActive(tab);
             return (
               <TouchableOpacity
-                key={`tab-${tab.name}-${index}`}
+                key={tab.name}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
@@ -228,11 +235,11 @@ export default function FloatingTabBar({
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab, index) => {
+          {tabs.map((tab) => {
             const isActive = getIsActive(tab);
             return (
               <TouchableOpacity
-                key={`tab-${tab.name}-${index}`}
+                key={tab.name}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}

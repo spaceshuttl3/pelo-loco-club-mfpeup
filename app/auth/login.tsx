@@ -28,17 +28,17 @@ export default function LoginScreen() {
   const instagramProfiles = [
     {
       id: 'barbershop',
-      handle: '@pelo_loco_barbershop',
+      handle: 'Salvatore',
       url: 'https://www.instagram.com/pelo_loco_barbershop/',
     },
     {
       id: 'luca',
-      handle: '@luca__peloloco',
+      handle: 'Luca',
       url: 'https://www.instagram.com/luca__peloloco/',
     },
     {
       id: 'tony',
-      handle: '@tony_scalaa_',
+      handle: 'Tony',
       url: 'https://www.instagram.com/tony_scalaa_/',
     },
   ];
@@ -194,9 +194,9 @@ export default function LoginScreen() {
                     >
                       <View
                         style={{
-                          width: 40,
+                          width: 60,
                           height: 40,
-                          borderRadius: 20,
+                          borderRadius: 80,
                           backgroundColor: colors.card,
                           justifyContent: 'center',
                           alignItems: 'center',

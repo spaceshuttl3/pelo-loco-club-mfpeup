@@ -281,6 +281,9 @@ export default function BookAppointmentScreen() {
     );
   }
 
+  // Check if the selected date is today
+  const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
@@ -378,6 +381,14 @@ export default function BookAppointmentScreen() {
         )}
 
         <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Data e Orario</Text>
+
+        {isToday && (
+          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
+            <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+              ⭐ Prenotazioni per oggi disponibili!
+            </Text>
+          </View>
+        )}
 
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
           <TouchableOpacity

@@ -381,9 +381,9 @@ export default function ManageAppointmentsScreen() {
                 Tutti
               </Text>
             </TouchableOpacity>
-            {barbers.map((barber, barberIndex) => (
+            {barbers.map((barber) => (
               <TouchableOpacity
-                key={`barber-${barber.id}-${barberIndex}`}
+                key={barber.id}
                 style={[
                   {
                     paddingHorizontal: 16,
@@ -432,9 +432,9 @@ export default function ManageAppointmentsScreen() {
                 Tutti
               </Text>
             </TouchableOpacity>
-            {barbers.map((barber, barberIndex) => (
+            {barbers.map((barber) => (
               <TouchableOpacity
-                key={`barber-${barber.id}-${barberIndex}`}
+                key={barber.id}
                 style={[
                   {
                     paddingHorizontal: 16,
@@ -473,97 +473,95 @@ export default function ManageAppointmentsScreen() {
             </Text>
           </View>
         ) : (
-          <React.Fragment>
-            {upcomingAppointments.map((appointment, index) => (
-              <View key={`upcoming-${appointment.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
-                <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    {appointment.service}
+          upcomingAppointments.map((appointment) => (
+            <View key={appointment.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+              <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                  {appointment.service}
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: colors.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                    PRENOTATO
                   </Text>
-                  <View
-                    style={{
-                      backgroundColor: colors.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      PRENOTATO
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={commonStyles.textSecondary}>
-                    Cliente: {appointment.user?.name || 'Sconosciuto'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Telefono: {appointment.user?.phone || 'N/D'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                  </Text>
-                  {appointment.barber && (
-                    <Text style={commonStyles.textSecondary}>
-                      Barbiere: {appointment.barber.name}
-                    </Text>
-                  )}
-                  <Text style={commonStyles.textSecondary}>
-                    Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
-                    {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
-                  </Text>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.primary,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => updateAppointmentStatus(appointment.id, 'completed')}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Completa
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.card,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    onPress={() => handleEditAppointment(appointment)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Riprogramma
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.error,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => handleCancelAppointment(appointment)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Annulla
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
-            ))}
-          </React.Fragment>
+
+              <View style={{ marginBottom: 12 }}>
+                <Text style={commonStyles.textSecondary}>
+                  Cliente: {appointment.user?.name || 'Sconosciuto'}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Telefono: {appointment.user?.phone || 'N/D'}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                </Text>
+                {appointment.barber && (
+                  <Text style={commonStyles.textSecondary}>
+                    Barbiere: {appointment.barber.name}
+                  </Text>
+                )}
+                <Text style={commonStyles.textSecondary}>
+                  Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
+                  {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.primary,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => updateAppointmentStatus(appointment.id, 'completed')}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Completa
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                  onPress={() => handleEditAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Riprogramma
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.error,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => handleCancelAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Annulla
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         )}
 
         {pastAppointments.length > 0 && (
@@ -594,52 +592,50 @@ export default function ManageAppointmentsScreen() {
             </TouchableOpacity>
 
             {showPastAppointments && (
-              <React.Fragment>
-                {pastAppointments.map((appointment, index) => (
-                  <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                        {appointment.service}
+              pastAppointments.map((appointment) => (
+                <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      {appointment.service}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
                       </Text>
-                      <View
-                        style={{
-                          backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
-                          paddingHorizontal: 12,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                        }}
-                      >
-                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                          {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
-                        </Text>
-                      </View>
                     </View>
-
-                    <Text style={commonStyles.textSecondary}>
-                      Cliente: {appointment.user?.name || 'Sconosciuto'}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                    </Text>
-                    {appointment.barber && (
-                      <Text style={commonStyles.textSecondary}>
-                        Barbiere: {appointment.barber.name}
-                      </Text>
-                    )}
-
-                    {appointment.cancellation_reason && (
-                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
-                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
-                          Motivo Annullamento:
-                        </Text>
-                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                          {appointment.cancellation_reason}
-                        </Text>
-                      </View>
-                    )}
                   </View>
-                ))}
-              </React.Fragment>
+
+                  <Text style={commonStyles.textSecondary}>
+                    Cliente: {appointment.user?.name || 'Sconosciuto'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                  </Text>
+                  {appointment.barber && (
+                    <Text style={commonStyles.textSecondary}>
+                      Barbiere: {appointment.barber.name}
+                    </Text>
+                  )}
+
+                  {appointment.cancellation_reason && (
+                    <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                      <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                        Motivo Annullamento:
+                      </Text>
+                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                        {appointment.cancellation_reason}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ))
             )}
           </>
         )}
@@ -703,11 +699,11 @@ export default function ManageAppointmentsScreen() {
             </Text>
             <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
-                {generateTimeSlots().map((slot, slotIndex) => {
+                {generateTimeSlots().map((slot) => {
                   const isAvailable = isTimeSlotAvailable(slot);
                   return (
                     <TouchableOpacity
-                      key={`timeslot-${slot}-${slotIndex}`}
+                      key={slot}
                       style={[
                         {
                           margin: 4,

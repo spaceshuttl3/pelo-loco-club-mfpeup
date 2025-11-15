@@ -45,6 +45,7 @@ export default function ProductsScreen() {
         return;
       }
 
+      console.log('Products fetched:', data?.length || 0);
       setProducts(data || []);
     } catch (error) {
       console.error('Error in fetchProducts:', error);
@@ -128,9 +129,9 @@ export default function ProductsScreen() {
           </View>
         ) : (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-            {products.map((product) => (
+            {products.map((product, productIndex) => (
               <View
-                key={product.id}
+                key={`product-${product.id}-${productIndex}`}
                 style={{
                   width: cardWidth,
                   margin: 6,
@@ -142,6 +143,9 @@ export default function ProductsScreen() {
                       source={{ uri: product.photo_url }}
                       style={{ width: '100%', height: cardWidth, backgroundColor: colors.border }}
                       resizeMode="cover"
+                      onError={(error) => {
+                        console.error('Image load error for product:', product.name, error.nativeEvent.error);
+                      }}
                     />
                   ) : (
                     <View

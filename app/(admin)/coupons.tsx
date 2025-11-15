@@ -297,18 +297,25 @@ export default function CouponsScreen() {
   const handleSendCoupons = async () => {
     console.log('SendCoupons - Button pressed');
     
-    if (!selectedConfig) return;
+    if (!selectedConfig) {
+      console.error('No config selected');
+      return;
+    }
 
     if (selectedUsers.length === 0) {
       Alert.alert('Error', 'Please select at least one user');
       return;
     }
 
+    console.log('Sending coupons to', selectedUsers.length, 'users');
+    console.log('Config:', selectedConfig);
+    console.log('Expiration date:', expirationDate.toISOString().split('T')[0]);
+
     setSaving(true);
     try {
       // Generate coupons with unique codes
       const coupons = selectedUsers.map(userId => {
-        const uniqueCode = `PROMO${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const uniqueCode = `${selectedConfig.coupon_text.substring(0, 4).toUpperCase()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         return {
           user_id: userId,
           config_id: selectedConfig.id,
@@ -320,58 +327,52 @@ export default function CouponsScreen() {
         };
       });
 
-      // Check for duplicate coupon codes before inserting
-      const couponCodes = coupons.map(c => c.coupon_code);
-      const { data: existingCoupons, error: checkError } = await supabase
-        .from('coupons')
-        .select('coupon_code')
-        .in('coupon_code', couponCodes);
+      console.log('Coupons to insert:', coupons);
 
-      if (checkError) {
-        console.error('Error checking coupon codes:', checkError);
-        Alert.alert('Error', 'Could not verify coupon codes');
-        setSaving(false);
-        return;
-      }
+      // Insert coupons one by one to better track errors
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: any[] = [];
 
-      if (existingCoupons && existingCoupons.length > 0) {
-        Alert.alert('Error', 'Some coupon codes already exist. Please try again.');
-        setSaving(false);
-        return;
-      }
+      for (const coupon of coupons) {
+        const { data, error } = await supabase
+          .from('coupons')
+          .insert(coupon)
+          .select();
 
-      const { error } = await supabase
-        .from('coupons')
-        .insert(coupons);
-
-      if (error) {
-        console.error('Error sending coupons:', error);
-        // Check if it's a duplicate key error
-        if (error.message.includes('duplicate') || error.code === '23505') {
-          Alert.alert('Error', 'A coupon with this code already exists. Please try again.');
+        if (error) {
+          console.error('Error inserting coupon for user', coupon.user_id, ':', error);
+          errorCount++;
+          errors.push({ userId: coupon.user_id, error });
         } else {
-          Alert.alert('Error', 'Could not send coupons');
+          console.log('Coupon inserted successfully:', data);
+          successCount++;
         }
-        setSaving(false);
-        return;
       }
 
-      Alert.alert(
-        'Success',
-        `Coupons sent to ${selectedUsers.length} user(s)!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setSendModalVisible(false);
-              setSelectedConfig(null);
-              setSelectedUsers([]);
-              setExpirationDate(new Date());
-              fetchData();
+      console.log(`Coupons sent: ${successCount} success, ${errorCount} errors`);
+
+      if (successCount > 0) {
+        Alert.alert(
+          'Success',
+          `Coupons sent to ${successCount} user(s)!${errorCount > 0 ? ` (${errorCount} failed)` : ''}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setSendModalVisible(false);
+                setSelectedConfig(null);
+                setSelectedUsers([]);
+                setExpirationDate(new Date());
+                fetchData();
+              },
             },
-          },
-        ]
-      );
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to send coupons. Please check the logs and try again.');
+        console.error('All coupon insertions failed:', errors);
+      }
     } catch (error) {
       console.error('Error in handleSendCoupons:', error);
       Alert.alert('Error', 'Could not send coupons');
@@ -464,93 +465,91 @@ export default function CouponsScreen() {
             </Text>
           </View>
         ) : (
-          <React.Fragment>
-            {configs.map((config, configIndex) => (
-              <View key={`config-${config.id}-${configIndex}`} style={[commonStyles.card, { marginBottom: 16 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                  <View
-                    style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      backgroundColor: colors.primary,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
-                      {config.discount_value}%
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                      {config.coupon_text}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      {config.is_spin_wheel ? 'Spin Wheel Coupon' : 'Direct Coupon'}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 12,
-                      backgroundColor: config.is_active ? colors.primary : colors.card,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      {config.is_active ? 'Active' : 'Inactive'}
-                    </Text>
-                  </View>
+          configs.map((config) => (
+            <View key={config.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <View
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: colors.primary,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 12,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 18, fontWeight: 'bold' }]}>
+                    {config.discount_value}%
+                  </Text>
                 </View>
-
-                <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                    <TouchableOpacity
-                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
-                      onPress={() => {
-                        console.log('Send to users button pressed for config:', config.id);
-                        setSelectedConfig(config);
-                        setSelectedUsers([]);
-                        const defaultExpiration = new Date();
-                        defaultExpiration.setDate(defaultExpiration.getDate() + 30);
-                        setExpirationDate(defaultExpiration);
-                        setSendModalVisible(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={buttonStyles.text}>Send to Users</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[buttonStyles.primary, { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.card }]}
-                      onPress={() => {
-                        console.log('Edit button pressed for config:', config.id);
-                        setEditingConfig(config);
-                        setCouponText(config.coupon_text);
-                        setDiscountValue(config.discount_value.toString());
-                        setIsSpinWheel(config.is_spin_wheel);
-                        const defaultExpiration = new Date();
-                        defaultExpiration.setDate(defaultExpiration.getDate() + 30);
-                        setExpirationDate(defaultExpiration);
-                        setModalVisible(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <IconSymbol name="pencil" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 10 }]}
-                    onPress={() => handleDeleteConfig(config)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={buttonStyles.text}>Delete Config</Text>
-                  </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                    {config.coupon_text}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    {config.is_spin_wheel ? 'Spin Wheel Coupon' : 'Direct Coupon'}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 12,
+                    backgroundColor: config.is_active ? colors.primary : colors.card,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                    {config.is_active ? 'Active' : 'Inactive'}
+                  </Text>
                 </View>
               </View>
-            ))}
-          </React.Fragment>
+
+              <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
+                    onPress={() => {
+                      console.log('Send to users button pressed for config:', config.id);
+                      setSelectedConfig(config);
+                      setSelectedUsers([]);
+                      const defaultExpiration = new Date();
+                      defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+                      setExpirationDate(defaultExpiration);
+                      setSendModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={buttonStyles.text}>Send to Users</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[buttonStyles.primary, { paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.card }]}
+                    onPress={() => {
+                      console.log('Edit button pressed for config:', config.id);
+                      setEditingConfig(config);
+                      setCouponText(config.coupon_text);
+                      setDiscountValue(config.discount_value.toString());
+                      setIsSpinWheel(config.is_spin_wheel);
+                      const defaultExpiration = new Date();
+                      defaultExpiration.setDate(defaultExpiration.getDate() + 30);
+                      setExpirationDate(defaultExpiration);
+                      setModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <IconSymbol name="pencil" size={20} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 10 }]}
+                  onPress={() => handleDeleteConfig(config)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={buttonStyles.text}>Delete Config</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         )}
       </ScrollView>
 
@@ -721,9 +720,9 @@ export default function CouponsScreen() {
                 </TouchableOpacity>
 
                 <ScrollView style={{ maxHeight: 300, marginBottom: 16 }}>
-                  {users.map((user, userIndex) => (
+                  {users.map((user) => (
                     <TouchableOpacity
-                      key={`user-${user.id}-${userIndex}`}
+                      key={user.id}
                       style={[
                         commonStyles.card,
                         commonStyles.row,
@@ -808,50 +807,48 @@ export default function CouponsScreen() {
                   </Text>
                 </View>
               ) : (
-                <React.Fragment>
-                  {issuedCoupons.map((coupon, couponIndex) => (
-                    <View key={`coupon-${coupon.id}-${couponIndex}`} style={[commonStyles.card, { marginBottom: 12 }]}>
-                      <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                            {coupon.coupon_type}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            {coupon.user?.name} - {coupon.user?.email}
-                          </Text>
-                        </View>
-                        <View
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 4,
-                            borderRadius: 12,
-                            backgroundColor: coupon.status === 'active' ? colors.primary : colors.card,
-                          }}
-                        >
-                          <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                            {coupon.status.toUpperCase()}
-                          </Text>
-                        </View>
+                issuedCoupons.map((coupon) => (
+                  <View key={coupon.id} style={[commonStyles.card, { marginBottom: 12 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[commonStyles.text, { fontWeight: '600' }]}>
+                          {coupon.coupon_type}
+                        </Text>
+                        <Text style={commonStyles.textSecondary}>
+                          {coupon.user?.name} - {coupon.user?.email}
+                        </Text>
                       </View>
-                      <Text style={commonStyles.textSecondary}>
-                        Code: {coupon.coupon_code}
-                      </Text>
-                      <Text style={commonStyles.textSecondary}>
-                        Discount: {coupon.discount_value}%
-                      </Text>
-                      <Text style={commonStyles.textSecondary}>
-                        Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
-                      </Text>
-                      <TouchableOpacity
-                        style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 8, marginTop: 8 }]}
-                        onPress={() => handleDeleteCoupon(coupon)}
-                        activeOpacity={0.7}
+                      <View
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                          backgroundColor: coupon.status === 'active' ? colors.primary : colors.card,
+                        }}
                       >
-                        <Text style={[buttonStyles.text, { fontSize: 14 }]}>Delete</Text>
-                      </TouchableOpacity>
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          {coupon.status.toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
-                  ))}
-                </React.Fragment>
+                    <Text style={commonStyles.textSecondary}>
+                      Code: {coupon.coupon_code}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Discount: {coupon.discount_value}%
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      Expires: {new Date(coupon.expiration_date).toLocaleDateString()}
+                    </Text>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { backgroundColor: colors.error, paddingVertical: 8, marginTop: 8 }]}
+                      onPress={() => handleDeleteCoupon(coupon)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
               )}
             </ScrollView>
           </View>
