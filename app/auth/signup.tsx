@@ -40,41 +40,40 @@ export default function SignupScreen() {
 
   const checkDuplicates = async (email: string, phone: string) => {
     try {
-      const { data: emailCheck, error: emailError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email.toLowerCase().trim())
-        .maybeSingle();
+      console.log('Checking duplicates for:', { email, phone });
+      
+      // Use RPC function to check duplicates (bypasses RLS)
+      const { data, error } = await supabase.rpc('check_user_duplicates', {
+        p_email: email.toLowerCase().trim(),
+        p_phone: phone.replace(/[\s-]/g, '')
+      });
 
-      if (emailError && emailError.code !== 'PGRST116') {
-        console.error('Error checking email:', emailError);
-        throw emailError;
+      console.log('Duplicate check result:', { data, error });
+
+      if (error) {
+        console.error('Error checking duplicates:', error);
+        // If RPC doesn't exist, we'll catch it in the signup process
+        return { duplicate: false };
       }
 
-      if (emailCheck) {
-        return { duplicate: true, field: 'email' };
-      }
-
-      const cleanPhone = phone.replace(/[\s-]/g, '');
-      const { data: phoneCheck, error: phoneError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('phone', cleanPhone)
-        .maybeSingle();
-
-      if (phoneError && phoneError.code !== 'PGRST116') {
-        console.error('Error checking phone:', phoneError);
-        throw phoneError;
-      }
-
-      if (phoneCheck) {
-        return { duplicate: true, field: 'phone' };
+      // The RPC returns a single row with email_exists and phone_exists columns
+      if (data && data.length > 0) {
+        const result = data[0];
+        console.log('Duplicate check details:', result);
+        
+        if (result.email_exists) {
+          return { duplicate: true, field: 'email' };
+        }
+        if (result.phone_exists) {
+          return { duplicate: true, field: 'phone' };
+        }
       }
 
       return { duplicate: false };
     } catch (error) {
       console.error('Error in checkDuplicates:', error);
-      throw error;
+      // Don't block signup if check fails
+      return { duplicate: false };
     }
   };
 
@@ -101,7 +100,10 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
+      // Check for duplicates first
       const duplicateCheck = await checkDuplicates(email, phone);
+      console.log('Final duplicate check result:', duplicateCheck);
+      
       if (duplicateCheck.duplicate) {
         Alert.alert(
           'Account Già Esistente',
@@ -132,6 +134,8 @@ export default function SignupScreen() {
       
       if (error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
         errorMessage = 'Questa email o numero di telefono è già registrato.';
+      } else if (error.message?.includes('User already registered')) {
+        errorMessage = 'Questa email è già registrata. Prova ad accedere.';
       } else if (error.message) {
         errorMessage = error.message;
       }

@@ -309,12 +309,14 @@ export default function ManageAppointmentsScreen() {
       </View>
 
       {Platform.OS === 'ios' ? (
-        <GlassView
+ <GlassView
           style={{
             marginHorizontal: 16,
             marginBottom: 14,
+						marginTop: 16,
             borderRadius: 16,
             overflow: 'hidden',
+						backgroundColor: 'transparent',
           }}
           intensity={80}
           tint="dark"

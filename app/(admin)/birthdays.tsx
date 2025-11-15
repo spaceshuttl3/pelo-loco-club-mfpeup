@@ -54,6 +54,7 @@ export default function BirthdaysScreen() {
 
       if (error) {
         console.error('Error fetching birthdays:', error);
+        Alert.alert('Errore', 'Impossibile caricare i compleanni');
         return;
       }
 
@@ -87,14 +88,18 @@ export default function BirthdaysScreen() {
         };
       }) || [];
 
-      // Sort by days until birthday
+      // Sort by days until birthday (ascending) - this will show all future birthdays
       birthdaysWithDays.sort((a, b) => a.days_until - b.days_until);
 
-      console.log('Birthdays fetched:', birthdaysWithDays.length);
+      console.log('Total birthdays processed:', birthdaysWithDays.length);
+      console.log('Birthdays within 7 days:', birthdaysWithDays.filter(b => b.days_until <= 7).length);
       console.log('Birthdays within 30 days:', birthdaysWithDays.filter(b => b.days_until <= 30).length);
+      console.log('All future birthdays:', birthdaysWithDays.filter(b => b.days_until >= 0).length);
+      
       setBirthdays(birthdaysWithDays);
     } catch (error) {
       console.error('Error in fetchBirthdays:', error);
+      Alert.alert('Errore', 'Si è verificato un errore durante il caricamento dei compleanni');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -115,13 +120,13 @@ export default function BirthdaysScreen() {
 
   const sendCoupon = async () => {
     if (!selectedUser || !discountValue) {
-      Alert.alert('Error', 'Please enter a discount value');
+      Alert.alert('Errore', 'Inserisci un valore di sconto');
       return;
     }
 
     const discount = parseFloat(discountValue);
     if (isNaN(discount) || discount <= 0 || discount > 100) {
-      Alert.alert('Error', 'Please enter a valid discount percentage (1-100)');
+      Alert.alert('Errore', 'Inserisci una percentuale di sconto valida (1-100)');
       return;
     }
 
@@ -134,7 +139,7 @@ export default function BirthdaysScreen() {
         .from('coupons')
         .insert({
           user_id: selectedUser.id,
-          coupon_type: 'Birthday Special',
+          coupon_type: 'Compleanno Speciale',
           discount_value: discount,
           expiration_date: expirationDate.toISOString().split('T')[0],
           status: 'active',
@@ -143,13 +148,13 @@ export default function BirthdaysScreen() {
 
       if (error) {
         console.error('Error sending coupon:', error);
-        Alert.alert('Error', 'Could not send coupon');
+        Alert.alert('Errore', 'Impossibile inviare il coupon');
         return;
       }
 
       Alert.alert(
-        'Success',
-        `Birthday coupon sent to ${selectedUser.name}!`,
+        'Successo',
+        `Coupon di compleanno inviato a ${selectedUser.name}!`,
         [
           {
             text: 'OK',
@@ -163,7 +168,7 @@ export default function BirthdaysScreen() {
       );
     } catch (error) {
       console.error('Error in sendCoupon:', error);
-      Alert.alert('Error', 'Could not send coupon');
+      Alert.alert('Errore', 'Impossibile inviare il coupon');
     } finally {
       setSending(false);
     }
@@ -177,7 +182,8 @@ export default function BirthdaysScreen() {
     );
   }
 
-  const upcomingBirthdays = birthdays.filter(b => b.days_until <= 30);
+  // Show all future birthdays (days_until >= 0)
+  const upcomingBirthdays = birthdays.filter(b => b.days_until >= 0);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -192,7 +198,7 @@ export default function BirthdaysScreen() {
         >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Upcoming Birthdays</Text>
+        <Text style={commonStyles.headerTitle}>Compleanni Futuri</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -204,14 +210,16 @@ export default function BirthdaysScreen() {
         }
       >
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Next 30 Days ({upcomingBirthdays.length})
+          Tutti i Compleanni Futuri ({upcomingBirthdays.length})
         </Text>
 
         {upcomingBirthdays.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="gift" size={48} color={colors.textSecondary} />
-            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              No upcoming birthdays in the next 30 days
+            <Text style={[commonStyles.textSecondary, { marginTop: 16, textAlign: 'center' }]}>
+              Nessun compleanno futuro trovato.
+              {'\n'}
+              Assicurati che i clienti abbiano inserito la loro data di nascita.
             </Text>
           </View>
         ) : (
@@ -223,7 +231,7 @@ export default function BirthdaysScreen() {
                     width: 50,
                     height: 50,
                     borderRadius: 25,
-                    backgroundColor: user.days_until === 0 ? colors.primary : colors.card,
+                    backgroundColor: user.days_until === 0 ? colors.primary : user.days_until <= 7 ? colors.accent : colors.card,
                     justifyContent: 'center',
                     alignItems: 'center',
                     marginRight: 12,
@@ -236,10 +244,14 @@ export default function BirthdaysScreen() {
                     {user.name}
                   </Text>
                   <Text style={commonStyles.textSecondary}>
-                    {new Date(user.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                    {new Date(user.birthday).toLocaleDateString('it-IT', { month: 'long', day: 'numeric' })}
                   </Text>
                   <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                    {user.days_until === 0 ? 'Today!' : `In ${user.days_until} day${user.days_until === 1 ? '' : 's'}`}
+                    {user.days_until === 0 
+                      ? 'Oggi!' 
+                      : user.days_until === 1 
+                      ? 'Domani' 
+                      : `Tra ${user.days_until} giorni`}
                   </Text>
                 </View>
                 {user.days_until === 0 && (
@@ -252,7 +264,21 @@ export default function BirthdaysScreen() {
                     }}
                   >
                     <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      TODAY
+                      OGGI
+                    </Text>
+                  </View>
+                )}
+                {user.days_until > 0 && user.days_until <= 7 && (
+                  <View
+                    style={{
+                      backgroundColor: colors.accent,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      PRESTO
                     </Text>
                   </View>
                 )}
@@ -271,7 +297,7 @@ export default function BirthdaysScreen() {
                   onPress={() => handleSendCoupon(user)}
                   activeOpacity={0.7}
                 >
-                  <Text style={buttonStyles.text}>Send Birthday Coupon</Text>
+                  <Text style={buttonStyles.text}>Invia Coupon di Compleanno</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -289,7 +315,7 @@ export default function BirthdaysScreen() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={[commonStyles.card, { width: '90%' }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Send Birthday Coupon
+              Invia Coupon di Compleanno
             </Text>
 
             {selectedUser && (
@@ -298,14 +324,14 @@ export default function BirthdaysScreen() {
                   {selectedUser.name}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Birthday: {new Date(selectedUser.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                  Compleanno: {new Date(selectedUser.birthday).toLocaleDateString('it-IT', { month: 'long', day: 'numeric' })}
                 </Text>
               </View>
             )}
 
             <TextInput
               style={commonStyles.input}
-              placeholder="Discount Percentage"
+              placeholder="Percentuale di Sconto"
               placeholderTextColor={colors.textSecondary}
               value={discountValue}
               onChangeText={setDiscountValue}
@@ -320,7 +346,7 @@ export default function BirthdaysScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
-                  {sending ? 'Sending...' : 'Send Coupon'}
+                  {sending ? 'Invio...' : 'Invia Coupon'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -332,7 +358,7 @@ export default function BirthdaysScreen() {
                 disabled={sending}
                 activeOpacity={0.7}
               >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Cancel</Text>
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
               </TouchableOpacity>
             </View>
           </View>
