@@ -5,8 +5,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Linking,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,7 +28,7 @@ export default function CustomerHomeScreen() {
       id: 'redeem-coupon',
       title: 'Coupon',
       icon: 'gift.fill',
-      color: colors.accent,
+      color: colors.primary,
       route: '/(customer)/spin-wheel',
     },
     {
@@ -47,45 +45,14 @@ export default function CustomerHomeScreen() {
       color: colors.primary,
       route: '/(customer)/bookings',
     },
-  ];
-
-  const instagramProfiles = [
     {
-      id: 'barbershop',
-      name: 'Pelo Loco Barbershop',
-      handle: '@pelo_loco_barbershop',
-      url: 'https://www.instagram.com/pelo_loco_barbershop/',
-      color: colors.primary,
-    },
-    {
-      id: 'luca',
-      name: 'Luca',
-      handle: '@luca__peloloco',
-      url: 'https://www.instagram.com/luca__peloloco/',
-      color: colors.accent,
-    },
-    {
-      id: 'tony',
-      name: 'Tony Scala',
-      handle: '@tony_scalaa_',
-      url: 'https://www.instagram.com/tony_scalaa_/',
+      id: 'my-orders',
+      title: 'Ordini',
+      icon: 'shippingbox.fill',
       color: colors.secondary,
+      route: '/(customer)/order-history',
     },
   ];
-
-  const handleInstagramPress = async (url: string, handle: string) => {
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Errore', `Impossibile aprire ${handle}`);
-      }
-    } catch (error) {
-      console.error('Error opening Instagram:', error);
-      Alert.alert('Errore', 'Impossibile aprire Instagram');
-    }
-  };
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -140,44 +107,6 @@ export default function CustomerHomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
-        <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-          Seguici su Instagram
-        </Text>
-
-        {instagramProfiles.map((profile) => (
-          <TouchableOpacity
-            key={profile.id}
-            style={[commonStyles.card, { marginBottom: 12 }]}
-            onPress={() => handleInstagramPress(profile.url, profile.handle)}
-            activeOpacity={0.7}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View
-                style={{
-                  width: 50,
-                  height: 50,
-                  borderRadius: 25,
-                  backgroundColor: profile.color,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginRight: 16,
-                }}
-              >
-                <IconSymbol name="camera.fill" size={24} color={colors.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                  {profile.name}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  {profile.handle}
-                </Text>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-            </View>
-          </TouchableOpacity>
-        ))}
       </ScrollView>
     </SafeAreaView>
   );

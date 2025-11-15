@@ -148,10 +148,32 @@ export default function CouponsScreen() {
       return;
     }
 
+    // Check for duplicate coupon name (uniqueness validation)
+    const { data: existingCoupons, error: checkError } = await supabase
+      .from('admin_coupon_config')
+      .select('id, coupon_text')
+      .eq('coupon_text', couponText.trim());
+
+    if (checkError) {
+      console.error('Error checking coupon name:', checkError);
+      Alert.alert('Error', 'Could not verify coupon name');
+      return;
+    }
+
+    // If editing, exclude the current coupon from the check
+    const duplicates = editingConfig 
+      ? existingCoupons?.filter(c => c.id !== editingConfig.id) 
+      : existingCoupons;
+
+    if (duplicates && duplicates.length > 0) {
+      Alert.alert('Error', 'A coupon with this name already exists. Please choose a different name.');
+      return;
+    }
+
     setSaving(true);
     try {
       const configData = {
-        coupon_text: couponText,
+        coupon_text: couponText.trim(),
         discount_value: discount,
         is_spin_wheel: isSpinWheel,
         is_active: true,
@@ -547,7 +569,7 @@ export default function CouponsScreen() {
 
             <TextInput
               style={commonStyles.input}
-              placeholder="Coupon Text"
+              placeholder="Coupon Name (must be unique) *"
               placeholderTextColor={colors.textSecondary}
               value={couponText}
               onChangeText={setCouponText}

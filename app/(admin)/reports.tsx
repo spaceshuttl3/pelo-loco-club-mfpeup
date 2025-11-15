@@ -70,10 +70,10 @@ export default function ReportsScreen() {
         dateFilter = monthAgo.toISOString().split('T')[0];
       }
 
-      // Fetch appointments data
+      // Fetch appointments data with service details
       let appointmentsQuery = supabase
         .from('appointments')
-        .select('*, services!inner(price)');
+        .select('*');
 
       if (filterType === 'today') {
         appointmentsQuery = appointmentsQuery.eq('date', dateFilter);
@@ -90,6 +90,21 @@ export default function ReportsScreen() {
       if (aptError) {
         console.error('Error fetching appointments:', aptError);
       }
+
+      // Fetch services to get pricing information
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select('name, price');
+
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
+      }
+
+      // Create a map of service names to prices
+      const servicePriceMap: { [key: string]: number } = {};
+      services?.forEach(service => {
+        servicePriceMap[service.name] = parseFloat(service.price) || 0;
+      });
 
       // Fetch orders data
       let ordersQuery = supabase
@@ -117,10 +132,13 @@ export default function ReportsScreen() {
       const completedAppointments = appointments?.filter(a => a.status === 'completed').length || 0;
       const cancelledAppointments = appointments?.filter(a => a.status === 'cancelled').length || 0;
 
-      // Calculate appointment revenue (only paid appointments)
+      // Calculate appointment revenue (only paid appointments) using service price map
       const appointmentRevenue = appointments
-        ?.filter(a => a.payment_status === 'paid' && a.services)
-        .reduce((sum, a) => sum + (parseFloat(a.services.price) || 0), 0) || 0;
+        ?.filter(a => a.payment_status === 'paid')
+        .reduce((sum, a) => {
+          const servicePrice = servicePriceMap[a.service] || 0;
+          return sum + servicePrice;
+        }, 0) || 0;
 
       // Calculate product revenue (only paid orders)
       const productRevenue = orders
@@ -129,8 +147,11 @@ export default function ReportsScreen() {
 
       // Calculate pending payments
       const pendingAppointments = appointments
-        ?.filter(a => a.payment_status === 'pending' && a.services)
-        .reduce((sum, a) => sum + (parseFloat(a.services.price) || 0), 0) || 0;
+        ?.filter(a => a.payment_status === 'pending')
+        .reduce((sum, a) => {
+          const servicePrice = servicePriceMap[a.service] || 0;
+          return sum + servicePrice;
+        }, 0) || 0;
 
       const pendingOrders = orders
         ?.filter(o => o.payment_status === 'pending')
@@ -150,6 +171,7 @@ export default function ReportsScreen() {
       });
     } catch (error) {
       console.error('Error in fetchReportData:', error);
+      Alert.alert('Errore', 'Impossibile caricare i dati del report');
     } finally {
       setLoading(false);
       setRefreshing(false);

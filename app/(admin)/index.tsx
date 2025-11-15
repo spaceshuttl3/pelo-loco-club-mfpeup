@@ -157,7 +157,7 @@ export default function AdminDashboardScreen() {
       id: 'products',
       title: 'Prodotti',
       icon: 'cube.fill',
-      color: colors.accent,
+     color: colors.primary,
       route: '/(admin)/products',
     },
     {
@@ -178,7 +178,7 @@ export default function AdminDashboardScreen() {
       id: 'birthdays',
       title: 'Compleanni',
       icon: 'birthday.cake.fill',
-      color: colors.accent,
+     color: colors.primary,
       route: '/(admin)/birthdays',
     },
     {

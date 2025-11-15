@@ -10,11 +10,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/IconSymbol';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,6 +24,24 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+
+  const instagramProfiles = [
+    {
+      id: 'barbershop',
+      handle: '@pelo_loco_barbershop',
+      url: 'https://www.instagram.com/pelo_loco_barbershop/',
+    },
+    {
+      id: 'luca',
+      handle: '@luca__peloloco',
+      url: 'https://www.instagram.com/luca__peloloco/',
+    },
+    {
+      id: 'tony',
+      handle: '@tony_scalaa_',
+      url: 'https://www.instagram.com/tony_scalaa_/',
+    },
+  ];
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -61,6 +81,20 @@ export default function LoginScreen() {
 
   const handleForgotPassword = () => {
     router.push('/auth/forgot-password' as any);
+  };
+
+  const handleInstagramPress = async (url: string, handle: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Errore', `Impossibile aprire ${handle}`);
+      }
+    } catch (error) {
+      console.error('Error opening Instagram:', error);
+      Alert.alert('Errore', 'Impossibile aprire Instagram');
+    }
   };
 
   return (
@@ -141,6 +175,43 @@ export default function LoginScreen() {
                   </Text>
                 </Text>
               </TouchableOpacity>
+
+              {/* Instagram Profiles - Minimal Style */}
+              <View style={{ marginTop: 40, paddingTop: 30, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 16, fontSize: 12, color: colors.textSecondary }]}>
+                  Seguici su Instagram
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
+                  {instagramProfiles.map((profile) => (
+                    <TouchableOpacity
+                      key={profile.id}
+                      onPress={() => handleInstagramPress(profile.url, profile.handle)}
+                      activeOpacity={0.7}
+                      style={{
+                        alignItems: 'center',
+                        padding: 8,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          backgroundColor: colors.card,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginBottom: 6,
+                        }}
+                      >
+                        <IconSymbol name="camera.fill" size={20} color={colors.primary} />
+                      </View>
+                      <Text style={[commonStyles.textSecondary, { fontSize: 10, textAlign: 'center' }]}>
+                        {profile.handle.replace('@', '')}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </View>
           </View>
         </ScrollView>
