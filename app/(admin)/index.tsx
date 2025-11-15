@@ -37,7 +37,7 @@ export default function AdminDashboardScreen() {
       // Fetch today's appointments
       const { data: appointments, error: aptError } = await supabase
         .from('appointments')
-        .select('*, services!inner(price)')
+        .select('*')
         .eq('date', today)
         .eq('status', 'booked')
         .order('time', { ascending: true });
@@ -61,12 +61,29 @@ export default function AdminDashboardScreen() {
         setPendingOrders(orders || []);
       }
 
-      // Calculate today's earnings (paid appointments + paid orders)
-      const { data: paidAppointments, error: paidAptError } = await supabase
+      // Fetch services to get pricing information
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select('name, price');
+
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
+      }
+
+      // Create a map of service names to prices
+      const servicePriceMap: { [key: string]: number } = {};
+      if (services) {
+        services.forEach(service => {
+          servicePriceMap[service.name] = parseFloat(service.price.toString()) || 0;
+        });
+      }
+
+      // Calculate today's earnings (completed appointments + paid orders)
+      const { data: completedAppointments, error: completedAptError } = await supabase
         .from('appointments')
-        .select('*, services!inner(price)')
+        .select('*')
         .eq('date', today)
-        .eq('payment_status', 'paid');
+        .eq('status', 'completed');
 
       const { data: paidOrders, error: paidOrdersError } = await supabase
         .from('orders')
@@ -77,15 +94,16 @@ export default function AdminDashboardScreen() {
 
       let earnings = 0;
       
-      if (!paidAptError && paidAppointments) {
-        earnings += paidAppointments.reduce((sum, apt) => {
-          return sum + (parseFloat(apt.services?.price) || 0);
+      if (!completedAptError && completedAppointments) {
+        earnings += completedAppointments.reduce((sum, apt) => {
+          const servicePrice = servicePriceMap[apt.service] || 0;
+          return sum + servicePrice;
         }, 0);
       }
 
       if (!paidOrdersError && paidOrders) {
         earnings += paidOrders.reduce((sum, order) => {
-          return sum + (parseFloat(order.total_price) || 0);
+          return sum + (parseFloat(order.total_price.toString()) || 0);
         }, 0);
       }
 
@@ -157,7 +175,7 @@ export default function AdminDashboardScreen() {
       id: 'products',
       title: 'Prodotti',
       icon: 'cube.fill',
-     color: colors.primary,
+      color: colors.primary,
       route: '/(admin)/products',
     },
     {
@@ -178,7 +196,7 @@ export default function AdminDashboardScreen() {
       id: 'birthdays',
       title: 'Compleanni',
       icon: 'birthday.cake.fill',
-     color: colors.primary,
+      color: colors.primary,
       route: '/(admin)/birthdays',
     },
     {

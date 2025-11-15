@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
   RefreshControl,
   Modal,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface ReportData {
   totalAppointments: number;
@@ -70,7 +71,7 @@ export default function ReportsScreen() {
         dateFilter = monthAgo.toISOString().split('T')[0];
       }
 
-      // Fetch appointments data with service details
+      // Fetch appointments data
       let appointmentsQuery = supabase
         .from('appointments')
         .select('*');
@@ -132,22 +133,22 @@ export default function ReportsScreen() {
       const completedAppointments = appointments?.filter(a => a.status === 'completed').length || 0;
       const cancelledAppointments = appointments?.filter(a => a.status === 'cancelled').length || 0;
 
-      // Calculate appointment revenue (only paid appointments) using service price map
+      // Calculate appointment revenue (completed appointments only - confirmed haircuts)
       const appointmentRevenue = appointments
-        ?.filter(a => a.payment_status === 'paid')
+        ?.filter(a => a.status === 'completed')
         .reduce((sum, a) => {
           const servicePrice = servicePriceMap[a.service] || 0;
           return sum + servicePrice;
         }, 0) || 0;
 
-      // Calculate product revenue (only paid orders)
+      // Calculate product revenue (paid orders only)
       const productRevenue = orders
         ?.filter(o => o.payment_status === 'paid')
         .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0) || 0;
 
-      // Calculate pending payments
+      // Calculate pending payments (pending appointments and orders)
       const pendingAppointments = appointments
-        ?.filter(a => a.payment_status === 'pending')
+        ?.filter(a => a.payment_status === 'pending' && a.status === 'booked')
         .reduce((sum, a) => {
           const servicePrice = servicePriceMap[a.service] || 0;
           return sum + servicePrice;
@@ -233,7 +234,7 @@ export default function ReportsScreen() {
             €{reportData.totalRevenue.toFixed(2)}
           </Text>
           <Text style={commonStyles.textSecondary}>
-            Ricavi Totali
+            Ricavi Totali (Confermati)
           </Text>
         </View>
 
@@ -289,10 +290,10 @@ export default function ReportsScreen() {
 
         <View style={[commonStyles.card, { backgroundColor: colors.accent, padding: 20 }]}>
           <Text style={[commonStyles.text, { marginBottom: 8 }]}>
-            💡 Suggerimento
+            💡 Nota
           </Text>
           <Text style={commonStyles.textSecondary}>
-            Usa i filtri per analizzare i tuoi ricavi in diversi periodi di tempo e identificare i trend del tuo business.
+            I ricavi mostrati includono solo gli appuntamenti completati/confermati e gli ordini pagati. I pagamenti in attesa non sono conteggiati nei ricavi totali.
           </Text>
         </View>
       </ScrollView>

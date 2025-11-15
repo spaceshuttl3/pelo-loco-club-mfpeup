@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -43,9 +44,11 @@ export default function ManageAppointmentsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editDate, setEditDate] = useState(new Date());
   const [editTime, setEditTime] = useState('');
+  const [cancellationReason, setCancellationReason] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
@@ -168,6 +171,42 @@ export default function ManageAppointmentsScreen() {
     } catch (error) {
       console.error('Error updating appointment:', error);
       Alert.alert('Errore', 'Impossibile aggiornare l\'appuntamento');
+    }
+  };
+
+  const handleCancelAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setCancellationReason('');
+    setCancelModalVisible(true);
+  };
+
+  const confirmCancelAppointment = async () => {
+    if (!selectedAppointment) return;
+
+    if (!cancellationReason.trim()) {
+      Alert.alert('Motivo Richiesto', 'Per favore, fornisci un motivo per l\'annullamento.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: cancellationReason.trim(),
+        })
+        .eq('id', selectedAppointment.id);
+
+      if (error) throw error;
+
+      Alert.alert('Successo', 'Appuntamento annullato. Il cliente è stato notificato.');
+      setCancelModalVisible(false);
+      setSelectedAppointment(null);
+      setCancellationReason('');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      Alert.alert('Errore', 'Impossibile annullare l\'appuntamento');
     }
   };
 
@@ -515,7 +554,7 @@ export default function ManageAppointmentsScreen() {
                       borderRadius: 6,
                       alignItems: 'center',
                     }}
-                    onPress={() => updateAppointmentStatus(appointment.id, 'cancelled')}
+                    onPress={() => handleCancelAppointment(appointment)}
                   >
                     <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                       Annulla
@@ -587,6 +626,17 @@ export default function ManageAppointmentsScreen() {
                         Barbiere: {appointment.barber.name}
                       </Text>
                     )}
+
+                    {appointment.cancellation_reason && (
+                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                          Motivo Annullamento:
+                        </Text>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                          {appointment.cancellation_reason}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 ))}
               </React.Fragment>
@@ -595,6 +645,7 @@ export default function ManageAppointmentsScreen() {
         )}
       </ScrollView>
 
+      {/* Edit Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -710,6 +761,70 @@ export default function ManageAppointmentsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Modal with Reason */}
+      <Modal
+        visible={cancelModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Annulla Appuntamento
+            </Text>
+
+            {selectedAppointment && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 16, marginBottom: 16 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                  {selectedAppointment.service}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Cliente: {selectedAppointment.user?.name}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Data: {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Motivo dell&apos;annullamento
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { height: 100, textAlignVertical: 'top' }]}
+              placeholder="Spiega perché vuoi annullare questo appuntamento..."
+              placeholderTextColor={colors.textSecondary}
+              value={cancellationReason}
+              onChangeText={setCancellationReason}
+              multiline
+              numberOfLines={4}
+            />
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.error }]}
+                onPress={confirmCancelAppointment}
+                activeOpacity={0.7}
+              >
+                <Text style={buttonStyles.text}>Conferma Annullamento</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  setSelectedAppointment(null);
+                  setCancellationReason('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
               </TouchableOpacity>
             </View>
           </View>

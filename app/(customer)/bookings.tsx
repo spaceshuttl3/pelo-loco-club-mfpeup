@@ -1,6 +1,4 @@
 
-import { IconSymbol } from '@/components/IconSymbol';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -13,12 +11,14 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Appointment } from '@/types';
 import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { useRouter } from 'expo-router';
+import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ExistingAppointment {
   id: string;
@@ -29,20 +29,17 @@ interface ExistingAppointment {
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editDate, setEditDate] = useState(new Date());
   const [editTime, setEditTime] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
-  const [cancellationReason, setCancellationReason] = useState('');
-  const [showPastAppointments, setShowPastAppointments] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -58,6 +55,8 @@ export default function BookingsScreen() {
 
   const fetchAppointments = async () => {
     try {
+      console.log('Fetching appointments for user:', user?.id);
+      
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
@@ -67,12 +66,14 @@ export default function BookingsScreen() {
 
       if (error) {
         console.error('Error fetching appointments:', error);
-        return;
+        throw error;
       }
 
+      console.log('Appointments fetched:', data?.length || 0);
       setAppointments(data || []);
     } catch (error) {
       console.error('Error in fetchAppointments:', error);
+      Alert.alert('Errore', 'Impossibile caricare gli appuntamenti');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -108,67 +109,74 @@ export default function BookingsScreen() {
     fetchAppointments();
   };
 
-  const canModifyAppointment = (appointment: Appointment): { canModify: boolean; reason?: string } => {
-    // Create a proper Date object from the appointment date and time
-    const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}:00`);
+  const canModifyAppointment = (appointment: Appointment): boolean => {
+    if (appointment.status !== 'booked') return false;
+    
+    const appointmentDate = new Date(appointment.date);
+    const [hours, minutes] = appointment.time.split(':').map(Number);
+    appointmentDate.setHours(hours, minutes, 0, 0);
+    
     const now = new Date();
+    const hoursDifference = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60);
     
-    // Calculate the difference in milliseconds
-    const timeDifference = appointmentDateTime.getTime() - now.getTime();
-    
-    // Convert to hours
-    const hoursUntilAppointment = timeDifference / (1000 * 60 * 60);
-
-    console.log('Appointment date/time:', appointmentDateTime);
-    console.log('Current date/time:', now);
-    console.log('Hours until appointment:', hoursUntilAppointment);
-
-    if (hoursUntilAppointment < 24) {
-      return {
-        canModify: false,
-        reason: 'Puoi modificare gli appuntamenti solo con almeno 24 ore di anticipo.',
-      };
-    }
-
-    return { canModify: true };
+    return hoursDifference >= 2;
   };
 
   const handleCancelAppointment = (appointment: Appointment) => {
-    const { canModify, reason } = canModifyAppointment(appointment);
-
-    if (!canModify) {
-      Alert.alert('Impossibile Annullare', reason);
+    if (!canModifyAppointment(appointment)) {
+      Alert.alert(
+        'Impossibile Annullare',
+        'Puoi annullare un appuntamento solo se mancano almeno 2 ore.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
-    setSelectedAppointment(appointment);
-    setCancellationReason('');
-    setCancelModalVisible(true);
+    Alert.alert(
+      'Annulla Appuntamento',
+      'Sei sicuro di voler annullare questo appuntamento?',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Sì, Annulla',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('appointments')
+                .update({ status: 'cancelled' })
+                .eq('id', appointment.id);
+
+              if (error) throw error;
+
+              Alert.alert('Successo', 'Appuntamento annullato con successo');
+              fetchAppointments();
+            } catch (error) {
+              console.error('Error cancelling appointment:', error);
+              Alert.alert('Errore', 'Impossibile annullare l\'appuntamento');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const confirmCancelAppointment = async () => {
     if (!selectedAppointment) return;
 
-    if (!cancellationReason.trim()) {
-      Alert.alert('Motivo Richiesto', 'Per favore, fornisci un motivo per l\'annullamento.');
-      return;
-    }
-
     try {
       const { error } = await supabase
         .from('appointments')
-        .update({ 
-          status: 'cancelled',
-          cancellation_reason: cancellationReason.trim(),
-        })
+        .update({ status: 'cancelled' })
         .eq('id', selectedAppointment.id);
 
       if (error) throw error;
 
       Alert.alert('Successo', 'Appuntamento annullato con successo');
-      setCancelModalVisible(false);
       setSelectedAppointment(null);
-      setCancellationReason('');
       fetchAppointments();
     } catch (error) {
       console.error('Error cancelling appointment:', error);
@@ -177,10 +185,12 @@ export default function BookingsScreen() {
   };
 
   const handleRescheduleAppointment = (appointment: Appointment) => {
-    const { canModify, reason } = canModifyAppointment(appointment);
-
-    if (!canModify) {
-      Alert.alert('Impossibile Riprogrammare', reason);
+    if (!canModifyAppointment(appointment)) {
+      Alert.alert(
+        'Impossibile Riprogrammare',
+        'Puoi riprogrammare un appuntamento solo se mancano almeno 2 ore.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -264,7 +274,7 @@ export default function BookingsScreen() {
       fetchAppointments();
     } catch (error) {
       console.error('Error updating appointment:', error);
-      Alert.alert('Errore', 'Impossibile riprogrammare l\'appuntamento');
+      Alert.alert('Errore', 'Impossibile aggiornare l\'appuntamento');
     } finally {
       setUpdating(false);
     }
@@ -284,7 +294,7 @@ export default function BookingsScreen() {
       case 'booked':
         return colors.primary;
       case 'completed':
-        return colors.primary;
+        return colors.secondary;
       case 'cancelled':
         return colors.error;
       default:
@@ -313,33 +323,13 @@ export default function BookingsScreen() {
     );
   }
 
-  // Filter upcoming appointments - only booked appointments that are in the future
-  const upcomingAppointments = appointments.filter((apt) => {
-    if (apt.status !== 'booked') return false;
-    
-    const appointmentDateTime = new Date(`${apt.date}T${apt.time}:00`);
-    const now = new Date();
-    
-    return appointmentDateTime >= now;
-  });
-
-  // Past appointments include completed, cancelled, or past booked appointments
-  const pastAppointments = appointments.filter((apt) => {
-    if (apt.status === 'completed' || apt.status === 'cancelled') return true;
-    
-    const appointmentDateTime = new Date(`${apt.date}T${apt.time}:00`);
-    const now = new Date();
-    
-    return appointmentDateTime < now;
-  });
-
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <View style={commonStyles.header}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Le Mie Prenotazioni</Text>
+        <Text style={commonStyles.headerTitle}>I Miei Appuntamenti</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -350,165 +340,119 @@ export default function BookingsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-          Prossimi ({upcomingAppointments.length})
-        </Text>
-
-        {upcomingAppointments.length === 0 ? (
+        {appointments.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="calendar" size={48} color={colors.textSecondary} />
-            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              Nessun appuntamento in programma
+            <Text style={[commonStyles.textSecondary, { marginTop: 16, textAlign: 'center' }]}>
+              Non hai ancora prenotato nessun appuntamento
             </Text>
+            <TouchableOpacity
+              style={[buttonStyles.primary, { marginTop: 20 }]}
+              onPress={() => router.push('/(customer)/book-appointment')}
+            >
+              <Text style={buttonStyles.text}>Prenota Ora</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <React.Fragment>
-            {upcomingAppointments.map((appointment, index) => {
-              const { canModify } = canModifyAppointment(appointment);
-              
-              return (
-                <View key={`upcoming-${appointment.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      {appointment.service}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: getStatusColor(appointment.status),
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {getStatusText(appointment.status)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={commonStyles.textSecondary}>
-                      📅 {new Date(appointment.date).toLocaleDateString('it-IT', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      🕐 {appointment.time}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      💳 {appointment.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Pagato Online'}
+            {appointments.map((appointment, index) => (
+              <View key={`appointment-${appointment.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                    {appointment.service}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: getStatusColor(appointment.status),
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      {getStatusText(appointment.status)}
                     </Text>
                   </View>
+                </View>
 
-                  {!canModify && (
-                    <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
-                      <Text style={[commonStyles.text, { fontSize: 12, textAlign: 'center' }]}>
-                        ⚠️ Non modificabile - meno di 24 ore all&apos;appuntamento
-                      </Text>
-                    </View>
-                  )}
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={commonStyles.textSecondary}>
+                    📅 Data: {new Date(appointment.date).toLocaleDateString('it-IT', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    🕐 Orario: {appointment.time}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    💳 Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
+                    {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
+                  </Text>
+                </View>
 
+                {appointment.cancellation_reason && (
+                  <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                      Motivo Annullamento:
+                    </Text>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      {appointment.cancellation_reason}
+                    </Text>
+                  </View>
+                )}
+
+                {appointment.status === 'booked' && canModifyAppointment(appointment) && (
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <TouchableOpacity
-                      style={[
-                        buttonStyles.primary,
-                        { flex: 1, paddingVertical: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
-                        !canModify && { opacity: 0.5 },
-                      ]}
+                      style={{
+                        flex: 1,
+                        backgroundColor: colors.card,
+                        paddingVertical: 10,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}
                       onPress={() => handleRescheduleAppointment(appointment)}
-                      disabled={!canModify}
-                      activeOpacity={0.7}
                     >
-                      <Text style={[buttonStyles.text, { color: colors.text, fontSize: 14 }]}>
+                      <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                         Riprogramma
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[
-                        buttonStyles.primary,
-                        { flex: 1, paddingVertical: 10, backgroundColor: colors.error },
-                        !canModify && { opacity: 0.5 },
-                      ]}
+                      style={{
+                        flex: 1,
+                        backgroundColor: colors.error,
+                        paddingVertical: 10,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                      }}
                       onPress={() => handleCancelAppointment(appointment)}
-                      disabled={!canModify}
-                      activeOpacity={0.7}
                     >
-                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>
+                      <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                         Annulla
                       </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              );
-            })}
-          </React.Fragment>
-        )}
+                )}
 
-        {pastAppointments.length > 0 && (
-          <>
-            <TouchableOpacity
-              style={[commonStyles.card, commonStyles.row, { marginTop: 30, marginBottom: 16 }]}
-              onPress={() => setShowPastAppointments(!showPastAppointments)}
-              activeOpacity={0.7}
-            >
-              <Text style={[commonStyles.subtitle, { flex: 1 }]}>
-                Appuntamenti Passati ({pastAppointments.length})
-              </Text>
-              <IconSymbol 
-                name={showPastAppointments ? 'chevron.up' : 'chevron.down'} 
-                size={24} 
-                color={colors.primary} 
-              />
-            </TouchableOpacity>
-
-            {showPastAppointments && (
-              <React.Fragment>
-                {pastAppointments.map((appointment, index) => (
-                  <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                        {appointment.service}
-                      </Text>
-                      <View
-                        style={{
-                          backgroundColor: getStatusColor(appointment.status),
-                          paddingHorizontal: 12,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                        }}
-                      >
-                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                          {getStatusText(appointment.status)}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={commonStyles.textSecondary}>
-                      {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                {appointment.status === 'booked' && !canModifyAppointment(appointment) && (
+                  <View style={[commonStyles.card, { backgroundColor: colors.accent, padding: 12 }]}>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      ℹ️ Puoi modificare o annullare questo appuntamento solo se mancano almeno 2 ore
                     </Text>
-                    
-                    {appointment.cancellation_reason && (
-                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
-                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
-                          Motivo Annullamento:
-                        </Text>
-                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                          {appointment.cancellation_reason}
-                        </Text>
-                      </View>
-                    )}
                   </View>
-                ))}
-              </React.Fragment>
-            )}
-          </>
+                )}
+              </View>
+            ))}
+          </React.Fragment>
         )}
       </ScrollView>
 
-      {/* Reschedule Modal */}
+      {/* Edit Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -527,7 +471,7 @@ export default function BookingsScreen() {
                   {selectedAppointment.service}
                 </Text>
                 <Text style={commonStyles.textSecondary}>
-                  Attuale: {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
+                  Data Attuale: {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
                 </Text>
               </View>
             )}
@@ -587,7 +531,7 @@ export default function BookingsScreen() {
                         if (isAvailable) {
                           setEditTime(slot);
                         } else {
-                          Alert.alert('Non disponibile', 'Questo orario è in conflitto con un altro appuntamento');
+                          Alert.alert('Non disponibile', 'Questo orario è già occupato');
                         }
                       }}
                       disabled={!isAvailable}
@@ -610,7 +554,7 @@ export default function BookingsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>
-                  {updating ? 'Aggiornamento...' : 'Riprogramma'}
+                  {updating ? 'Aggiornamento...' : 'Conferma'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -624,67 +568,6 @@ export default function BookingsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Cancel Modal with Reason */}
-      <Modal
-        visible={cancelModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setCancelModalVisible(false)}
-      >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Annulla Appuntamento
-            </Text>
-
-            {selectedAppointment && (
-              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 16, marginBottom: 16 }]}>
-                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                  {selectedAppointment.service}
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
-                </Text>
-              </View>
-            )}
-
-            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
-              Motivo dell&apos;annullamento
-            </Text>
-            <TextInput
-              style={[commonStyles.input, { height: 100, textAlignVertical: 'top' }]}
-              placeholder="Spiega perché vuoi annullare questo appuntamento..."
-              placeholderTextColor={colors.textSecondary}
-              value={cancellationReason}
-              onChangeText={setCancellationReason}
-              multiline
-              numberOfLines={4}
-            />
-
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.error }]}
-                onPress={confirmCancelAppointment}
-                activeOpacity={0.7}
-              >
-                <Text style={buttonStyles.text}>Conferma Annullamento</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
-                onPress={() => {
-                  setCancelModalVisible(false);
-                  setSelectedAppointment(null);
-                  setCancellationReason('');
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
               </TouchableOpacity>
             </View>
           </View>

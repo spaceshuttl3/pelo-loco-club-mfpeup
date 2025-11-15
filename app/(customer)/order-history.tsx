@@ -23,9 +23,15 @@ export default function OrderHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
+
   const fetchOrders = async () => {
     try {
-      console.log('Fetching customer orders...');
+      console.log('Fetching orders for user:', user?.id);
       
       const { data, error } = await supabase
         .from('orders')
@@ -35,7 +41,7 @@ export default function OrderHistoryScreen() {
 
       if (error) {
         console.error('Error fetching orders:', error);
-        return;
+        throw error;
       }
 
       console.log('Orders fetched:', data?.length || 0);
@@ -47,12 +53,6 @@ export default function OrderHistoryScreen() {
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -66,10 +66,6 @@ export default function OrderHistoryScreen() {
       </SafeAreaView>
     );
   }
-
-  const pendingOrders = orders.filter(o => o.payment_status === 'pending');
-  const completedOrders = orders.filter(o => o.payment_status === 'paid');
-  const cancelledOrders = orders.filter(o => o.payment_status === 'cancelled');
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -88,190 +84,88 @@ export default function OrderHistoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {pendingOrders.length > 0 && (
-          <>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Ordini in Attesa ({pendingOrders.length})
-            </Text>
-
-            <React.Fragment>
-              {pendingOrders.map((order, index) => (
-                <View key={`pending-${order.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      Ordine #{order.id.substring(0, 8)}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: colors.accent,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        IN ATTESA
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ marginBottom: 12 }}>
-                    <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
-                      💰 Totale: €{order.total_price}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      💳 Modalità: {order.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Online'}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
-                      {new Date(order.created_at || '').toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-
-                  {order.items && Array.isArray(order.items) && (
-                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                        Articoli:
-                      </Text>
-                      {order.items.map((item: any, itemIndex: number) => (
-                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={commonStyles.textSecondary}>
-                            {item.name} x {item.quantity}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            €{(item.price * item.quantity).toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </React.Fragment>
-          </>
-        )}
-
-        {completedOrders.length > 0 && (
-          <>
-            <Text style={[commonStyles.subtitle, { marginTop: pendingOrders.length > 0 ? 30 : 0, marginBottom: 16 }]}>
-              Ordini Completati ({completedOrders.length})
-            </Text>
-
-            <React.Fragment>
-              {completedOrders.map((order, index) => (
-                <View key={`completed-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.8, marginBottom: 12 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      Ordine #{order.id.substring(0, 8)}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: colors.primary,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        PAGATO
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
-                    💰 Totale: €{order.total_price}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
-                  </Text>
-
-                  {order.items && Array.isArray(order.items) && (
-                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                        Articoli:
-                      </Text>
-                      {order.items.map((item: any, itemIndex: number) => (
-                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={commonStyles.textSecondary}>
-                            {item.name} x {item.quantity}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            €{(item.price * item.quantity).toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </React.Fragment>
-          </>
-        )}
-
-        {cancelledOrders.length > 0 && (
-          <>
-            <Text style={[commonStyles.subtitle, { marginTop: (pendingOrders.length > 0 || completedOrders.length > 0) ? 30 : 0, marginBottom: 16 }]}>
-              Ordini Annullati ({cancelledOrders.length})
-            </Text>
-
-            <React.Fragment>
-              {cancelledOrders.map((order, index) => (
-                <View key={`cancelled-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.6, marginBottom: 12 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      Ordine #{order.id.substring(0, 8)}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: colors.error,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        ANNULLATO
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 4 }]}>
-                    💰 Totale: €{order.total_price}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
-                  </Text>
-
-                  {order.items && Array.isArray(order.items) && (
-                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                        Articoli:
-                      </Text>
-                      {order.items.map((item: any, itemIndex: number) => (
-                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={commonStyles.textSecondary}>
-                            {item.name} x {item.quantity}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            €{(item.price * item.quantity).toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
-            </React.Fragment>
-          </>
-        )}
-
-        {orders.length === 0 && (
+        {orders.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="bag" size={48} color={colors.textSecondary} />
-            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-              Nessun ordine trovato
+            <Text style={[commonStyles.textSecondary, { marginTop: 16, textAlign: 'center' }]}>
+              Non hai ancora effettuato nessun ordine
             </Text>
           </View>
+        ) : (
+          <React.Fragment>
+            {orders.map((order, index) => (
+              <View key={`order-${order.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                    Ordine #{order.id.substring(0, 8)}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: 
+                        order.payment_status === 'paid' 
+                          ? colors.primary 
+                          : order.payment_status === 'cancelled'
+                          ? colors.error
+                          : colors.accent,
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      {order.payment_status === 'paid' 
+                        ? 'PAGATO' 
+                        : order.payment_status === 'cancelled'
+                        ? 'ANNULLATO'
+                        : 'IN ATTESA'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginBottom: 8 }]}>
+                    💰 Totale: €{order.total_price}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    💳 Modalità: {order.payment_mode === 'pay_in_person' ? 'Paga di Persona' : 'Online'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')} alle{' '}
+                    {new Date(order.created_at || '').toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+
+                {order.items && Array.isArray(order.items) && (
+                  <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginBottom: 12 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                      Articoli:
+                    </Text>
+                    {order.items.map((item: any, itemIndex: number) => (
+                      <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={commonStyles.textSecondary}>
+                          {item.name} x {item.quantity}
+                        </Text>
+                        <Text style={commonStyles.textSecondary}>
+                          €{(item.price * item.quantity).toFixed(2)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {order.cancellation_reason && (
+                  <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12 }]}>
+                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                      Motivo Annullamento:
+                    </Text>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      {order.cancellation_reason}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </React.Fragment>
         )}
       </ScrollView>
     </SafeAreaView>

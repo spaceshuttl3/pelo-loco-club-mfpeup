@@ -23,12 +23,6 @@ const customerTabs: TabBarItem[] = [
     label: 'Prodotti',
   },
   {
-    name: 'order-history',
-    route: '/(customer)/order-history',
-    icon: 'bag.badge.checkmark',
-    label: 'Ordini',
-  },
-  {
     name: 'profile',
     route: '/(customer)/profile',
     icon: 'person.fill',
