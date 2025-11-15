@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Pelo Loco Club",
@@ -29,7 +30,19 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.pelolococlub.app"
+      "package": "com.pelolococlub.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "pelolococlub"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -47,6 +60,5 @@
     "extra": {
       "router": {}
     }
-  },
-  "scheme": "Pelo Loco Club"
+  }
 }

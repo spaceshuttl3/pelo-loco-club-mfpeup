@@ -35,9 +35,9 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      // Use Natively's email confirmation URL which will handle the deep link
+      // Use the app's custom scheme for deep linking
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://natively.dev/email-confirmed?type=recovery',
+        redirectTo: 'pelolococlub://reset-password',
       });
 
       if (error) {

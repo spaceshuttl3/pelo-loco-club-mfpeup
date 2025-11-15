@@ -49,6 +49,7 @@ export default function ManageAppointmentsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
+  const [showPastAppointments, setShowPastAppointments] = useState(false);
 
   const fetchBarbers = async () => {
     try {
@@ -309,14 +310,14 @@ export default function ManageAppointmentsScreen() {
       </View>
 
       {Platform.OS === 'ios' ? (
- <GlassView
+        <GlassView
           style={{
             marginHorizontal: 16,
             marginBottom: 14,
-						marginTop: 16,
+            marginTop: 16,
             borderRadius: 16,
             overflow: 'hidden',
-						backgroundColor: 'transparent',
+            backgroundColor: 'transparent',
           }}
           intensity={80}
           tint="dark"
@@ -341,9 +342,9 @@ export default function ManageAppointmentsScreen() {
                 Tutti
               </Text>
             </TouchableOpacity>
-            {barbers.map((barber) => (
+            {barbers.map((barber, barberIndex) => (
               <TouchableOpacity
-                key={barber.id}
+                key={`barber-${barber.id}-${barberIndex}`}
                 style={[
                   {
                     paddingHorizontal: 16,
@@ -392,9 +393,9 @@ export default function ManageAppointmentsScreen() {
                 Tutti
               </Text>
             </TouchableOpacity>
-            {barbers.map((barber) => (
+            {barbers.map((barber, barberIndex) => (
               <TouchableOpacity
-                key={barber.id}
+                key={`barber-${barber.id}-${barberIndex}`}
                 style={[
                   {
                     paddingHorizontal: 16,
@@ -528,45 +529,68 @@ export default function ManageAppointmentsScreen() {
 
         {pastAppointments.length > 0 && (
           <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Appuntamenti Passati ({pastAppointments.length})
-            </Text>
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: 30,
+                  marginBottom: 16,
+                  paddingVertical: 16,
+                },
+              ]}
+              onPress={() => setShowPastAppointments(!showPastAppointments)}
+              activeOpacity={0.7}
+            >
+              <Text style={[commonStyles.subtitle, { marginBottom: 0 }]}>
+                Appuntamenti Passati ({pastAppointments.length})
+              </Text>
+              <IconSymbol
+                name={showPastAppointments ? 'chevron.up' : 'chevron.down'}
+                size={24}
+                color={colors.text}
+              />
+            </TouchableOpacity>
 
-            <React.Fragment>
-              {pastAppointments.map((appointment, index) => (
-                <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      {appointment.service}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
+            {showPastAppointments && (
+              <React.Fragment>
+                {pastAppointments.map((appointment, index) => (
+                  <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                        {appointment.service}
                       </Text>
+                      <View
+                        style={{
+                          backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <Text style={commonStyles.textSecondary}>
-                    Cliente: {appointment.user?.name || 'Sconosciuto'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                  </Text>
-                  {appointment.barber && (
                     <Text style={commonStyles.textSecondary}>
-                      Barbiere: {appointment.barber.name}
+                      Cliente: {appointment.user?.name || 'Sconosciuto'}
                     </Text>
-                  )}
-                </View>
-              ))}
-            </React.Fragment>
+                    <Text style={commonStyles.textSecondary}>
+                      Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                    </Text>
+                    {appointment.barber && (
+                      <Text style={commonStyles.textSecondary}>
+                        Barbiere: {appointment.barber.name}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </React.Fragment>
+            )}
           </>
         )}
       </ScrollView>
