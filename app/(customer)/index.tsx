@@ -5,6 +5,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomerHomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
   const quickActions = [
     {
@@ -54,14 +56,17 @@ export default function CustomerHomeScreen() {
     },
   ];
 
+  // Calculate card width based on screen size
+  const cardWidth = width < 400 ? '100%' : '50%';
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={{ marginBottom: 30, marginTop: 20 }}>
-          <Text style={[commonStyles.title, { fontSize: 28 }]}>
+          <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.07, 28) }]}>
             Bentornato/a da Pelo Loco,
           </Text>
-          <Text style={[commonStyles.title, { fontSize: 32, color: colors.primary }]}>
+          <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), color: colors.primary }]}>
             {user?.name?.split(' ')[0] || 'Ospite'}!
           </Text>
           <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
@@ -74,11 +79,11 @@ export default function CustomerHomeScreen() {
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-          {quickActions.map((action) => (
+          {quickActions.map((action, actionIndex) => (
             <TouchableOpacity
-              key={action.id}
+              key={`action-${action.id}-${actionIndex}`}
               style={{
-                width: '50%',
+                width: cardWidth,
                 padding: 6,
               }}
               onPress={() => {

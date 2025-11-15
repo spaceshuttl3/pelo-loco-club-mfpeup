@@ -357,67 +357,69 @@ export default function BookingsScreen() {
             </Text>
           </View>
         ) : (
-          upcomingAppointments.map((appointment) => (
-            <View key={appointment.id} style={[commonStyles.card, { marginBottom: 16 }]}>
-              <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                  {appointment.service}
-                </Text>
-                <View
-                  style={{
-                    backgroundColor: getStatusColor(appointment.status),
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 12,
-                  }}
-                >
-                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                    {getStatusText(appointment.status)}
+          <React.Fragment>
+            {upcomingAppointments.map((appointment) => (
+              <View key={`upcoming-${appointment.id}`} style={[commonStyles.card, { marginBottom: 16 }]}>
+                <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                    {appointment.service}
                   </Text>
+                  <View
+                    style={{
+                      backgroundColor: getStatusColor(appointment.status),
+                      paddingHorizontal: 12,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                      {getStatusText(appointment.status)}
+                    </Text>
+                  </View>
                 </View>
-              </View>
 
-              <View style={{ marginBottom: 12 }}>
-                <Text style={commonStyles.textSecondary}>
-                  Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                </Text>
-                {appointment.barber && (
+                <View style={{ marginBottom: 12 }}>
                   <Text style={commonStyles.textSecondary}>
-                    Barbiere: {appointment.barber.name}
+                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
                   </Text>
+                  {appointment.barber && (
+                    <Text style={commonStyles.textSecondary}>
+                      Barbiere: {appointment.barber.name}
+                    </Text>
+                  )}
+                  <Text style={commonStyles.textSecondary}>
+                    Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
+                    {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
+                  </Text>
+                </View>
+
+                {canModifyAppointment(appointment) && (
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
+                      onPress={() => handleRescheduleAppointment(appointment)}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>Riprogramma</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[buttonStyles.primary, { flex: 1, paddingVertical: 10, backgroundColor: colors.error }]}
+                      onPress={() => handleCancelAppointment(appointment)}
+                    >
+                      <Text style={[buttonStyles.text, { fontSize: 14 }]}>Annulla</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
-                <Text style={commonStyles.textSecondary}>
-                  Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
-                  {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
-                </Text>
+
+                {!canModifyAppointment(appointment) && (
+                  <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12 }]}>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      ⚠️ Modifiche disponibili solo con 24 ore di anticipo
+                    </Text>
+                  </View>
+                )}
               </View>
-
-              {canModifyAppointment(appointment) && (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10 }]}
-                    onPress={() => handleRescheduleAppointment(appointment)}
-                  >
-                    <Text style={[buttonStyles.text, { fontSize: 14 }]}>Riprogramma</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[buttonStyles.primary, { flex: 1, paddingVertical: 10, backgroundColor: colors.error }]}
-                    onPress={() => handleCancelAppointment(appointment)}
-                  >
-                    <Text style={[buttonStyles.text, { fontSize: 14 }]}>Annulla</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {!canModifyAppointment(appointment) && (
-                <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12 }]}>
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                    ⚠️ Modifiche disponibili solo con 24 ore di anticipo
-                  </Text>
-                </View>
-              )}
-            </View>
-          ))
+            ))}
+          </React.Fragment>
         )}
 
         {pastAppointments.length > 0 && (
@@ -448,47 +450,49 @@ export default function BookingsScreen() {
             </TouchableOpacity>
 
             {showPastAppointments && (
-              pastAppointments.map((appointment) => (
-                <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      {appointment.service}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: getStatusColor(appointment.status),
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {getStatusText(appointment.status)}
+              <React.Fragment>
+                {pastAppointments.map((appointment) => (
+                  <View key={`past-${appointment.id}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                        {appointment.service}
                       </Text>
+                      <View
+                        style={{
+                          backgroundColor: getStatusColor(appointment.status),
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                  </Text>
-                  {appointment.barber && (
                     <Text style={commonStyles.textSecondary}>
-                      Barbiere: {appointment.barber.name}
+                      Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
                     </Text>
-                  )}
+                    {appointment.barber && (
+                      <Text style={commonStyles.textSecondary}>
+                        Barbiere: {appointment.barber.name}
+                      </Text>
+                    )}
 
-                  {appointment.cancellation_reason && (
-                    <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
-                      <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
-                        Motivo Annullamento:
-                      </Text>
-                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                        {appointment.cancellation_reason}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              ))
+                    {appointment.cancellation_reason && (
+                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                          Motivo Annullamento:
+                        </Text>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                          {appointment.cancellation_reason}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </React.Fragment>
             )}
           </>
         )}
@@ -556,7 +560,7 @@ export default function BookingsScreen() {
                   const isAvailable = isTimeSlotAvailable(slot);
                   return (
                     <TouchableOpacity
-                      key={slot}
+                      key={`reschedule-slot-${slot}`}
                       style={[
                         {
                           margin: 4,

@@ -1,20 +1,21 @@
+
 {
   "expo": {
-    "name": "Pelo Loco Club",
-    "slug": "Pelo Loco Club",
+    "name": "Pelo Loco Barbershop",
+    "slug": "pelo-loco-barbershop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pelolococlub.app",
+      "bundleIdentifier": "com.pelolocobarbershop.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
@@ -25,18 +26,18 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
+        "foregroundImage": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.pelolococlub.app",
+      "package": "com.pelolocobarbershop.app",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             {
-              "scheme": "pelolococlub"
+              "scheme": "pelolocobarbershop"
             }
           ],
           "category": [
@@ -47,7 +48,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/final_quest_240x240.png",
+      "favicon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
       "bundler": "metro"
     },
     "plugins": [
@@ -55,13 +56,12 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "pelolococlub",
+    "scheme": "pelolocobarbershop",
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {}
     }
-  },
-  "scheme": "Pelo Loco Club"
+  }
 }

@@ -1,5 +1,12 @@
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive scaling
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 export const colors = {
   background: '#0a0a0a',
@@ -12,6 +19,7 @@ export const colors = {
   accent: '#bb8fce',
   error: '#ff4444',
   success: '#4CAF50',
+  black: '#000000',
 };
 
 export const commonStyles = StyleSheet.create({
@@ -21,7 +29,7 @@ export const commonStyles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: moderateScale(20),
   },
   centerContent: {
     justifyContent: 'center',
@@ -31,43 +39,43 @@ export const commonStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 10,
+    padding: moderateScale(20),
+    paddingTop: moderateScale(10),
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     color: colors.text,
     flex: 1,
   },
   title: {
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   subtitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   text: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: colors.text,
   },
   textSecondary: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: colors.textSecondary,
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(12),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -78,11 +86,11 @@ export const commonStyles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: moderateScale(12),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(16),
     color: colors.text,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -91,21 +99,21 @@ export const commonStyles = StyleSheet.create({
 export const buttonStyles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondary: {
     backgroundColor: colors.secondary,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: moderateScale(12),
+    padding: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
 });

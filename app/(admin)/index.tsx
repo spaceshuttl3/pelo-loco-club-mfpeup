@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
@@ -25,6 +26,7 @@ export default function AdminDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { signOut } = useAuth();
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     fetchDashboardData();
@@ -215,6 +217,9 @@ export default function AdminDashboardScreen() {
     },
   ];
 
+  // Calculate card width based on screen size
+  const cardWidth = width < 400 ? '100%' : '50%';
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView
@@ -226,7 +231,7 @@ export default function AdminDashboardScreen() {
       >
         <View style={{ marginBottom: 30, marginTop: 20 }}>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.title, { fontSize: 32, flex: 1 }]}>
+            <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), flex: 1 }]}>
               Dashboard Admin
             </Text>
             <TouchableOpacity onPress={handleSignOut}>
@@ -267,11 +272,11 @@ export default function AdminDashboardScreen() {
         </Text>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
-          {quickActions.map((action) => (
+          {quickActions.map((action, actionIndex) => (
             <TouchableOpacity
-              key={action.id}
+              key={`action-${action.id}-${actionIndex}`}
               style={{
-                width: '50%',
+                width: cardWidth,
                 padding: 6,
               }}
               onPress={() => {

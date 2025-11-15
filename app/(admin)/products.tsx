@@ -81,7 +81,7 @@ export default function ManageProductsScreen() {
 
       console.log('Launching image picker...');
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
@@ -89,7 +89,7 @@ export default function ManageProductsScreen() {
 
       console.log('Image picker result:', result);
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets && result.assets[0]) {
         console.log('Image selected:', result.assets[0].uri);
         setPhotoUri(result.assets[0].uri);
         setPhotoUrl('');
@@ -336,7 +336,7 @@ export default function ManageProductsScreen() {
         ) : (
           <React.Fragment>
             {products.map((product) => (
-              <View key={product.id} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
+              <View key={`product-${product.id}`} style={[commonStyles.card, { marginBottom: 16, padding: 0, overflow: 'hidden' }]}>
                 {product.photo_url ? (
                   <Image
                     source={{ uri: product.photo_url }}

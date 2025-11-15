@@ -107,7 +107,7 @@ export default function LoginScreen() {
           <View style={[commonStyles.content, commonStyles.centerContent, { paddingTop: 60 }]}>
             <View style={{ width: '100%', maxWidth: 400 }}>
               <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 24 }]}>
-                Pelo Loco BarberShop
+                Pelo Loco Barbershop
               </Text>
               
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -182,9 +182,9 @@ export default function LoginScreen() {
                   Seguici su Instagram
                 </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
-                  {instagramProfiles.map((profile) => (
+                  {instagramProfiles.map((profile, profileIndex) => (
                     <TouchableOpacity
-                      key={profile.id}
+                      key={`instagram-${profile.id}-${profileIndex}`}
                       onPress={() => handleInstagramPress(profile.url, profile.handle)}
                       activeOpacity={0.7}
                       style={{

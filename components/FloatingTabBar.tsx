@@ -101,7 +101,7 @@ export default function FloatingTabBar({
         mass: 1,
       });
     }
-  }, [activeTabIndex, animatedValue]);
+  }, [activeTabIndex, animatedValue, pathname, tabs]);
 
   const indicatorStyle = useAnimatedStyle(() => {
     const horizontalPadding = 6;
@@ -182,11 +182,11 @@ export default function FloatingTabBar({
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab) => {
+          {tabs.map((tab, tabIndex) => {
             const isActive = getIsActive(tab);
             return (
               <TouchableOpacity
-                key={tab.name}
+                key={`tab-${tab.name}-${tabIndex}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
@@ -235,11 +235,11 @@ export default function FloatingTabBar({
             ]}
             pointerEvents="none"
           />
-          {tabs.map((tab) => {
+          {tabs.map((tab, tabIndex) => {
             const isActive = getIsActive(tab);
             return (
               <TouchableOpacity
-                key={tab.name}
+                key={`tab-${tab.name}-${tabIndex}`}
                 style={styles.tab}
                 onPress={() => handleTabPress(tab.route)}
                 activeOpacity={0.7}
