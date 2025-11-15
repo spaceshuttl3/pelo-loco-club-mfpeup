@@ -284,15 +284,39 @@ export default function CouponsScreen() {
 
     setSaving(true);
     try {
-      const coupons = selectedUsers.map(userId => ({
-        user_id: userId,
-        config_id: selectedConfig.id,
-        coupon_type: selectedConfig.coupon_text,
-        discount_value: selectedConfig.discount_value,
-        expiration_date: expirationDate.toISOString().split('T')[0],
-        status: 'active',
-        coupon_code: `PROMO${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      }));
+      // Generate coupons with unique codes
+      const coupons = selectedUsers.map(userId => {
+        const uniqueCode = `PROMO${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        return {
+          user_id: userId,
+          config_id: selectedConfig.id,
+          coupon_type: selectedConfig.coupon_text,
+          discount_value: selectedConfig.discount_value,
+          expiration_date: expirationDate.toISOString().split('T')[0],
+          status: 'active',
+          coupon_code: uniqueCode,
+        };
+      });
+
+      // Check for duplicate coupon codes before inserting
+      const couponCodes = coupons.map(c => c.coupon_code);
+      const { data: existingCoupons, error: checkError } = await supabase
+        .from('coupons')
+        .select('coupon_code')
+        .in('coupon_code', couponCodes);
+
+      if (checkError) {
+        console.error('Error checking coupon codes:', checkError);
+        Alert.alert('Error', 'Could not verify coupon codes');
+        setSaving(false);
+        return;
+      }
+
+      if (existingCoupons && existingCoupons.length > 0) {
+        Alert.alert('Error', 'Some coupon codes already exist. Please try again.');
+        setSaving(false);
+        return;
+      }
 
       const { error } = await supabase
         .from('coupons')
@@ -300,7 +324,13 @@ export default function CouponsScreen() {
 
       if (error) {
         console.error('Error sending coupons:', error);
-        Alert.alert('Error', 'Could not send coupons');
+        // Check if it's a duplicate key error
+        if (error.message.includes('duplicate') || error.code === '23505') {
+          Alert.alert('Error', 'A coupon with this code already exists. Please try again.');
+        } else {
+          Alert.alert('Error', 'Could not send coupons');
+        }
+        setSaving(false);
         return;
       }
 

@@ -21,6 +21,7 @@ export default function AdminDashboardScreen() {
   const router = useRouter();
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [todayEarnings, setTodayEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { signOut } = useAuth();
@@ -33,9 +34,10 @@ export default function AdminDashboardScreen() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
+      // Fetch today's appointments
       const { data: appointments, error: aptError } = await supabase
         .from('appointments')
-        .select('*')
+        .select('*, services!inner(price)')
         .eq('date', today)
         .eq('status', 'booked')
         .order('time', { ascending: true });
@@ -46,6 +48,7 @@ export default function AdminDashboardScreen() {
         setTodayAppointments(appointments || []);
       }
 
+      // Fetch pending orders
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -57,6 +60,36 @@ export default function AdminDashboardScreen() {
       } else {
         setPendingOrders(orders || []);
       }
+
+      // Calculate today's earnings (paid appointments + paid orders)
+      const { data: paidAppointments, error: paidAptError } = await supabase
+        .from('appointments')
+        .select('*, services!inner(price)')
+        .eq('date', today)
+        .eq('payment_status', 'paid');
+
+      const { data: paidOrders, error: paidOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+        .eq('payment_status', 'paid');
+
+      let earnings = 0;
+      
+      if (!paidAptError && paidAppointments) {
+        earnings += paidAppointments.reduce((sum, apt) => {
+          return sum + (parseFloat(apt.services?.price) || 0);
+        }, 0);
+      }
+
+      if (!paidOrdersError && paidOrders) {
+        earnings += paidOrders.reduce((sum, order) => {
+          return sum + (parseFloat(order.total_price) || 0);
+        }, 0);
+      }
+
+      setTodayEarnings(earnings);
     } catch (error) {
       console.error('Error in fetchDashboardData:', error);
     } finally {
@@ -149,10 +182,17 @@ export default function AdminDashboardScreen() {
       route: '/(admin)/birthdays',
     },
     {
+      id: 'reports',
+      title: 'Report',
+      icon: 'chart.bar.fill',
+      color: colors.primary,
+      route: '/(admin)/reports',
+    },
+    {
       id: 'notifications',
       title: 'Notifiche',
       icon: 'bell.fill',
-      color: colors.primary,
+      color: colors.secondary,
       route: '/(admin)/notifications',
     },
   ];
@@ -190,10 +230,16 @@ export default function AdminDashboardScreen() {
               {todayAppointments.length}
             </Text>
           </View>
-          <View style={commonStyles.row}>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
             <Text style={commonStyles.text}>Ordini in Attesa:</Text>
             <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
               {pendingOrders.length}
+            </Text>
+          </View>
+          <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.accent }]}>
+              €{todayEarnings.toFixed(2)}
             </Text>
           </View>
         </View>

@@ -21,6 +21,7 @@ export interface Appointment {
   status: 'booked' | 'completed' | 'cancelled';
   payment_mode: 'pay_in_person' | 'online';
   payment_status: 'pending' | 'paid';
+  cancellation_reason?: string;
   created_at?: string;
   user?: User;
 }
@@ -42,6 +43,7 @@ export interface Order {
   total_price: number;
   payment_mode: 'pay_in_person' | 'online';
   payment_status: 'pending' | 'paid' | 'cancelled';
+  cancellation_reason?: string;
   created_at?: string;
   user?: User;
 }

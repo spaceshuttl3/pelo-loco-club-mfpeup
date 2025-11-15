@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  TextInput,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -32,12 +33,15 @@ export default function BookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [editDate, setEditDate] = useState(new Date());
   const [editTime, setEditTime] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showPastAppointments, setShowPastAppointments] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -137,36 +141,39 @@ export default function BookingsScreen() {
       return;
     }
 
-    Alert.alert(
-      'Annulla Appuntamento',
-      'Sei sicuro di voler annullare questo appuntamento?',
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Sì, Annulla',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('appointments')
-                .update({ status: 'cancelled' })
-                .eq('id', appointment.id);
+    setSelectedAppointment(appointment);
+    setCancellationReason('');
+    setCancelModalVisible(true);
+  };
 
-              if (error) throw error;
+  const confirmCancelAppointment = async () => {
+    if (!selectedAppointment) return;
 
-              Alert.alert('Successo', 'Appuntamento annullato con successo');
-              fetchAppointments();
-            } catch (error) {
-              console.error('Error cancelling appointment:', error);
-              Alert.alert('Errore', 'Impossibile annullare l\'appuntamento');
-            }
-          },
-        },
-      ]
-    );
+    if (!cancellationReason.trim()) {
+      Alert.alert('Motivo Richiesto', 'Per favore, fornisci un motivo per l\'annullamento.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: cancellationReason.trim(),
+        })
+        .eq('id', selectedAppointment.id);
+
+      if (error) throw error;
+
+      Alert.alert('Successo', 'Appuntamento annullato con successo');
+      setCancelModalVisible(false);
+      setSelectedAppointment(null);
+      setCancellationReason('');
+      fetchAppointments();
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      Alert.alert('Errore', 'Impossibile annullare l\'appuntamento');
+    }
   };
 
   const handleRescheduleAppointment = (appointment: Appointment) => {
@@ -442,41 +449,66 @@ export default function BookingsScreen() {
 
         {pastAppointments.length > 0 && (
           <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Appuntamenti Passati ({pastAppointments.length})
-            </Text>
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginTop: 30, marginBottom: 16 }]}
+              onPress={() => setShowPastAppointments(!showPastAppointments)}
+              activeOpacity={0.7}
+            >
+              <Text style={[commonStyles.subtitle, { flex: 1 }]}>
+                Appuntamenti Passati ({pastAppointments.length})
+              </Text>
+              <IconSymbol 
+                name={showPastAppointments ? 'chevron.up' : 'chevron.down'} 
+                size={24} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
 
-            <React.Fragment>
-              {pastAppointments.map((appointment, index) => (
-                <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      {appointment.service}
-                    </Text>
-                    <View
-                      style={{
-                        backgroundColor: getStatusColor(appointment.status),
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        {getStatusText(appointment.status)}
+            {showPastAppointments && (
+              <React.Fragment>
+                {pastAppointments.map((appointment, index) => (
+                  <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                        {appointment.service}
                       </Text>
+                      <View
+                        style={{
+                          backgroundColor: getStatusColor(appointment.status),
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          {getStatusText(appointment.status)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
 
-                  <Text style={commonStyles.textSecondary}>
-                    {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                  </Text>
-                </View>
-              ))}
-            </React.Fragment>
+                    <Text style={commonStyles.textSecondary}>
+                      {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                    </Text>
+                    
+                    {appointment.cancellation_reason && (
+                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                          Motivo Annullamento:
+                        </Text>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                          {appointment.cancellation_reason}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </React.Fragment>
+            )}
           </>
         )}
       </ScrollView>
 
+      {/* Reschedule Modal */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
@@ -592,6 +624,67 @@ export default function BookingsScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Modal with Reason */}
+      <Modal
+        visible={cancelModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Annulla Appuntamento
+            </Text>
+
+            {selectedAppointment && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 16, marginBottom: 16 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                  {selectedAppointment.service}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  {new Date(selectedAppointment.date).toLocaleDateString('it-IT')} alle {selectedAppointment.time}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Motivo dell&apos;annullamento
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { height: 100, textAlignVertical: 'top' }]}
+              placeholder="Spiega perché vuoi annullare questo appuntamento..."
+              placeholderTextColor={colors.textSecondary}
+              value={cancellationReason}
+              onChangeText={setCancellationReason}
+              multiline
+              numberOfLines={4}
+            />
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.error }]}
+                onPress={confirmCancelAppointment}
+                activeOpacity={0.7}
+              >
+                <Text style={buttonStyles.text}>Conferma Annullamento</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  setSelectedAppointment(null);
+                  setCancellationReason('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
               </TouchableOpacity>
             </View>
           </View>

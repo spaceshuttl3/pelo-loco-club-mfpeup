@@ -213,9 +213,10 @@ export default function CartScreen() {
                   €{totalPrice.toFixed(2)}
                 </Text>
               </View>
-              <Text style={[commonStyles.textSecondary, { fontSize: 12, textAlign: 'center' }]}>
-                💳 Pagamento di persona al negozio
+  <Text style={[commonStyles.textSecondary, { fontSize: 12, textAlign: 'center' }]}>
+                Pagamento di persona al negozio 💳 
               </Text>
+
             </View>
 
             <TouchableOpacity

@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +23,11 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [showCompletedOrders, setShowCompletedOrders] = useState(false);
+  const [showCancelledOrders, setShowCancelledOrders] = useState(false);
 
   const fetchOrders = async () => {
     try {
@@ -102,41 +109,44 @@ export default function OrdersScreen() {
   };
 
   const handleCancelOrder = (order: Order) => {
-    Alert.alert(
-      'Annulla Ordine',
-      `Sei sicuro di voler annullare l\'ordine #${order.id.substring(0, 8)}?`,
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Sì, Annulla',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Cancelling order:', order.id);
-              
-              const { error } = await supabase
-                .from('orders')
-                .update({ payment_status: 'cancelled' })
-                .eq('id', order.id);
+    setSelectedOrder(order);
+    setCancellationReason('');
+    setCancelModalVisible(true);
+  };
 
-              if (error) {
-                console.error('Error cancelling order:', error);
-                throw error;
-              }
-              
-              Alert.alert('Successo', 'Ordine annullato con successo');
-              fetchOrders();
-            } catch (error) {
-              console.error('Error cancelling order:', error);
-              Alert.alert('Errore', 'Impossibile annullare l\'ordine');
-            }
-          },
-        },
-      ]
-    );
+  const confirmCancelOrder = async () => {
+    if (!selectedOrder) return;
+
+    if (!cancellationReason.trim()) {
+      Alert.alert('Motivo Richiesto', 'Per favore, fornisci un motivo per l\'annullamento.');
+      return;
+    }
+
+    try {
+      console.log('Cancelling order:', selectedOrder.id);
+      
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          payment_status: 'cancelled',
+          cancellation_reason: cancellationReason.trim(),
+        })
+        .eq('id', selectedOrder.id);
+
+      if (error) {
+        console.error('Error cancelling order:', error);
+        throw error;
+      }
+      
+      Alert.alert('Successo', 'Ordine annullato con successo');
+      setCancelModalVisible(false);
+      setSelectedOrder(null);
+      setCancellationReason('');
+      fetchOrders();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      Alert.alert('Errore', 'Impossibile annullare l\'ordine');
+    }
   };
 
   const handleDeleteOrder = (order: Order) => {
@@ -321,164 +331,262 @@ export default function OrdersScreen() {
 
         {completedOrders.length > 0 && (
           <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Ordini Completati ({completedOrders.length})
-            </Text>
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginTop: 30, marginBottom: 16 }]}
+              onPress={() => setShowCompletedOrders(!showCompletedOrders)}
+              activeOpacity={0.7}
+            >
+              <Text style={[commonStyles.subtitle, { flex: 1 }]}>
+                Ordini Completati ({completedOrders.length})
+              </Text>
+              <IconSymbol 
+                name={showCompletedOrders ? 'chevron.up' : 'chevron.down'} 
+                size={24} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
 
-            <React.Fragment>
-              {completedOrders.map((order, index) => (
-                <View key={`completed-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.7 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      Ordine #{order.id.substring(0, 8)}
+            {showCompletedOrders && (
+              <React.Fragment>
+                {completedOrders.map((order, index) => (
+                  <View key={`completed-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.7 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                        Ordine #{order.id.substring(0, 8)}
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: colors.primary,
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          PAGATO
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={commonStyles.textSecondary}>
+                      👤 Cliente: {order.user?.name || 'Non disponibile'}
                     </Text>
-                    <View
+                    <Text style={commonStyles.textSecondary}>
+                      📞 Telefono: {order.user?.phone || 'Non disponibile'}
+                    </Text>
+                    <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
+                      💰 Totale: €{order.total_price}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                    </Text>
+
+                    {order.items && Array.isArray(order.items) && (
+                      <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
+                        <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                          Articoli:
+                        </Text>
+                        {order.items.map((item: any, itemIndex: number) => (
+                          <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <Text style={commonStyles.textSecondary}>
+                              {item.name} x {item.quantity}
+                            </Text>
+                            <Text style={commonStyles.textSecondary}>
+                              €{(item.price * item.quantity).toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <TouchableOpacity
                       style={{
-                        backgroundColor: colors.primary,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
+                        marginTop: 12,
+                        backgroundColor: colors.card,
+                        paddingVertical: 8,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.error,
                       }}
+                      onPress={() => handleDeleteOrder(order)}
                     >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        PAGATO
+                      <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                        Elimina Ordine
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   </View>
-
-                  <Text style={commonStyles.textSecondary}>
-                    👤 Cliente: {order.user?.name || 'Non disponibile'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📞 Telefono: {order.user?.phone || 'Non disponibile'}
-                  </Text>
-                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
-                    💰 Totale: €{order.total_price}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
-                  </Text>
-
-                  {order.items && Array.isArray(order.items) && (
-                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                        Articoli:
-                      </Text>
-                      {order.items.map((item: any, itemIndex: number) => (
-                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={commonStyles.textSecondary}>
-                            {item.name} x {item.quantity}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            €{(item.price * item.quantity).toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity
-                    style={{
-                      marginTop: 12,
-                      backgroundColor: colors.card,
-                      paddingVertical: 8,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: colors.error,
-                    }}
-                    onPress={() => handleDeleteOrder(order)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                      Elimina Ordine
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </React.Fragment>
+                ))}
+              </React.Fragment>
+            )}
           </>
         )}
 
         {cancelledOrders.length > 0 && (
           <>
-            <Text style={[commonStyles.subtitle, { marginTop: 30, marginBottom: 16 }]}>
-              Ordini Annullati ({cancelledOrders.length})
-            </Text>
+            <TouchableOpacity
+              style={[commonStyles.card, commonStyles.row, { marginTop: 30, marginBottom: 16 }]}
+              onPress={() => setShowCancelledOrders(!showCancelledOrders)}
+              activeOpacity={0.7}
+            >
+              <Text style={[commonStyles.subtitle, { flex: 1 }]}>
+                Ordini Annullati ({cancelledOrders.length})
+              </Text>
+              <IconSymbol 
+                name={showCancelledOrders ? 'chevron.up' : 'chevron.down'} 
+                size={24} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
 
-            <React.Fragment>
-              {cancelledOrders.map((order, index) => (
-                <View key={`cancelled-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.6 }]}>
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                      Ordine #{order.id.substring(0, 8)}
+            {showCancelledOrders && (
+              <React.Fragment>
+                {cancelledOrders.map((order, index) => (
+                  <View key={`cancelled-${order.id}-${index}`} style={[commonStyles.card, { opacity: 0.6 }]}>
+                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                        Ordine #{order.id.substring(0, 8)}
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: colors.error,
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                          ANNULLATO
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={commonStyles.textSecondary}>
+                      👤 Cliente: {order.user?.name || 'Non disponibile'}
                     </Text>
-                    <View
+                    <Text style={commonStyles.textSecondary}>
+                      📞 Telefono: {order.user?.phone || 'Non disponibile'}
+                    </Text>
+                    <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
+                      💰 Totale: €{order.total_price}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
+                    </Text>
+
+                    {order.cancellation_reason && (
+                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                          Motivo Annullamento:
+                        </Text>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                          {order.cancellation_reason}
+                        </Text>
+                      </View>
+                    )}
+
+                    {order.items && Array.isArray(order.items) && (
+                      <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
+                        <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                          Articoli:
+                        </Text>
+                        {order.items.map((item: any, itemIndex: number) => (
+                          <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <Text style={commonStyles.textSecondary}>
+                              {item.name} x {item.quantity}
+                            </Text>
+                            <Text style={commonStyles.textSecondary}>
+                              €{(item.price * item.quantity).toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    <TouchableOpacity
                       style={{
-                        backgroundColor: colors.error,
-                        paddingHorizontal: 12,
-                        paddingVertical: 4,
-                        borderRadius: 12,
+                        marginTop: 12,
+                        backgroundColor: colors.card,
+                        paddingVertical: 8,
+                        borderRadius: 6,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: colors.error,
                       }}
+                      onPress={() => handleDeleteOrder(order)}
                     >
-                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                        ANNULLATO
+                      <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
+                        Elimina Ordine
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                   </View>
-
-                  <Text style={commonStyles.textSecondary}>
-                    👤 Cliente: {order.user?.name || 'Non disponibile'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📞 Telefono: {order.user?.phone || 'Non disponibile'}
-                  </Text>
-                  <Text style={[commonStyles.text, { fontWeight: 'bold', marginTop: 4 }]}>
-                    💰 Totale: €{order.total_price}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    📅 Data: {new Date(order.created_at || '').toLocaleDateString('it-IT')}
-                  </Text>
-
-                  {order.items && Array.isArray(order.items) && (
-                    <View style={{ paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-                        Articoli:
-                      </Text>
-                      {order.items.map((item: any, itemIndex: number) => (
-                        <View key={`item-${itemIndex}`} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <Text style={commonStyles.textSecondary}>
-                            {item.name} x {item.quantity}
-                          </Text>
-                          <Text style={commonStyles.textSecondary}>
-                            €{(item.price * item.quantity).toFixed(2)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <TouchableOpacity
-                    style={{
-                      marginTop: 12,
-                      backgroundColor: colors.card,
-                      paddingVertical: 8,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: colors.error,
-                    }}
-                    onPress={() => handleDeleteOrder(order)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600', color: colors.error }]}>
-                      Elimina Ordine
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </React.Fragment>
+                ))}
+              </React.Fragment>
+            )}
           </>
         )}
       </ScrollView>
+
+      {/* Cancel Modal with Reason */}
+      <Modal
+        visible={cancelModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Annulla Ordine
+            </Text>
+
+            {selectedOrder && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 16, marginBottom: 16 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                  Ordine #{selectedOrder.id.substring(0, 8)}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Cliente: {selectedOrder.user?.name}
+                </Text>
+              </View>
+            )}
+
+            <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
+              Motivo dell&apos;annullamento
+            </Text>
+            <TextInput
+              style={[commonStyles.input, { height: 100, textAlignVertical: 'top' }]}
+              placeholder="Spiega perché vuoi annullare questo ordine..."
+              placeholderTextColor={colors.textSecondary}
+              value={cancellationReason}
+              onChangeText={setCancellationReason}
+              multiline
+              numberOfLines={4}
+            />
+
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.error }]}
+                onPress={confirmCancelOrder}
+                activeOpacity={0.7}
+              >
+                <Text style={buttonStyles.text}>Conferma Annullamento</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                onPress={() => {
+                  setCancelModalVisible(false);
+                  setSelectedOrder(null);
+                  setCancellationReason('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

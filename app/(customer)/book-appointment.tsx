@@ -13,10 +13,13 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width } = Dimensions.get('window');
 
 interface Barber {
   id: string;
@@ -374,21 +377,26 @@ export default function BookAppointmentScreen() {
           ))
         )}
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Data</Text>
-        
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row]}
-          onPress={() => {
-            console.log('Date picker opened');
-            setShowDatePicker(true);
-          }}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="calendar" size={24} color={colors.primary} />
-          <Text style={[commonStyles.text, { marginLeft: 12 }]}>
-            {date.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </Text>
-        </TouchableOpacity>
+        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Data e Orario</Text>
+
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={[commonStyles.card, { flex: 1, alignItems: 'center', padding: 20 }]}
+            onPress={() => {
+              console.log('Date picker opened');
+              setShowDatePicker(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <IconSymbol name="calendar" size={40} color={colors.primary} />
+            <Text style={[commonStyles.text, { marginTop: 12, textAlign: 'center', fontWeight: '600', fontSize: 16 }]}>
+              {date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </Text>
+            <Text style={[commonStyles.textSecondary, { marginTop: 4, fontSize: 12 }]}>
+              {date.toLocaleDateString('it-IT', { weekday: 'long' })}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <Modal
           visible={showDatePicker}
@@ -424,10 +432,12 @@ export default function BookAppointmentScreen() {
           </View>
         </Modal>
 
-        <Text style={[commonStyles.subtitle, { marginTop: 24, marginBottom: 12 }]}>Seleziona Orario</Text>
+        <Text style={[commonStyles.text, { marginBottom: 12, fontWeight: '600', fontSize: 16 }]}>
+          Orari Disponibili
+        </Text>
         
         {availableTimeSlots.length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 20 }}>
             {availableTimeSlots.map((slot) => {
               const [hours, minutes] = slot.split(':');
               const slotTime = new Date();
@@ -440,14 +450,16 @@ export default function BookAppointmentScreen() {
                   key={slot}
                   style={[
                     {
-                      margin: 4,
-                      paddingVertical: 12,
-                      paddingHorizontal: 16,
-                      borderRadius: 8,
+                      width: (width - 48) / 3,
+                      margin: 6,
+                      paddingVertical: 20,
+                      borderRadius: 12,
                       backgroundColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.card),
-                      borderWidth: 1,
+                      borderWidth: 2,
                       borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
-                      opacity: !isAvailable ? 0.5 : 1,
+                      opacity: !isAvailable ? 0.4 : 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     },
                   ]}
                   onPress={() => {
@@ -461,15 +473,20 @@ export default function BookAppointmentScreen() {
                   disabled={!isAvailable}
                   activeOpacity={0.7}
                 >
-                  <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                  <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
                     {slot}
                   </Text>
+                  {!isAvailable && (
+                    <Text style={[commonStyles.textSecondary, { fontSize: 10, marginTop: 4 }]}>
+                      Occupato
+                    </Text>
+                  )}
                 </TouchableOpacity>
               );
             })}
           </View>
         ) : (
-          <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 20, marginBottom: 20 }]}>
             <Text style={commonStyles.textSecondary}>Seleziona prima un barbiere</Text>
           </View>
         )}

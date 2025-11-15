@@ -72,8 +72,8 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           <View style={[commonStyles.content, commonStyles.centerContent, { paddingTop: 60 }]}>
             <View style={{ width: '100%', maxWidth: 400 }}>
-              <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 16 }]}>
-                Pelo Loco Club
+              <Text style={[commonStyles.title, { textAlign: 'center', marginBottom: 24 }]}>
+                Pelo Loco BarberShop
               </Text>
               
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
@@ -85,7 +85,7 @@ export default function LoginScreen() {
               </View>
 
               <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 40 }]}>
-                Bentornato
+                Bentornato/a
               </Text>
 
               <TextInput

@@ -23,6 +23,12 @@ const customerTabs: TabBarItem[] = [
     label: 'Prodotti',
   },
   {
+    name: 'order-history',
+    route: '/(customer)/order-history',
+    icon: 'bag.badge.checkmark',
+    label: 'Ordini',
+  },
+  {
     name: 'profile',
     route: '/(customer)/profile',
     icon: 'person.fill',
@@ -41,6 +47,7 @@ export default function CustomerLayout() {
         <Stack.Screen name="cart" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="spin-wheel" />
+        <Stack.Screen name="order-history" />
       </Stack>
       <FloatingTabBar tabs={customerTabs} />
     </>
