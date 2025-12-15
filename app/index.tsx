@@ -25,7 +25,7 @@ export default function IndexScreen() {
     <View style={[commonStyles.container, commonStyles.centerContent]}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text style={[commonStyles.text, { marginTop: 20 }]}>
-        Loading Pelo Loco Club...
+        Caricamento Pelo Loco Barbershop...
       </Text>
     </View>
   );
