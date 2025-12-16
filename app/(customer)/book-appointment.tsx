@@ -72,6 +72,7 @@ export default function BookAppointmentScreen() {
 
   useEffect(() => {
     if (selectedBarber && date) {
+      console.log('Generating time slots for barber:', selectedBarber, 'date:', date);
       generateTimeSlots();
       fetchExistingAppointments();
     }
@@ -136,7 +137,7 @@ export default function BookAppointmentScreen() {
         return;
       }
 
-      console.log('Existing appointments:', data?.length || 0);
+      console.log('Existing appointments for', selectedDate, ':', data?.length || 0);
       setExistingAppointments(data || []);
     } catch (error) {
       console.error('Error in fetchExistingAppointments:', error);
@@ -145,7 +146,10 @@ export default function BookAppointmentScreen() {
 
   const generateTimeSlots = () => {
     const selectedBarberData = barbers.find(b => b.id === selectedBarber);
-    if (!selectedBarberData) return;
+    if (!selectedBarberData) {
+      console.log('No barber selected or barber not found');
+      return;
+    }
 
     const slots: string[] = [];
     const startHour = parseInt(selectedBarberData.available_hours.start.split(':')[0]);
@@ -156,6 +160,8 @@ export default function BookAppointmentScreen() {
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
     const isToday = date.toISOString().split('T')[0] === now.toISOString().split('T')[0];
+
+    console.log('Generating slots from', startHour, 'to', endHour, 'isToday:', isToday);
 
     for (let hour = startHour; hour < endHour; hour++) {
       const slot1 = `${hour.toString().padStart(2, '0')}:00`;
@@ -178,6 +184,7 @@ export default function BookAppointmentScreen() {
       }
     }
 
+    console.log('Generated', slots.length, 'time slots');
     setAvailableTimeSlots(slots);
   };
 
@@ -203,8 +210,7 @@ export default function BookAppointmentScreen() {
       const newAppointmentEnd = slotTimeInMinutes + serviceDuration;
       const existingAppointmentEnd = aptTimeInMinutes + appointmentDuration;
 
-      // Fixed: Only check if the new appointment overlaps with existing appointment
-      // Don't block the half hour before
+      // Check if the new appointment overlaps with existing appointment
       if (
         (slotTimeInMinutes >= aptTimeInMinutes && slotTimeInMinutes < existingAppointmentEnd) ||
         (newAppointmentEnd > aptTimeInMinutes && newAppointmentEnd <= existingAppointmentEnd) ||
@@ -219,6 +225,9 @@ export default function BookAppointmentScreen() {
 
   const handleBookAppointment = async () => {
     console.log('BookAppointment - Button pressed');
+    console.log('Selected service:', selectedService);
+    console.log('Selected barber:', selectedBarber);
+    console.log('Selected time:', time);
     
     if (!selectedService) {
       Alert.alert('Errore', 'Seleziona un servizio');
@@ -302,6 +311,7 @@ export default function BookAppointmentScreen() {
   };
 
   const handleServiceSelect = (serviceId: string) => {
+    console.log('Service selected:', serviceId);
     setSelectedService(serviceId);
     setExpandedSection(null);
     // Auto-expand next section after a short delay
@@ -309,14 +319,18 @@ export default function BookAppointmentScreen() {
   };
 
   const handleBarberSelect = (barberId: string) => {
+    console.log('Barber selected:', barberId);
     setSelectedBarber(barberId);
     setExpandedSection(null);
+    // Reset time selection when barber changes
+    setTime(null);
     // Auto-expand next section after a short delay
     setTimeout(() => setExpandedSection('datetime'), 300);
   };
 
   const handleDateTimeConfirm = () => {
     if (time) {
+      console.log('Date and time confirmed:', date, time);
       setExpandedSection(null);
       // Auto-expand next section after a short delay
       setTimeout(() => setExpandedSection('payment'), 300);
@@ -326,6 +340,7 @@ export default function BookAppointmentScreen() {
   };
 
   const handlePaymentSelect = (mode: 'pay_in_person' | 'online') => {
+    console.log('Payment mode selected:', mode);
     setPaymentMode(mode);
   };
 
@@ -337,6 +352,8 @@ export default function BookAppointmentScreen() {
     if (selectedDate) {
       console.log('Date selected:', selectedDate);
       setDate(selectedDate);
+      // Reset time when date changes
+      setTime(null);
     }
   };
 
@@ -447,7 +464,13 @@ export default function BookAppointmentScreen() {
             expandedSection === 'barber' && { borderColor: colors.primary, borderWidth: 2 },
             !selectedService && { opacity: 0.5 },
           ]}
-          onPress={() => selectedService && setExpandedSection(expandedSection === 'barber' ? null : 'barber')}
+          onPress={() => {
+            if (selectedService) {
+              setExpandedSection(expandedSection === 'barber' ? null : 'barber');
+            } else {
+              Alert.alert('Attenzione', 'Seleziona prima un servizio');
+            }
+          }}
           activeOpacity={0.7}
           disabled={!selectedService}
         >
@@ -455,9 +478,13 @@ export default function BookAppointmentScreen() {
             <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               2. Seleziona Barbiere
             </Text>
-            {selectedBarber && (
+            {selectedBarber ? (
               <Text style={commonStyles.textSecondary}>
                 {barbers.find(b => b.id === selectedBarber)?.name}
+              </Text>
+            ) : (
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
+                {!selectedService ? 'Seleziona prima un servizio' : 'Tocca per selezionare'}
               </Text>
             )}
           </View>
@@ -517,7 +544,13 @@ export default function BookAppointmentScreen() {
             expandedSection === 'datetime' && { borderColor: colors.primary, borderWidth: 2 },
             !selectedBarber && { opacity: 0.5 },
           ]}
-          onPress={() => selectedBarber && setExpandedSection(expandedSection === 'datetime' ? null : 'datetime')}
+          onPress={() => {
+            if (selectedBarber) {
+              setExpandedSection(expandedSection === 'datetime' ? null : 'datetime');
+            } else {
+              Alert.alert('Attenzione', 'Seleziona prima un barbiere');
+            }
+          }}
           activeOpacity={0.7}
           disabled={!selectedBarber}
         >
@@ -525,9 +558,13 @@ export default function BookAppointmentScreen() {
             <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               3. Seleziona Data e Orario
             </Text>
-            {time && (
+            {time ? (
               <Text style={commonStyles.textSecondary}>
                 {date.toLocaleDateString('it-IT')} alle {time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            ) : (
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
+                {!selectedBarber ? 'Seleziona prima un barbiere' : 'Tocca per selezionare'}
               </Text>
             )}
           </View>
@@ -647,7 +684,9 @@ export default function BookAppointmentScreen() {
               </View>
             ) : (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20, marginBottom: 20 }]}>
-                <Text style={commonStyles.textSecondary}>Seleziona prima un barbiere</Text>
+                <Text style={commonStyles.textSecondary}>
+                  {selectedBarber ? 'Nessun orario disponibile per questa data' : 'Seleziona prima un barbiere'}
+                </Text>
               </View>
             )}
 
@@ -670,7 +709,13 @@ export default function BookAppointmentScreen() {
             expandedSection === 'payment' && { borderColor: colors.primary, borderWidth: 2 },
             !time && { opacity: 0.5 },
           ]}
-          onPress={() => time && setExpandedSection(expandedSection === 'payment' ? null : 'payment')}
+          onPress={() => {
+            if (time) {
+              setExpandedSection(expandedSection === 'payment' ? null : 'payment');
+            } else {
+              Alert.alert('Attenzione', 'Seleziona prima data e orario');
+            }
+          }}
           activeOpacity={0.7}
           disabled={!time}
         >
@@ -678,9 +723,13 @@ export default function BookAppointmentScreen() {
             <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               4. Metodo di Pagamento
             </Text>
-            {paymentMode && (
+            {paymentMode ? (
               <Text style={commonStyles.textSecondary}>
                 {paymentMode === 'pay_in_person' ? 'Paga di Persona' : 'Paga Online'}
+              </Text>
+            ) : (
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
+                {!time ? 'Seleziona prima data e orario' : 'Tocca per selezionare'}
               </Text>
             )}
           </View>

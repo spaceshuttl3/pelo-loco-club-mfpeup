@@ -18,8 +18,8 @@ const MAPPING = {
   'chevron.up': 'keyboard-arrow-up',
   'chevron.down': 'keyboard-arrow-down',
   'person.fill': 'person',
-  'calendar': 'calendar-today',
-  'calendar.badge.plus': 'event',
+  'calendar': 'event',
+  'calendar.badge.plus': 'event-available',
   'bag.fill': 'shopping-bag',
   'gift.fill': 'card-giftcard',
   'list.bullet': 'list',
@@ -43,6 +43,15 @@ const MAPPING = {
   'rectangle.portrait.and.arrow.right': 'logout',
   'star.fill': 'star',
   'trophy.fill': 'emoji-events',
+  'xmark': 'close',
+  'magnifyingglass': 'search',
+  'heart.fill': 'favorite',
+  'heart': 'favorite-border',
+  'info.circle': 'info',
+  'exclamationmark.triangle': 'warning',
+  'checkmark': 'check',
+  'arrow.right': 'arrow-forward',
+  'arrow.left': 'arrow-back',
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],
@@ -64,11 +73,25 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
+  const iconName = MAPPING[name];
+  
+  if (!iconName) {
+    console.warn(`Icon "${name}" not found in mapping. Using default icon.`);
+    return (
+      <MaterialIcons
+        color={color}
+        size={size}
+        name="help-outline"
+        style={style as StyleProp<TextStyle>}
+      />
+    );
+  }
+  
   return (
     <MaterialIcons
       color={color}
       size={size}
-      name={MAPPING[name] as any}
+      name={iconName as any}
       style={style as StyleProp<TextStyle>}
     />
   );
