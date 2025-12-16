@@ -17,6 +17,7 @@ import {
   Modal,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -104,12 +105,6 @@ export default function ManageProductsScreen() {
     try {
       console.log('Starting image upload from URI:', uri);
       
-      // Fetch the image as a blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
-      console.log('Blob created, size:', blob.size, 'type:', blob.type);
-      
       // Generate a unique filename
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -117,11 +112,17 @@ export default function ManageProductsScreen() {
 
       console.log('Uploading to path:', filePath);
 
+      // Read the file as a blob using fetch
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      console.log('Blob created, size:', blob.size, 'type:', blob.type);
+
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('product-images')
         .upload(filePath, blob, {
-          contentType: `image/${fileExt}`,
+          contentType: blob.type || `image/${fileExt}`,
           upsert: false,
         });
 
@@ -141,7 +142,7 @@ export default function ManageProductsScreen() {
       return urlData.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);
-      Alert.alert('Errore', 'Impossibile caricare l\'immagine. Riprova.');
+      Alert.alert('Errore', 'Impossibile caricare l\'immagine. Verifica la connessione internet e riprova.');
       return null;
     }
   };

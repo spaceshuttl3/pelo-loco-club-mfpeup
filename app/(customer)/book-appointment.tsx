@@ -12,7 +12,6 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Modal,
   Dimensions,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -321,11 +320,24 @@ export default function BookAppointmentScreen() {
       setExpandedSection(null);
       // Auto-expand next section after a short delay
       setTimeout(() => setExpandedSection('payment'), 300);
+    } else {
+      Alert.alert('Attenzione', 'Seleziona prima un orario');
     }
   };
 
   const handlePaymentSelect = (mode: 'pay_in_person' | 'online') => {
     setPaymentMode(mode);
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (selectedDate) {
+      console.log('Date selected:', selectedDate);
+      setDate(selectedDate);
+    }
   };
 
   if (loadingData) {
@@ -555,39 +567,30 @@ export default function BookAppointmentScreen() {
               </TouchableOpacity>
             </View>
 
-            <Modal
-              visible={showDatePicker}
-              transparent={true}
-              animationType="slide"
-              onRequestClose={() => setShowDatePicker(false)}
-            >
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                <View style={[commonStyles.card, { width: '90%', padding: 20 }]}>
-                  <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
-                    Seleziona Data
-                  </Text>
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display="spinner"
-                    onChange={(event, selectedDate) => {
-                      if (selectedDate) {
-                        console.log('Date selected:', selectedDate);
-                        setDate(selectedDate);
-                      }
-                    }}
-                    minimumDate={new Date()}
-                    textColor={colors.text}
-                  />
+            {showDatePicker && (
+              <View style={[commonStyles.card, { marginBottom: 20, padding: 16 }]}>
+                <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
+                  Seleziona Data
+                </Text>
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  minimumDate={new Date()}
+                  textColor={colors.text}
+                  style={{ height: 200 }}
+                />
+                {Platform.OS === 'ios' && (
                   <TouchableOpacity
                     style={[buttonStyles.primary, { marginTop: 16 }]}
                     onPress={() => setShowDatePicker(false)}
                   >
                     <Text style={buttonStyles.text}>Conferma</Text>
                   </TouchableOpacity>
-                </View>
+                )}
               </View>
-            </Modal>
+            )}
 
             <Text style={[commonStyles.text, { marginBottom: 12, fontWeight: '600', fontSize: 16 }]}>
               Orari Disponibili
