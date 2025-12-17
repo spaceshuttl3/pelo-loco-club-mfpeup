@@ -19,7 +19,8 @@ export default function IndexScreen() {
         router.replace('/(customer)');
       }
     }
-  }, [user, loading, isAdmin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, isAdmin]);
 
   return (
     <View style={[commonStyles.container, commonStyles.centerContent]}>

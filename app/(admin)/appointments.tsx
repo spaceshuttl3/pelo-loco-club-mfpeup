@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Appointment } from '../../types';
+import { Appointment } from '../../app/integrations/supabase/types';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -140,14 +140,19 @@ export default function ManageAppointmentsScreen() {
 
   useEffect(() => {
     fetchBarbers();
+  }, []);
+
+  useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBarberId]);
 
   useEffect(() => {
     if (selectedAppointment && editDate) {
       fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
     }
-  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editDate, selectedAppointment]);
 
   const onRefresh = () => {
     setRefreshing(true);

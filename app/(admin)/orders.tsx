@@ -152,7 +152,7 @@ export default function OrdersScreen() {
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
       'Elimina Ordine',
-      `Sei sicuro di voler eliminare definitivamente l\'ordine #${order.id.substring(0, 8)}?`,
+      `Sei sicuro di voler eliminare definitivamente l'ordine #${order.id.substring(0, 8)}?`,
       [
         {
           text: 'Annulla',
