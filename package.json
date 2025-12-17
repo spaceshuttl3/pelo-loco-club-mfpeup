@@ -1,9 +1,10 @@
+
 {
   "name": "pelo-loco-club-mfpeup",
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "dev": "EXPO_NO_TELEMETRY=1 expo start",
+    "dev": "EXPO_NO_TELEMETRY=1 expo start --clear --tunnel",
     "dev:tunnel": "EXPO_NO_TELEMETRY=1 expo start --tunnel",
     "dev:lan": "EXPO_NO_TELEMETRY=1 expo start --lan",
     "dev:localhost": "EXPO_NO_TELEMETRY=1 expo start --localhost",

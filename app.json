@@ -1,8 +1,8 @@
 
 {
   "expo": {
-    "name": "Pelo Loco Barbershop",
-    "slug": "pelo-loco-barbershop",
+    "name": "Pelo Loco Club",
+    "slug": "Pelo Loco Club",
     "version": "3.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
@@ -77,7 +77,7 @@
             "buildToolsVersion": "34.0.0"
           },
           "ios": {
-            "deploymentTarget": "13.4"
+            "deploymentTarget": "15.1"
           }
         }
       ]
@@ -87,10 +87,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "pelo-loco-barbershop"
-      }
+      "router": {}
     },
     "owner": "pelo-loco-barbershop",
     "privacy": "public",
