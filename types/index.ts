@@ -24,6 +24,10 @@ export interface Appointment {
   cancellation_reason?: string;
   created_at?: string;
   user?: User;
+  barber?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface Product {
@@ -64,6 +68,31 @@ export interface Coupon {
   status: 'active' | 'used' | 'expired';
   coupon_code?: string;
   config_id?: string;
+  created_at?: string;
+}
+
+export interface LoyaltyReward {
+  id: string;
+  points_required: number;
+  reward_type: 'free_service' | 'discount_percentage' | 'discount_euros' | 'custom';
+  reward_value: number;
+  reward_description: string;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface BadgeRule {
+  id: string;
+  badge_name: string;
+  badge_description: string;
+  badge_icon: string;
+  rule_type: 'visits_count' | 'visits_timeframe' | 'total_spent';
+  rule_config: {
+    required_visits?: number;
+    timeframe_days?: number;
+    required_amount?: number;
+  };
+  is_active: boolean;
   created_at?: string;
 }
 

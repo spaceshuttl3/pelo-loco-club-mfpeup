@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Order } from '../types';
+import { Order } from '../../types';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -152,7 +152,7 @@ export default function OrdersScreen() {
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
       'Elimina Ordine',
-      `Sei sicuro di voler eliminare definitivamente l'ordine #${order.id.substring(0, 8)}?`,
+      `Sei sicuro di voler eliminare definitivamente l\'ordine #${order.id.substring(0, 8)}?`,
       [
         {
           text: 'Annulla',

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Appointment } from '../types';
+import { Appointment } from '../../types';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';

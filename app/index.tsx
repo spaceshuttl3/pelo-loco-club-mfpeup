@@ -19,7 +19,7 @@ export default function IndexScreen() {
         router.replace('/(customer)');
       }
     }
-  }, [user, loading, isAdmin]);
+  }, [user, loading, isAdmin, router]);
 
   return (
     <View style={[commonStyles.container, commonStyles.centerContent]}>
