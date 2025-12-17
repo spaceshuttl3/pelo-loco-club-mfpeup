@@ -1,5 +1,5 @@
 
-import { commonStyles, colors } from '@/styles/commonStyles';
+import { commonStyles, colors } from '../../styles/commonStyles';
 import {
   View,
   Text,
@@ -12,11 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
-import { Appointment, Order } from '@/types';
+import { Appointment, Order } from '../../types';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { IconSymbol } from '../../components/IconSymbol';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();

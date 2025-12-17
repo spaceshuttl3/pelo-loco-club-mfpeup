@@ -11,12 +11,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '../../contexts/AuthContext';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
-import { LoyaltyReward, Badge, LoyaltyTransaction } from '@/types';
+import { supabase } from '../../lib/supabase';
+import { LoyaltyReward, Badge, LoyaltyTransaction } from '../../types';
 import { GlassView } from 'expo-glass-effect';
 
 const { width } = Dimensions.get('window');

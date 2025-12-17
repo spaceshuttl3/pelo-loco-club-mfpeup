@@ -1,7 +1,7 @@
 
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { supabase } from '@/lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { supabase } from '../../lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState, useEffect } from 'react';
 import {
@@ -14,8 +14,8 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '../../contexts/AuthContext';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');

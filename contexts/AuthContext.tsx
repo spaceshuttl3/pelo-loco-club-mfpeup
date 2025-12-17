@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { User, UserRole } from '@/types';
+import { User, UserRole } from '../types';
 import { useRouter, useSegments } from 'expo-router';
 
 interface AuthContextType {

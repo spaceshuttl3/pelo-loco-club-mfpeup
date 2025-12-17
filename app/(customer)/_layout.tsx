@@ -1,6 +1,6 @@
 
 import { Stack } from 'expo-router';
-import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
+import FloatingTabBar, { TabBarItem } from '../../components/FloatingTabBar';
 import React from 'react';
 
 const customerTabs: TabBarItem[] = [

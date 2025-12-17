@@ -1,6 +1,6 @@
 
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import {
   View,
   Text,
@@ -11,11 +11,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { useCart } from '@/contexts/CartContext';
+import { useCart } from '../../contexts/CartContext';
 import React from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
+import { IconSymbol } from '../../components/IconSymbol';
 
 const { width } = Dimensions.get('window');
 

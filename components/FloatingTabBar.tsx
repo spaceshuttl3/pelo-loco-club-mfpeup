@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { GlassView } from 'expo-glass-effect';
-import { IconSymbol } from '@/components/IconSymbol';
+import { IconSymbol } from './IconSymbol';
 import { useTheme } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -19,7 +19,7 @@ import Animated, {
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
-import { colors } from '@/styles/commonStyles';
+import { colors } from '../styles/commonStyles';
 
 export interface TabBarItem {
   name: string;

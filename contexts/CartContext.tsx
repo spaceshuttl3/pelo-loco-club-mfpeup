@@ -1,8 +1,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { Product } from '@/types';
+import { Product } from '../types';
 
 interface CartItem {
   id: string;

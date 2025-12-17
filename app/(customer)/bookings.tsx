@@ -12,13 +12,13 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Appointment } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { IconSymbol } from '@/components/IconSymbol';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { Appointment } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { IconSymbol } from '../../components/IconSymbol';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 interface ExistingAppointment {
   id: string;

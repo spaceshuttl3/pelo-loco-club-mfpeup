@@ -9,12 +9,12 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Order } from '@/types';
-import { commonStyles, colors } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { Order } from '../../types';
+import { commonStyles, colors } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function OrderHistoryScreen() {
   const router = useRouter();

@@ -8,9 +8,9 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { useAuth } from '../../contexts/AuthContext';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {

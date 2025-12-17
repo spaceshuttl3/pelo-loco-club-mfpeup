@@ -2,8 +2,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { commonStyles, colors } from '@/styles/commonStyles';
+import { useAuth } from '../contexts/AuthContext';
+import { commonStyles, colors } from '../styles/commonStyles';
 
 export default function IndexScreen() {
   const { user, loading, isAdmin } = useAuth();
@@ -19,7 +19,7 @@ export default function IndexScreen() {
         router.replace('/(customer)');
       }
     }
-  }, [user, loading, isAdmin]);
+  }, [user, loading, isAdmin, router]);
 
   return (
     <View style={[commonStyles.container, commonStyles.centerContent]}>

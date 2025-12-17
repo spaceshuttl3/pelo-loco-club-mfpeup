@@ -1,5 +1,5 @@
 
-import { IconSymbol } from '@/components/IconSymbol';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
@@ -12,10 +12,10 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 
 interface Coupon {
   id: string;
