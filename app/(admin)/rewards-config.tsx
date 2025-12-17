@@ -13,12 +13,12 @@ import {
   Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { supabase } from '@/lib/supabase';
-import { IconSymbol } from '@/components/IconSymbol';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
-import { LoyaltyReward, BadgeRule } from '@/types';
+import { LoyaltyReward, BadgeRule } from '../types';
 
 export default function RewardsConfigScreen() {
   const router = useRouter();

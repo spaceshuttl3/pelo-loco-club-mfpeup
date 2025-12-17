@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 
 interface Service {
   id: string;

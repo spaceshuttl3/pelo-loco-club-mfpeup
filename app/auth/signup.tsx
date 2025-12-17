@@ -11,9 +11,9 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 

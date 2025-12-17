@@ -1,13 +1,11 @@
-
 {
   "expo": {
-    "name": "Pelo Loco Club",
-    "slug": "Pelo Loco Club",
+    "name": "Pelo Loco Barbershop",
+    "slug": "pelo-loco-barbershop",
     "version": "3.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
       "resizeMode": "contain",
@@ -17,81 +15,31 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pelolocobarbershop.app",
       "buildNumber": "3",
+      "deploymentTarget": "15.1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
-          "NSAllowsLocalNetworking": true
-        },
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload product images.",
-        "NSCameraUsageDescription": "This app needs access to your camera to take photos of products.",
-        "UIBackgroundModes": [
-          "remote-notification"
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
-        "backgroundColor": "#000000"
-      },
-      "edgeToEdgeEnabled": true,
       "package": "com.pelolocobarbershop.app",
-      "versionCode": 5,
-      "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
-      ],
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "pelolocobarbershop"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        }
-      ]
-    },
-    "web": {
-      "favicon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
-      "bundler": "metro"
+      "versionCode": 5
     },
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0"
-          },
-          "ios": {
-            "deploymentTarget": "15.1"
-          }
-        }
-      ]
+      "expo-web-browser"
     ],
     "scheme": "pelolocobarbershop",
     "experiments": {
       "typedRoutes": true
     },
-    "extra": {
-      "router": {}
-    },
-    "owner": "pelo-loco-barbershop",
     "privacy": "public",
     "description": "Pelo Loco Barbershop - Prenota il tuo taglio, acquista prodotti e ricevi coupon esclusivi. L'app ufficiale del tuo barbiere di fiducia.",
-    "primaryColor": "#9b59b6"
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f58c39ed-204a-46e2-bc3d-9a4c486a3a4a"
+      }
+    }
   }
 }

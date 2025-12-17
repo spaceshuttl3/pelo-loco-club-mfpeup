@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,10 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Order } from '@/types';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { Order } from '../types';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OrdersScreen() {
@@ -29,7 +29,7 @@ export default function OrdersScreen() {
   const [showCompletedOrders, setShowCompletedOrders] = useState(false);
   const [showCancelledOrders, setShowCancelledOrders] = useState(false);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       console.log('Fetching orders...');
       
@@ -75,11 +75,11 @@ export default function OrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [fetchOrders]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -152,7 +152,7 @@ export default function OrdersScreen() {
   const handleDeleteOrder = (order: Order) => {
     Alert.alert(
       'Elimina Ordine',
-      `Sei sicuro di voler eliminare definitivamente l\'ordine #${order.id.substring(0, 8)}?`,
+      `Sei sicuro di voler eliminare definitivamente l'ordine #${order.id.substring(0, 8)}?`,
       [
         {
           text: 'Annulla',

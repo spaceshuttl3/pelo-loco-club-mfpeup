@@ -11,10 +11,10 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Picker } from '@react-native-picker/picker';
 

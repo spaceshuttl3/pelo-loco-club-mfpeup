@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { Product } from '../types';
@@ -30,15 +30,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchCart();
-    } else {
-      setCartItems([]);
-    }
-  }, [user]);
-
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -71,7 +63,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchCart();
+    } else {
+      setCartItems([]);
+    }
+  }, [user, fetchCart]);
 
   const addToCart = async (productId: string, quantity: number = 1) => {
     if (!user) {

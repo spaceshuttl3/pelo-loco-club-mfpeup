@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { Appointment } from '../../types';
+import { Appointment } from '../types';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,7 +73,7 @@ export default function ManageAppointmentsScreen() {
     }
   };
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       console.log('Fetching appointments...');
       
@@ -112,9 +112,9 @@ export default function ManageAppointmentsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedBarberId]);
 
-  const fetchExistingAppointmentsForDate = async (barberId: string, date: Date) => {
+  const fetchExistingAppointmentsForDate = useCallback(async (barberId: string, date: Date) => {
     try {
       const selectedDate = date.toISOString().split('T')[0];
       
@@ -136,22 +136,18 @@ export default function ManageAppointmentsScreen() {
     } catch (error) {
       console.error('Error in fetchExistingAppointmentsForDate:', error);
     }
-  };
+  }, [selectedAppointment?.id]);
 
   useEffect(() => {
     fetchBarbers();
     fetchAppointments();
-  }, []);
-
-  useEffect(() => {
-    fetchAppointments();
-  }, [selectedBarberId]);
+  }, [fetchAppointments]);
 
   useEffect(() => {
     if (selectedAppointment && editDate) {
       fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
     }
-  }, [editDate, selectedAppointment]);
+  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate]);
 
   const onRefresh = () => {
     setRefreshing(true);

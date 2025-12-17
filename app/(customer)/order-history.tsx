@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,13 +23,7 @@ export default function OrderHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       console.log('Fetching orders for user:', user?.id);
       
@@ -52,7 +46,13 @@ export default function OrderHistoryScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user, fetchOrders]);
 
   const onRefresh = () => {
     setRefreshing(true);

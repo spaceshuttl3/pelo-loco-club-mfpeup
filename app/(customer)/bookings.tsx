@@ -17,7 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { IconSymbol } from '../../components/IconSymbol';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 
 interface ExistingAppointment {
@@ -44,19 +44,7 @@ export default function BookingsScreen() {
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
   const [showPastAppointments, setShowPastAppointments] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchAppointments();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedAppointment && editDate) {
-      fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
-    }
-  }, [editDate, selectedAppointment]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       console.log('Fetching appointments for user:', user?.id);
       
@@ -84,9 +72,9 @@ export default function BookingsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id]);
 
-  const fetchExistingAppointmentsForDate = async (barberId: string, date: Date) => {
+  const fetchExistingAppointmentsForDate = useCallback(async (barberId: string, date: Date) => {
     try {
       const selectedDate = date.toISOString().split('T')[0];
       
@@ -108,7 +96,19 @@ export default function BookingsScreen() {
     } catch (error) {
       console.error('Error in fetchExistingAppointmentsForDate:', error);
     }
-  };
+  }, [selectedAppointment?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchAppointments();
+    }
+  }, [user, fetchAppointments]);
+
+  useEffect(() => {
+    if (selectedAppointment && editDate) {
+      fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
+    }
+  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate]);
 
   const onRefresh = () => {
     setRefreshing(true);

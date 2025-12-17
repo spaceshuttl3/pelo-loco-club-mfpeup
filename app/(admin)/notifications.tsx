@@ -9,8 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { IconSymbol } from '@/components/IconSymbol';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {

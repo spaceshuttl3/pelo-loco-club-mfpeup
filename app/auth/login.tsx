@@ -13,10 +13,10 @@ import {
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { useAuth } from '../../contexts/AuthContext';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
+import { IconSymbol } from '../../components/IconSymbol';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -112,7 +112,7 @@ export default function LoginScreen() {
               
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
                 <Image
-                  source={require('@/assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg')}
+                  source={require('../../assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg')}
                   style={{ width: 120, height: 120, borderRadius: 60 }}
                   resizeMode="cover"
                 />

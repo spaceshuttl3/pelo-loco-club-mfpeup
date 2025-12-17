@@ -11,10 +11,10 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
+import { IconSymbol } from '../../components/IconSymbol';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');

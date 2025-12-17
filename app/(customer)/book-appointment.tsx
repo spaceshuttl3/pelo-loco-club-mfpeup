@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { supabase } from '../../lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -65,19 +65,6 @@ export default function BookAppointmentScreen() {
   // Escalating UI states
   const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | 'payment' | null>('service');
 
-  useEffect(() => {
-    fetchServices();
-    fetchBarbers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBarber && date) {
-      console.log('Generating time slots for barber:', selectedBarber, 'date:', date);
-      generateTimeSlots();
-      fetchExistingAppointments();
-    }
-  }, [selectedBarber, date]);
-
   const fetchServices = async () => {
     try {
       console.log('Fetching services from database...');
@@ -121,7 +108,7 @@ export default function BookAppointmentScreen() {
     }
   };
 
-  const fetchExistingAppointments = async () => {
+  const fetchExistingAppointments = useCallback(async () => {
     try {
       const selectedDate = date.toISOString().split('T')[0];
       
@@ -142,9 +129,9 @@ export default function BookAppointmentScreen() {
     } catch (error) {
       console.error('Error in fetchExistingAppointments:', error);
     }
-  };
+  }, [selectedBarber, date]);
 
-  const generateTimeSlots = () => {
+  const generateTimeSlots = useCallback(() => {
     const selectedBarberData = barbers.find(b => b.id === selectedBarber);
     if (!selectedBarberData) {
       console.log('No barber selected or barber not found');
@@ -186,7 +173,20 @@ export default function BookAppointmentScreen() {
 
     console.log('Generated', slots.length, 'time slots');
     setAvailableTimeSlots(slots);
-  };
+  }, [selectedBarber, date, barbers]);
+
+  useEffect(() => {
+    fetchServices();
+    fetchBarbers();
+  }, []);
+
+  useEffect(() => {
+    if (selectedBarber && date) {
+      console.log('Generating time slots for barber:', selectedBarber, 'date:', date);
+      generateTimeSlots();
+      fetchExistingAppointments();
+    }
+  }, [selectedBarber, date, generateTimeSlots, fetchExistingAppointments]);
 
   const isTimeSlotAvailable = (timeSlot: string): boolean => {
     if (!selectedService) return true;

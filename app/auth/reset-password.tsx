@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ResetPasswordScreen() {
@@ -23,12 +23,7 @@ export default function ResetPasswordScreen() {
   const [verifying, setVerifying] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check if user has a valid session from the reset link
-    checkSession();
-  }, []);
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       
@@ -60,7 +55,12 @@ export default function ResetPasswordScreen() {
         ]
       );
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    // Check if user has a valid session from the reset link
+    checkSession();
+  }, [checkSession]);
 
   const handleResetPassword = async () => {
     if (!password || !confirmPassword) {

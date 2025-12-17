@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { IconSymbol } from '@/components/IconSymbol';
-import { supabase } from '@/lib/supabase';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { IconSymbol } from '../../components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 
 interface ReportData {
   totalAppointments: number;
@@ -48,11 +48,7 @@ export default function ReportsScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  useEffect(() => {
-    fetchReportData();
-  }, [filterType, startDate, endDate]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     try {
       console.log('Fetching report data...');
       
@@ -177,7 +173,11 @@ export default function ReportsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [filterType, startDate, endDate]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
 
   const onRefresh = () => {
     setRefreshing(true);

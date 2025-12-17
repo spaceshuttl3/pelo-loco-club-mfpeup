@@ -1,11 +1,11 @@
 
 import { Stack } from 'expo-router';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { CartProvider } from '@/contexts/CartContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import { CartProvider } from '../contexts/CartContext';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 import 'react-native-reanimated';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.

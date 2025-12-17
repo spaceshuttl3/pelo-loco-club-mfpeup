@@ -1,10 +1,10 @@
 
 import * as ImagePicker from 'expo-image-picker';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Product } from '@/types';
-import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '../../lib/supabase';
+import { Product } from '../types';
+import { IconSymbol } from '../../components/IconSymbol';
 import {
   View,
   Text,

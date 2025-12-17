@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,13 +30,7 @@ export default function RewardsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       console.log('Fetching rewards and transactions...');
       
@@ -77,7 +71,13 @@ export default function RewardsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.id, refreshUser]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user, fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);

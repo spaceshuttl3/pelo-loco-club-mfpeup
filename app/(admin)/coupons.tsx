@@ -15,9 +15,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import { commonStyles, colors, buttonStyles } from '@/styles/commonStyles';
-import { supabase } from '@/lib/supabase';
-import { IconSymbol } from '@/components/IconSymbol';
+import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
+import { supabase } from '../../lib/supabase';
+import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface CouponConfig {

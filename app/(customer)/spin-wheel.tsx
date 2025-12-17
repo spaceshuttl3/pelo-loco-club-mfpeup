@@ -13,7 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 
@@ -35,13 +35,7 @@ export default function SpinWheelScreen() {
   const [redeemModalVisible, setRedeemModalVisible] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchCoupons();
-    }
-  }, [user]);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('coupons')
@@ -60,7 +54,13 @@ export default function SpinWheelScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      fetchCoupons();
+    }
+  }, [user, fetchCoupons]);
 
   const handleRedeemCoupon = (coupon: Coupon) => {
     Alert.alert(

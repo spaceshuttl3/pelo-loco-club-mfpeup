@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, UserRole } from '../types';
@@ -25,53 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const segments = useSegments();
 
-  useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setSupabaseUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session?.user?.email);
-      setSupabaseUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Handle navigation based on auth state
-  useEffect(() => {
-    if (loading) return;
-
-    const inAuthGroup = segments[0] === 'auth';
-
-    if (!user && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace('/auth/login');
-    } else if (user && inAuthGroup) {
-      // Redirect to appropriate dashboard after login
-      if (user.role === 'admin') {
-        router.replace('/(admin)/');
-      } else {
-        router.replace('/(customer)/');
-      }
-    }
-  }, [user, segments, loading]);
-
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string) => {
     try {
       console.log('Fetching user profile for:', userId);
       
@@ -100,9 +54,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error in fetchUserProfile:', error);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  useEffect(() => {
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session:', session?.user?.email);
+      setSupabaseUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for changes on auth state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session?.user?.email);
+      setSupabaseUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchUserProfile]);
+
+  // Handle navigation based on auth state
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === 'auth';
+
+    if (!user && !inAuthGroup) {
+      // Redirect to login if not authenticated
+      router.replace('/auth/login');
+    } else if (user && inAuthGroup) {
+      // Redirect to appropriate dashboard after login
+      if (user.role === 'admin') {
+        router.replace('/(admin)/');
+      } else {
+        router.replace('/(customer)/');
+      }
+    }
+  }, [user, segments, loading, router]);
+
+  const refreshUser = useCallback(async () => {
     if (supabaseUser) {
       // Refresh the session to get updated JWT with role in app_metadata
       const { data: { session }, error } = await supabase.auth.refreshSession();
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       await fetchUserProfile(supabaseUser.id);
     }
-  };
+  }, [supabaseUser, fetchUserProfile]);
 
   const signIn = async (email: string, password: string) => {
     console.log('Attempting to sign in:', email);

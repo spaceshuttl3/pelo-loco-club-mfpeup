@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { GlassView } from 'expo-glass-effect';
-import { IconSymbol } from './IconSymbol';
+import { IconSymbol } from '../components/IconSymbol';
 import { useTheme } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
