@@ -1,5 +1,5 @@
 
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { supabase } from '../../lib/supabase';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -49,7 +49,8 @@ interface ExistingAppointment {
 
 export default function BookAppointmentScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const params = useLocalSearchParams();
+  const { user, refreshUser } = useAuth();
   const [selectedService, setSelectedService] = useState('');
   const [selectedBarber, setSelectedBarber] = useState('');
   const [services, setServices] = useState<Service[]>([]);
@@ -61,6 +62,11 @@ export default function BookAppointmentScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
+
+  // Reward redemption params
+  const rewardId = params.rewardId as string | undefined;
+  const rewardName = params.rewardName as string | undefined;
+  const rewardCredits = params.rewardCredits ? parseInt(params.rewardCredits as string) : undefined;
 
   // Escalating UI states with animation
   const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>('service');
@@ -229,6 +235,7 @@ export default function BookAppointmentScreen() {
     console.log('Selected service:', selectedService);
     console.log('Selected barber:', selectedBarber);
     console.log('Selected time:', time);
+    console.log('Reward ID:', rewardId);
     
     if (!selectedService) {
       Alert.alert('Errore', 'Seleziona un servizio');
@@ -273,8 +280,73 @@ export default function BookAppointmentScreen() {
     setLoading(true);
     try {
       const service = services.find(s => s.id === selectedService);
-      
-      const { error } = await supabase
+      let redemptionId = null;
+
+      // If redeeming a reward, create the redemption first
+      if (rewardId && rewardCredits) {
+        console.log('Creating fidelity redemption...');
+        
+        // Verify user has enough credits
+        const userCredits = user?.fidelity_credits || 0;
+        if (userCredits < rewardCredits) {
+          Alert.alert('Errore', 'Crediti insufficienti per riscattare questa ricompensa');
+          setLoading(false);
+          return;
+        }
+
+        // Deduct credits
+        const newCredits = userCredits - rewardCredits;
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ fidelity_credits: newCredits })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating credits:', updateError);
+          throw updateError;
+        }
+
+        // Create redemption
+        const { data: redemptionData, error: redemptionError } = await supabase
+          .from('fidelity_redemptions')
+          .insert({
+            user_id: user.id,
+            reward_id: rewardId,
+            status: 'pending',
+            credits_deducted: rewardCredits,
+          })
+          .select()
+          .single();
+
+        if (redemptionError) {
+          console.error('Error creating redemption:', redemptionError);
+          // Refund credits
+          await supabase
+            .from('users')
+            .update({ fidelity_credits: userCredits })
+            .eq('id', user.id);
+          throw redemptionError;
+        }
+
+        redemptionId = redemptionData.id;
+
+        // Record transaction
+        await supabase
+          .from('fidelity_transactions')
+          .insert({
+            user_id: user.id,
+            credits_change: -rewardCredits,
+            transaction_type: 'redeemed',
+            reference_type: 'redemption',
+            reference_id: redemptionId,
+            description: `Riscattato: ${rewardName}`,
+          });
+
+        console.log('Redemption created:', redemptionId);
+      }
+
+      // Create appointment
+      const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert({
           user_id: user?.id,
@@ -285,17 +357,50 @@ export default function BookAppointmentScreen() {
           status: 'booked',
           payment_mode: 'pay_in_person',
           payment_status: 'pending',
-        });
+          fidelity_redemption_id: redemptionId,
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error booking appointment:', error);
+      if (appointmentError) {
+        console.error('Error booking appointment:', appointmentError);
+        
+        // If appointment creation fails and we created a redemption, cancel it and refund
+        if (redemptionId) {
+          await supabase
+            .from('fidelity_redemptions')
+            .update({ status: 'cancelled' })
+            .eq('id', redemptionId);
+          
+          const userCredits = user?.fidelity_credits || 0;
+          await supabase
+            .from('users')
+            .update({ fidelity_credits: userCredits + (rewardCredits || 0) })
+            .eq('id', user.id);
+        }
+        
         Alert.alert('Errore', 'Impossibile prenotare l\'appuntamento. Riprova.');
         return;
       }
 
+      // Update redemption with appointment ID
+      if (redemptionId) {
+        await supabase
+          .from('fidelity_redemptions')
+          .update({ appointment_id: appointmentData.id })
+          .eq('id', redemptionId);
+      }
+
+      // Refresh user data
+      await refreshUser();
+
+      const successMessage = rewardId 
+        ? `Il tuo appuntamento è stato prenotato per il ${date.toLocaleDateString('it-IT')} alle ${time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}.\n\n✨ Ricompensa "${rewardName}" riscattata con successo!`
+        : `Il tuo appuntamento è stato prenotato per il ${date.toLocaleDateString('it-IT')} alle ${time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+
       Alert.alert(
         'Successo!',
-        `Il tuo appuntamento è stato prenotato per il ${date.toLocaleDateString('it-IT')} alle ${time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`,
+        successMessage,
         [
           {
             text: 'OK',
@@ -403,7 +508,28 @@ export default function BookAppointmentScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}>
+        {/* Reward Info Banner */}
+        {rewardId && rewardName && (
+          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16 }]}>
+            <View style={[commonStyles.row, { marginBottom: 8 }]}>
+              <IconSymbol name="star.fill" size={24} color={colors.text} />
+              <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, flex: 1 }]}>
+                Riscatto Ricompensa
+              </Text>
+            </View>
+            <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
+              {rewardName}
+            </Text>
+            <Text style={[commonStyles.textSecondary, { fontSize: 14, marginTop: 4 }]}>
+              Costo: {rewardCredits} crediti
+            </Text>
+            <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 8 }]}>
+              Prenota un appuntamento per utilizzare questa ricompensa
+            </Text>
+          </View>
+        )}
+
         {/* Service Selection */}
         <TouchableOpacity
           style={[
@@ -726,7 +852,7 @@ export default function BookAppointmentScreen() {
             activeOpacity={0.7}
           >
             <Text style={buttonStyles.text}>
-              {loading ? 'Prenotazione...' : 'Prenota Appuntamento'}
+              {loading ? 'Prenotazione...' : (rewardId ? 'Prenota e Riscatta' : 'Prenota Appuntamento')}
             </Text>
           </TouchableOpacity>
         )}

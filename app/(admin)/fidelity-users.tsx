@@ -183,7 +183,7 @@ export default function FidelityUsersScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -276,7 +276,7 @@ export default function FidelityUsersScreen() {
 
               <ScrollView 
                 style={commonStyles.content}
-                contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
+                contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
               >
                 <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 24, marginBottom: 16, alignItems: 'center' }]}>
                   <Text style={[commonStyles.text, { fontSize: 48, fontWeight: 'bold' }]}>

@@ -33,8 +33,15 @@ export default function FidelityScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      console.log('Fetching fidelity data...');
+      console.log('Fetching fidelity data for user:', user?.id);
       
+      if (!user?.id) {
+        console.error('No user ID available');
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       // Fetch active rewards
       const { data: rewardsData, error: rewardsError } = await supabase
         .from('fidelity_rewards')
@@ -56,7 +63,7 @@ export default function FidelityScreen() {
           *,
           reward:fidelity_rewards(*)
         `)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -71,7 +78,7 @@ export default function FidelityScreen() {
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('fidelity_transactions')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -93,10 +100,13 @@ export default function FidelityScreen() {
   }, [user?.id, refreshUser]);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchData();
+    } else {
+      console.log('No user available, skipping fetch');
+      setLoading(false);
     }
-  }, [user, fetchData]);
+  }, [user?.id, fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -115,66 +125,25 @@ export default function FidelityScreen() {
     }
 
     Alert.alert(
-      'Riscatta Ricompensa',
-      `Vuoi riscattare questa ricompensa?\n\n${reward.name}\n${reward.description}\n\nCosto: ${reward.credits_required} crediti\nCrediti rimanenti: ${userCredits - reward.credits_required}\n\nLa ricompensa sarà in attesa di conferma dal barbiere.`,
+      'Prenota Appuntamento',
+      `Per riscattare questa ricompensa, devi prenotare un appuntamento.\n\n${reward.name}\n${reward.description}\n\nCosto: ${reward.credits_required} crediti\n\nVuoi procedere con la prenotazione?`,
       [
         {
           text: 'Annulla',
           style: 'cancel',
         },
         {
-          text: 'Riscatta',
-          onPress: async () => {
-            setRedeeming(true);
-            try {
-              // Deduct credits immediately
-              const newCredits = userCredits - reward.credits_required;
-              const { error: updateError } = await supabase
-                .from('users')
-                .update({ fidelity_credits: newCredits })
-                .eq('id', user.id);
-
-              if (updateError) throw updateError;
-
-              // Create redemption record
-              const { data: redemptionData, error: redemptionError } = await supabase
-                .from('fidelity_redemptions')
-                .insert({
-                  user_id: user.id,
-                  reward_id: reward.id,
-                  status: 'pending',
-                  credits_deducted: reward.credits_required,
-                })
-                .select()
-                .single();
-
-              if (redemptionError) throw redemptionError;
-
-              // Record transaction
-              const { error: transactionError } = await supabase
-                .from('fidelity_transactions')
-                .insert({
-                  user_id: user.id,
-                  credits_change: -reward.credits_required,
-                  transaction_type: 'redeemed',
-                  reference_type: 'redemption',
-                  reference_id: redemptionData.id,
-                  description: `Riscattato: ${reward.name}`,
-                });
-
-              if (transactionError) throw transactionError;
-
-              Alert.alert(
-                'Successo!',
-                'Ricompensa riscattata! Mostra questa conferma al barbiere al tuo prossimo appuntamento.',
-                [{ text: 'OK', onPress: () => fetchData() }]
-              );
-            } catch (error) {
-              console.error('Error redeeming reward:', error);
-              Alert.alert('Errore', 'Impossibile riscattare la ricompensa. Riprova.');
-            } finally {
-              setRedeeming(false);
-            }
+          text: 'Prenota',
+          onPress: () => {
+            // Navigate to booking screen with reward info
+            router.push({
+              pathname: '/(customer)/book-appointment',
+              params: {
+                rewardId: reward.id,
+                rewardName: reward.name,
+                rewardCredits: reward.credits_required.toString(),
+              },
+            });
           },
         },
       ]
@@ -201,6 +170,14 @@ export default function FidelityScreen() {
     );
   }
 
+  if (!user) {
+    return (
+      <SafeAreaView style={[commonStyles.container, commonStyles.centerContent]} edges={['top']}>
+        <Text style={commonStyles.text}>Effettua il login per vedere il tuo programma fedeltà</Text>
+      </SafeAreaView>
+    );
+  }
+
   const nextReward = getNextReward();
   const progress = getProgressToNextReward();
   const userCredits = user?.fidelity_credits || 0;
@@ -217,7 +194,7 @@ export default function FidelityScreen() {
 
       <ScrollView
         style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
@@ -348,7 +325,7 @@ export default function FidelityScreen() {
                       activeOpacity={0.7}
                     >
                       <Text style={buttonStyles.text}>
-                        {redeeming ? 'Riscatto...' : 'Riscatta'}
+                        {redeeming ? 'Riscatto...' : 'Prenota e Riscatta'}
                       </Text>
                     </TouchableOpacity>
                   )}
