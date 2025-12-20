@@ -38,6 +38,7 @@ interface Service {
   price: number;
   description: string;
   is_active: boolean;
+  earns_fidelity_reward?: boolean;
 }
 
 interface ExistingAppointment {
@@ -91,10 +92,22 @@ export default function BookAppointmentScreen() {
 
       // If redeeming a reward, auto-select the service based on reward name
       if (rewardName && data) {
-        const matchingService = data.find(s => 
-          rewardName.toLowerCase().includes(s.name.toLowerCase()) ||
-          s.name.toLowerCase().includes(rewardName.toLowerCase())
-        );
+        // More flexible matching - check if reward name contains service name or vice versa
+        const matchingService = data.find(s => {
+          const rewardLower = rewardName.toLowerCase();
+          const serviceLower = s.name.toLowerCase();
+          
+          // Check for common keywords
+          const rewardWords = rewardLower.split(/\s+/);
+          const serviceWords = serviceLower.split(/\s+/);
+          
+          // If any significant word matches, consider it a match
+          return rewardWords.some(rw => 
+            serviceWords.some(sw => 
+              (rw.length > 3 && sw.includes(rw)) || (sw.length > 3 && rw.includes(sw))
+            )
+          );
+        });
         
         if (matchingService) {
           console.log('Auto-selecting service based on reward:', matchingService.name);
@@ -102,7 +115,8 @@ export default function BookAppointmentScreen() {
           // Skip to barber selection
           setExpandedSection('barber');
         } else {
-          // If no match, start with service selection
+          console.log('No matching service found for reward:', rewardName);
+          // Still allow manual selection but start with service
           setExpandedSection('service');
         }
       } else {
@@ -545,7 +559,7 @@ export default function BookAppointmentScreen() {
               Costo: {rewardCredits} crediti
             </Text>
             <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 8 }]}>
-              Il servizio è stato pre-selezionato in base alla tua ricompensa
+              Seleziona barbiere, data e orario per completare la prenotazione
             </Text>
           </View>
         )}

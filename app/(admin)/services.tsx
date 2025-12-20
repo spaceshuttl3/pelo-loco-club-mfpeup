@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,6 +25,7 @@ interface Service {
   price: number;
   description: string;
   is_active: boolean;
+  earns_fidelity_reward?: boolean;
   created_at: string;
 }
 
@@ -38,6 +40,7 @@ export default function ServicesScreen() {
   const [duration, setDuration] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [earnsFidelityReward, setEarnsFidelityReward] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function ServicesScreen() {
     setDuration('');
     setPrice('');
     setDescription('');
+    setEarnsFidelityReward(true);
     setModalVisible(true);
   };
 
@@ -85,6 +89,7 @@ export default function ServicesScreen() {
     setDuration(service.duration.toString());
     setPrice(service.price.toString());
     setDescription(service.description || '');
+    setEarnsFidelityReward(service.earns_fidelity_reward !== false);
     setModalVisible(true);
   };
 
@@ -117,6 +122,7 @@ export default function ServicesScreen() {
             duration: durationNum,
             price: priceNum,
             description,
+            earns_fidelity_reward: earnsFidelityReward,
             updated_at: new Date().toISOString(),
           })
           .eq('id', editingService.id);
@@ -132,6 +138,7 @@ export default function ServicesScreen() {
             price: priceNum,
             description,
             is_active: true,
+            earns_fidelity_reward: earnsFidelityReward,
           });
 
         if (error) throw error;
@@ -277,6 +284,14 @@ export default function ServicesScreen() {
                   <Text style={commonStyles.textSecondary}>
                     💰 Prezzo: €{service.price}
                   </Text>
+                  <View style={[commonStyles.row, { marginTop: 4, alignItems: 'center' }]}>
+                    <Text style={commonStyles.textSecondary}>
+                      ⭐ Guadagna Crediti Fedeltà: 
+                    </Text>
+                    <Text style={[commonStyles.text, { marginLeft: 8, fontWeight: '600', color: service.earns_fidelity_reward !== false ? colors.primary : colors.error }]}>
+                      {service.earns_fidelity_reward !== false ? 'SÌ' : 'NO'}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -326,68 +341,90 @@ export default function ServicesScreen() {
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              {editingService ? 'Modifica Servizio' : 'Nuovo Servizio'}
-            </Text>
+            <ScrollView>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+                {editingService ? 'Modifica Servizio' : 'Nuovo Servizio'}
+              </Text>
 
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Nome Servizio *"
-              placeholderTextColor={colors.textSecondary}
-              value={name}
-              onChangeText={setName}
-              editable={!saving}
-            />
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Nome Servizio *"
+                placeholderTextColor={colors.textSecondary}
+                value={name}
+                onChangeText={setName}
+                editable={!saving}
+              />
 
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Durata (minuti) *"
-              placeholderTextColor={colors.textSecondary}
-              value={duration}
-              onChangeText={setDuration}
-              keyboardType="numeric"
-              editable={!saving}
-            />
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Durata (minuti) *"
+                placeholderTextColor={colors.textSecondary}
+                value={duration}
+                onChangeText={setDuration}
+                keyboardType="numeric"
+                editable={!saving}
+              />
 
-            <TextInput
-              style={commonStyles.input}
-              placeholder="Prezzo (€) *"
-              placeholderTextColor={colors.textSecondary}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-              editable={!saving}
-            />
+              <TextInput
+                style={commonStyles.input}
+                placeholder="Prezzo (€) *"
+                placeholderTextColor={colors.textSecondary}
+                value={price}
+                onChangeText={setPrice}
+                keyboardType="decimal-pad"
+                editable={!saving}
+              />
 
-            <TextInput
-              style={[commonStyles.input, { height: 80, textAlignVertical: 'top' }]}
-              placeholder="Descrizione (opzionale)"
-              placeholderTextColor={colors.textSecondary}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={3}
-              editable={!saving}
-            />
+              <TextInput
+                style={[commonStyles.input, { height: 80, textAlignVertical: 'top' }]}
+                placeholder="Descrizione (opzionale)"
+                placeholderTextColor={colors.textSecondary}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={3}
+                editable={!saving}
+              />
 
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1 }]}
-                onPress={handleSaveService}
-                disabled={saving}
-              >
-                <Text style={buttonStyles.text}>
-                  {saving ? 'Salvataggio...' : 'Salva'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
-                onPress={() => setModalVisible(false)}
-                disabled={saving}
-              >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 16, marginBottom: 16 }]}>
+                <View style={[commonStyles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+                  <View style={{ flex: 1, marginRight: 16 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                      Guadagna Crediti Fedeltà
+                    </Text>
+                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      I clienti guadagnano 1 credito quando completano questo servizio
+                    </Text>
+                  </View>
+                  <Switch
+                    value={earnsFidelityReward}
+                    onValueChange={setEarnsFidelityReward}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={colors.text}
+                    disabled={saving}
+                  />
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { flex: 1 }]}
+                  onPress={handleSaveService}
+                  disabled={saving}
+                >
+                  <Text style={buttonStyles.text}>
+                    {saving ? 'Salvataggio...' : 'Salva'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                  onPress={() => setModalVisible(false)}
+                  disabled={saving}
+                >
+                  <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>

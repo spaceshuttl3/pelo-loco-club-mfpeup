@@ -36,10 +36,17 @@ interface Barber {
   is_active: boolean;
 }
 
+interface Service {
+  id: string;
+  name: string;
+  earns_fidelity_reward?: boolean;
+}
+
 export default function ManageAppointmentsScreen() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +77,23 @@ export default function ManageAppointmentsScreen() {
       setBarbers(data || []);
     } catch (error) {
       console.error('Error in fetchBarbers:', error);
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, earns_fidelity_reward');
+
+      if (error) {
+        console.error('Error fetching services:', error);
+        return;
+      }
+
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error in fetchServices:', error);
     }
   };
 
@@ -146,6 +170,7 @@ export default function ManageAppointmentsScreen() {
 
   useEffect(() => {
     fetchBarbers();
+    fetchServices();
   }, []);
 
   useEffect(() => {
@@ -173,56 +198,64 @@ export default function ManageAppointmentsScreen() {
 
       if (updateError) throw updateError;
 
-      // If completing a paid appointment, award fidelity credit
-      if (status === 'completed' && appointment.payment_status === 'paid') {
+      // If completing an appointment
+      if (status === 'completed') {
         const userId = appointment.user_id;
         
-        // Get current user credits
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('fidelity_credits')
-          .eq('id', userId)
-          .single();
-
-        if (userError) {
-          console.error('Error fetching user credits:', userError);
-        } else {
-          const currentCredits = userData?.fidelity_credits || 0;
-          const newCredits = currentCredits + 1;
-
-          // Update user credits
-          const { error: creditError } = await supabase
+        // Check if this service earns fidelity rewards
+        const service = services.find(s => s.name === appointment.service);
+        const shouldEarnReward = service?.earns_fidelity_reward !== false; // Default to true if not set
+        
+        // Award fidelity credit if payment is completed and service earns rewards
+        if (appointment.payment_status === 'paid' && shouldEarnReward) {
+          // Get current user credits
+          const { data: userData, error: userError } = await supabase
             .from('users')
-            .update({ fidelity_credits: newCredits })
-            .eq('id', userId);
+            .select('fidelity_credits')
+            .eq('id', userId)
+            .single();
 
-          if (creditError) {
-            console.error('Error updating credits:', creditError);
+          if (userError) {
+            console.error('Error fetching user credits:', userError);
           } else {
-            // Record transaction
-            const { error: transactionError } = await supabase
-              .from('fidelity_transactions')
-              .insert({
-                user_id: userId,
-                credits_change: 1,
-                transaction_type: 'earned',
-                reference_type: 'appointment',
-                reference_id: appointment.id,
-                description: `Credito guadagnato: ${appointment.service}`,
-              });
+            const currentCredits = userData?.fidelity_credits || 0;
+            const newCredits = currentCredits + 1;
 
-            if (transactionError) {
-              console.error('Error recording transaction:', transactionError);
+            // Update user credits
+            const { error: creditError } = await supabase
+              .from('users')
+              .update({ fidelity_credits: newCredits })
+              .eq('id', userId);
+
+            if (creditError) {
+              console.error('Error updating credits:', creditError);
+            } else {
+              // Record transaction
+              const { error: transactionError } = await supabase
+                .from('fidelity_transactions')
+                .insert({
+                  user_id: userId,
+                  credits_change: 1,
+                  transaction_type: 'earned',
+                  reference_type: 'appointment',
+                  reference_id: appointment.id,
+                  description: `Credito guadagnato: ${appointment.service}`,
+                });
+
+              if (transactionError) {
+                console.error('Error recording transaction:', transactionError);
+              }
             }
           }
         }
 
-        // If there's a fidelity redemption, mark it as used
+        // If there's a fidelity redemption, mark it as confirmed/used
         if (appointment.fidelity_redemption_id) {
           const { error: redemptionError } = await supabase
             .from('fidelity_redemptions')
             .update({ 
-              status: 'used',
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
               used_at: new Date().toISOString(),
             })
             .eq('id', appointment.fidelity_redemption_id);
@@ -234,7 +267,23 @@ export default function ManageAppointmentsScreen() {
       }
 
       fetchAppointments();
-      Alert.alert('Successo', `Appuntamento ${status === 'completed' ? 'completato' : 'annullato'}${status === 'completed' && appointment.payment_status === 'paid' ? '. 1 credito fedeltà assegnato!' : ''}`);
+      
+      let successMessage = `Appuntamento ${status === 'completed' ? 'completato' : 'annullato'}`;
+      
+      if (status === 'completed') {
+        const service = services.find(s => s.name === appointment.service);
+        const shouldEarnReward = service?.earns_fidelity_reward !== false;
+        
+        if (appointment.payment_status === 'paid' && shouldEarnReward) {
+          successMessage += '. 1 credito fedeltà assegnato!';
+        }
+        
+        if (appointment.fidelity_redemption_id) {
+          successMessage += ' Ricompensa confermata!';
+        }
+      }
+      
+      Alert.alert('Successo', successMessage);
     } catch (error) {
       console.error('Error updating appointment:', error);
       Alert.alert('Errore', 'Impossibile aggiornare l\'appuntamento');
