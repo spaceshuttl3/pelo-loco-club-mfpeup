@@ -118,11 +118,27 @@ export default function ManageProductsScreen() {
       
       console.log('Blob created, size:', blob.size, 'type:', blob.type);
 
+      // Determine content type
+      let contentType = blob.type;
+      if (!contentType || contentType === 'application/octet-stream') {
+        // Fallback to determining type from file extension
+        const mimeTypes: { [key: string]: string } = {
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'png': 'image/png',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        };
+        contentType = mimeTypes[fileExt] || 'image/jpeg';
+      }
+
+      console.log('Using content type:', contentType);
+
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('product-images')
         .upload(filePath, blob, {
-          contentType: blob.type || `image/${fileExt}`,
+          contentType: contentType,
           upsert: false,
         });
 
@@ -347,6 +363,14 @@ export default function ManageProductsScreen() {
                       backgroundColor: colors.card,
                     }}
                     resizeMode="cover"
+                    onError={(error) => {
+                      console.error('Image load error for product:', product.name);
+                      console.error('Image URL:', product.photo_url);
+                      console.error('Error details:', error.nativeEvent);
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully for product:', product.name);
+                    }}
                   />
                 ) : (
                   <View

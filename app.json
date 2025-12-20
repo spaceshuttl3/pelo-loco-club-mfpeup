@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Pelo Loco Barbershop",
-    "slug": "pelo-loco-barbershop",
+    "name": "Pelo Loco Club",
+    "slug": "Pelo Loco Club",
     "version": "3.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
@@ -41,5 +41,6 @@
         "projectId": "f58c39ed-204a-46e2-bc3d-9a4c486a3a4a"
       }
     }
-  }
+  },
+  "scheme": "Pelo Loco Club"
 }

@@ -56,14 +56,13 @@ export default function BookAppointmentScreen() {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [paymentMode, setPaymentMode] = useState<'pay_in_person' | 'online'>('pay_in_person');
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
   // Escalating UI states
-  const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | 'payment' | null>('service');
+  const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>('service');
 
   const fetchServices = async () => {
     try {
@@ -282,8 +281,8 @@ export default function BookAppointmentScreen() {
           date: date.toISOString().split('T')[0],
           time: selectedTimeSlot,
           status: 'booked',
-          payment_mode: paymentMode,
-          payment_status: paymentMode === 'online' ? 'paid' : 'pending',
+          payment_mode: 'pay_in_person',
+          payment_status: 'pending',
         });
 
       if (error) {
@@ -328,20 +327,18 @@ export default function BookAppointmentScreen() {
     setTimeout(() => setExpandedSection('datetime'), 300);
   };
 
-  const handleDateTimeConfirm = () => {
-    if (time) {
-      console.log('Date and time confirmed:', date, time);
+  const handleTimeSlotSelect = (slot: string) => {
+    const [hours, minutes] = slot.split(':');
+    const slotTime = new Date();
+    slotTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    console.log('Time slot selected:', slot);
+    setTime(slotTime);
+    
+    // Auto-retract the datetime section after selecting time
+    setTimeout(() => {
       setExpandedSection(null);
-      // Auto-expand next section after a short delay
-      setTimeout(() => setExpandedSection('payment'), 300);
-    } else {
-      Alert.alert('Attenzione', 'Seleziona prima un orario');
-    }
-  };
-
-  const handlePaymentSelect = (mode: 'pay_in_person' | 'online') => {
-    console.log('Payment mode selected:', mode);
-    setPaymentMode(mode);
+    }, 300);
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -634,7 +631,7 @@ export default function BookAppointmentScreen() {
             </Text>
             
             {availableTimeSlots.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
                 {availableTimeSlots.map((slot, slotIndex) => {
                   const [hours, minutes] = slot.split(':');
                   const slotTime = new Date();
@@ -661,8 +658,7 @@ export default function BookAppointmentScreen() {
                       ]}
                       onPress={() => {
                         if (isAvailable) {
-                          console.log('Time slot selected:', slot);
-                          setTime(slotTime);
+                          handleTimeSlotSelect(slot);
                         } else {
                           Alert.alert('Non disponibile', 'Questo orario è già prenotato');
                         }
@@ -683,114 +679,17 @@ export default function BookAppointmentScreen() {
                 })}
               </View>
             ) : (
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, marginBottom: 20 }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>
                   {selectedBarber ? 'Nessun orario disponibile per questa data' : 'Seleziona prima un barbiere'}
                 </Text>
               </View>
             )}
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, { marginTop: 12 }]}
-              onPress={handleDateTimeConfirm}
-              disabled={!time}
-              activeOpacity={0.7}
-            >
-              <Text style={buttonStyles.text}>Conferma Data e Orario</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Payment Method Selection */}
-        <TouchableOpacity
-          style={[
-            commonStyles.card,
-            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-            expandedSection === 'payment' && { borderColor: colors.primary, borderWidth: 2 },
-            !time && { opacity: 0.5 },
-          ]}
-          onPress={() => {
-            if (time) {
-              setExpandedSection(expandedSection === 'payment' ? null : 'payment');
-            } else {
-              Alert.alert('Attenzione', 'Seleziona prima data e orario');
-            }
-          }}
-          activeOpacity={0.7}
-          disabled={!time}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              4. Metodo di Pagamento
-            </Text>
-            {paymentMode ? (
-              <Text style={commonStyles.textSecondary}>
-                {paymentMode === 'pay_in_person' ? 'Paga di Persona' : 'Paga Online'}
-              </Text>
-            ) : (
-              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
-                {!time ? 'Seleziona prima data e orario' : 'Tocca per selezionare'}
-              </Text>
-            )}
-          </View>
-          <IconSymbol
-            name={expandedSection === 'payment' ? 'chevron.up' : 'chevron.down'}
-            size={24}
-            color={colors.text}
-          />
-        </TouchableOpacity>
-
-        {expandedSection === 'payment' && (
-          <View style={{ marginBottom: 16 }}>
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 8 },
-                paymentMode === 'pay_in_person' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => handlePaymentSelect('pay_in_person')}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                  Paga di Persona
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Paga al negozio
-                </Text>
-              </View>
-              {paymentMode === 'pay_in_person' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                paymentMode === 'online' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => handlePaymentSelect('online')}
-              activeOpacity={0.7}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[commonStyles.text, { fontWeight: '600' }]}>
-                  Paga Online
-                </Text>
-                <Text style={commonStyles.textSecondary}>
-                  Paga ora con carta
-                </Text>
-              </View>
-              {paymentMode === 'online' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
           </View>
         )}
 
         {/* Book Button */}
-        {selectedService && selectedBarber && time && paymentMode && (
+        {selectedService && selectedBarber && time && (
           <TouchableOpacity
             style={[buttonStyles.primary, { marginTop: 24 }]}
             onPress={handleBookAppointment}

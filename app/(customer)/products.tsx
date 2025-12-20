@@ -144,7 +144,12 @@ export default function ProductsScreen() {
                       style={{ width: '100%', height: cardWidth, backgroundColor: colors.border }}
                       resizeMode="cover"
                       onError={(error) => {
-                        console.error('Image load error for product:', product.name, error.nativeEvent.error);
+                        console.error('Image load error for product:', product.name);
+                        console.error('Image URL:', product.photo_url);
+                        console.error('Error details:', error.nativeEvent);
+                      }}
+                      onLoad={() => {
+                        console.log('Image loaded successfully for product:', product.name);
                       }}
                     />
                   ) : (
