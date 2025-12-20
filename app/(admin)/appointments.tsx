@@ -20,7 +20,6 @@ import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { GlassView } from 'expo-glass-effect';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface ExistingAppointment {
   id: string;
@@ -39,7 +38,6 @@ interface Barber {
 
 export default function ManageAppointmentsScreen() {
   const router = useRouter();
-  const { user: currentUser } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
@@ -87,14 +85,8 @@ export default function ManageAppointmentsScreen() {
         .from('appointments')
         .select(`
           *,
-          user:users!appointments_user_id_fkey(id, name, email, phone, fidelity_credits),
-          barber:barbers!appointments_barber_id_fkey(id, name),
-          fidelity_redemption:fidelity_redemptions!appointments_fidelity_redemption_id_fkey(
-            id,
-            status,
-            credits_deducted,
-            reward:fidelity_rewards(name, description)
-          )
+          user:users!appointments_user_id_fkey(id, name, email, phone),
+          barber:barbers!appointments_barber_id_fkey(id, name)
         `)
         .gte('date', todayString);
 
@@ -152,107 +144,34 @@ export default function ManageAppointmentsScreen() {
 
   useEffect(() => {
     fetchAppointments();
-  }, [fetchAppointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBarberId]);
 
   useEffect(() => {
     if (selectedAppointment && editDate) {
       fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
     }
-  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editDate, selectedAppointment]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchAppointments();
   };
 
-  const completeAppointmentAndAwardCredits = async (appointment: Appointment) => {
+  const updateAppointmentStatus = async (id: string, status: string) => {
     try {
-      // Check if payment is completed
-      if (appointment.payment_status !== 'paid') {
-        Alert.alert(
-          'Pagamento Non Completato',
-          'Il pagamento deve essere completato prima di assegnare i crediti. Vuoi completare l\'appuntamento senza assegnare crediti?',
-          [
-            { text: 'Annulla', style: 'cancel' },
-            {
-              text: 'Completa Senza Crediti',
-              onPress: async () => {
-                const { error } = await supabase
-                  .from('appointments')
-                  .update({ status: 'completed' })
-                  .eq('id', appointment.id);
-
-                if (error) throw error;
-                Alert.alert('Successo', 'Appuntamento completato');
-                fetchAppointments();
-              },
-            },
-          ]
-        );
-        return;
-      }
-
-      // Check if credits already awarded
-      if (appointment.credits_awarded) {
-        Alert.alert('Crediti Già Assegnati', 'I crediti sono già stati assegnati per questo appuntamento');
-        return;
-      }
-
-      // Award 1 credit
-      const currentCredits = appointment.user?.fidelity_credits || 0;
-      const { error: updateUserError } = await supabase
-        .from('users')
-        .update({ fidelity_credits: currentCredits + 1 })
-        .eq('id', appointment.user_id);
-
-      if (updateUserError) throw updateUserError;
-
-      // Mark appointment as completed and credited
-      const { error: updateAppointmentError } = await supabase
+      const { error } = await supabase
         .from('appointments')
-        .update({ 
-          status: 'completed',
-          credits_awarded: true,
-        })
-        .eq('id', appointment.id);
+        .update({ status })
+        .eq('id', id);
 
-      if (updateAppointmentError) throw updateAppointmentError;
-
-      // Record transaction
-      const { error: transactionError } = await supabase
-        .from('fidelity_transactions')
-        .insert({
-          user_id: appointment.user_id,
-          credits_change: 1,
-          transaction_type: 'earned',
-          reference_type: 'appointment',
-          reference_id: appointment.id,
-          description: `Credito guadagnato: ${appointment.service}`,
-        });
-
-      if (transactionError) throw transactionError;
-
-      // Confirm fidelity redemption if exists
-      if (appointment.fidelity_redemption_id) {
-        const { error: confirmError } = await supabase
-          .from('fidelity_redemptions')
-          .update({ 
-            status: 'confirmed',
-            confirmed_at: new Date().toISOString(),
-            confirmed_by: currentUser?.id,
-          })
-          .eq('id', appointment.fidelity_redemption_id);
-
-        if (confirmError) {
-          console.error('Error confirming redemption:', confirmError);
-        }
-      }
-
-      Alert.alert('Successo', 'Appuntamento completato e 1 credito assegnato!');
+      if (error) throw error;
       fetchAppointments();
+      Alert.alert('Successo', `Appuntamento ${status === 'completed' ? 'completato' : 'annullato'}`);
     } catch (error) {
-      console.error('Error completing appointment:', error);
-      Alert.alert('Errore', 'Impossibile completare l\'appuntamento');
+      console.error('Error updating appointment:', error);
+      Alert.alert('Errore', 'Impossibile aggiornare l\'appuntamento');
     }
   };
 
@@ -280,42 +199,6 @@ export default function ManageAppointmentsScreen() {
         .eq('id', selectedAppointment.id);
 
       if (error) throw error;
-
-      // If there's a pending redemption, cancel it and refund credits
-      if (selectedAppointment.fidelity_redemption_id) {
-        const { data: redemptionData, error: redemptionError } = await supabase
-          .from('fidelity_redemptions')
-          .select('*, user:users!fidelity_redemptions_user_id_fkey(fidelity_credits)')
-          .eq('id', selectedAppointment.fidelity_redemption_id)
-          .single();
-
-        if (!redemptionError && redemptionData && redemptionData.status === 'pending') {
-          // Refund credits
-          const currentCredits = redemptionData.user?.fidelity_credits || 0;
-          await supabase
-            .from('users')
-            .update({ fidelity_credits: currentCredits + redemptionData.credits_deducted })
-            .eq('id', redemptionData.user_id);
-
-          // Cancel redemption
-          await supabase
-            .from('fidelity_redemptions')
-            .update({ status: 'cancelled' })
-            .eq('id', selectedAppointment.fidelity_redemption_id);
-
-          // Record transaction
-          await supabase
-            .from('fidelity_transactions')
-            .insert({
-              user_id: redemptionData.user_id,
-              credits_change: redemptionData.credits_deducted,
-              transaction_type: 'cancelled',
-              reference_type: 'redemption',
-              reference_id: redemptionData.id,
-              description: 'Crediti rimborsati per appuntamento annullato',
-            });
-        }
-      }
 
       Alert.alert('Successo', 'Appuntamento annullato. Il cliente è stato notificato.');
       setCancelModalVisible(false);
@@ -591,117 +474,95 @@ export default function ManageAppointmentsScreen() {
             </Text>
           </View>
         ) : (
-          <React.Fragment>
-            {upcomingAppointments.map((appointment, index) => (
-              <View key={`upcoming-${appointment.id}-${index}`} style={[commonStyles.card, { marginBottom: 16 }]}>
-                <View style={[commonStyles.row, { marginBottom: 12 }]}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                    {appointment.service}
+          upcomingAppointments.map((appointment) => (
+            <View key={appointment.id} style={[commonStyles.card, { marginBottom: 16 }]}>
+              <View style={[commonStyles.row, { marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                  {appointment.service}
+                </Text>
+                <View
+                  style={{
+                    backgroundColor: colors.primary,
+                    paddingHorizontal: 12,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                  }}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                    PRENOTATO
                   </Text>
-                  <View
-                    style={{
-                      backgroundColor: colors.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                      PRENOTATO
-                    </Text>
-                  </View>
-                </View>
-
-                {appointment.fidelity_redemption && (
-                  <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
-                    <View style={[commonStyles.row, { marginBottom: 4 }]}>
-                      <IconSymbol name="star.fill" size={20} color={colors.text} />
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, flex: 1 }]}>
-                        Ricompensa Fedeltà Riscattata
-                      </Text>
-                    </View>
-                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                      {appointment.fidelity_redemption.reward?.name}
-                    </Text>
-                    <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                      Crediti: {appointment.fidelity_redemption.credits_deducted}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={{ marginBottom: 12 }}>
-                  <Text style={commonStyles.textSecondary}>
-                    Cliente: {appointment.user?.name || 'Sconosciuto'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Telefono: {appointment.user?.phone || 'N/D'}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Crediti Cliente: {appointment.user?.fidelity_credits || 0}
-                  </Text>
-                  <Text style={commonStyles.textSecondary}>
-                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                  </Text>
-                  {appointment.barber && (
-                    <Text style={commonStyles.textSecondary}>
-                      Barbiere: {appointment.barber.name}
-                    </Text>
-                  )}
-                  <Text style={commonStyles.textSecondary}>
-                    Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
-                    {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
-                  </Text>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.primary,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => completeAppointmentAndAwardCredits(appointment)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Completa
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.card,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    onPress={() => handleEditAppointment(appointment)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Riprogramma
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.error,
-                      paddingVertical: 10,
-                      borderRadius: 6,
-                      alignItems: 'center',
-                    }}
-                    onPress={() => handleCancelAppointment(appointment)}
-                  >
-                    <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
-                      Annulla
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
-            ))}
-          </React.Fragment>
+
+              <View style={{ marginBottom: 12 }}>
+                <Text style={commonStyles.textSecondary}>
+                  Cliente: {appointment.user?.name || 'Sconosciuto'}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Telefono: {appointment.user?.phone || 'N/D'}
+                </Text>
+                <Text style={commonStyles.textSecondary}>
+                  Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                </Text>
+                {appointment.barber && (
+                  <Text style={commonStyles.textSecondary}>
+                    Barbiere: {appointment.barber.name}
+                  </Text>
+                )}
+                <Text style={commonStyles.textSecondary}>
+                  Pagamento: {appointment.payment_mode === 'pay_in_person' ? 'Di Persona' : 'Online'} -{' '}
+                  {appointment.payment_status === 'pending' ? 'In Attesa' : 'Pagato'}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.primary,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => updateAppointmentStatus(appointment.id, 'completed')}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Completa
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.card,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                  onPress={() => handleEditAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Riprogramma
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.error,
+                    paddingVertical: 10,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => handleCancelAppointment(appointment)}
+                >
+                  <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                    Annulla
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         )}
 
         {pastAppointments.length > 0 && (
@@ -732,65 +593,50 @@ export default function ManageAppointmentsScreen() {
             </TouchableOpacity>
 
             {showPastAppointments && (
-              <React.Fragment>
-                {pastAppointments.map((appointment, index) => (
-                  <View key={`past-${appointment.id}-${index}`} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
-                    <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
-                        {appointment.service}
+              pastAppointments.map((appointment) => (
+                <View key={appointment.id} style={[commonStyles.card, { opacity: 0.7, marginBottom: 12 }]}>
+                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', flex: 1 }]}>
+                      {appointment.service}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
+                        paddingHorizontal: 12,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text style={[commonStyles.text, { fontSize: 12 }]}>
+                        {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
                       </Text>
-                      <View
-                        style={{
-                          backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
-                          paddingHorizontal: 12,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                        }}
-                      >
-                        <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                          {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
-                        </Text>
-                      </View>
                     </View>
-
-                    {appointment.fidelity_redemption && appointment.fidelity_redemption.status === 'confirmed' && (
-                      <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 8, marginBottom: 8 }]}>
-                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600' }]}>
-                          ⭐ Ricompensa Fedeltà Usata: {appointment.fidelity_redemption.reward?.name}
-                        </Text>
-                      </View>
-                    )}
-
-                    <Text style={commonStyles.textSecondary}>
-                      Cliente: {appointment.user?.name || 'Sconosciuto'}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
-                    </Text>
-                    {appointment.barber && (
-                      <Text style={commonStyles.textSecondary}>
-                        Barbiere: {appointment.barber.name}
-                      </Text>
-                    )}
-                    {appointment.credits_awarded && (
-                      <Text style={[commonStyles.textSecondary, { color: colors.primary }]}>
-                        ✓ Credito assegnato
-                      </Text>
-                    )}
-
-                    {appointment.cancellation_reason && (
-                      <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
-                        <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
-                          Motivo Annullamento:
-                        </Text>
-                        <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                          {appointment.cancellation_reason}
-                        </Text>
-                      </View>
-                    )}
                   </View>
-                ))}
-              </React.Fragment>
+
+                  <Text style={commonStyles.textSecondary}>
+                    Cliente: {appointment.user?.name || 'Sconosciuto'}
+                  </Text>
+                  <Text style={commonStyles.textSecondary}>
+                    Data: {new Date(appointment.date).toLocaleDateString('it-IT')} alle {appointment.time}
+                  </Text>
+                  {appointment.barber && (
+                    <Text style={commonStyles.textSecondary}>
+                      Barbiere: {appointment.barber.name}
+                    </Text>
+                  )}
+
+                  {appointment.cancellation_reason && (
+                    <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 12, marginTop: 8 }]}>
+                      <Text style={[commonStyles.text, { fontSize: 12, fontWeight: '600', marginBottom: 4 }]}>
+                        Motivo Annullamento:
+                      </Text>
+                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                        {appointment.cancellation_reason}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ))
             )}
           </>
         )}

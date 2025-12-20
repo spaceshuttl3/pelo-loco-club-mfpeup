@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import { commonStyles, colors } from '../../styles/commonStyles';
 import {
   View,
   Text,
@@ -8,106 +8,144 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { Appointment, Order } from '../../app/integrations/supabase/types';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { commonStyles, colors } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface DashboardStats {
-  todayAppointments: number;
-  pendingOrders: number;
-  upcomingAppointments: number;
-  totalCustomers: number;
-  totalFidelityCredits: number;
-  pendingRedemptions: number;
-}
-
-export default function AdminDashboard() {
+export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
-    todayAppointments: 0,
-    pendingOrders: 0,
-    upcomingAppointments: 0,
-    totalCustomers: 0,
-    totalFidelityCredits: 0,
-    pendingRedemptions: 0,
-  });
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [todayEarnings, setTodayEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { signOut } = useAuth();
+  const { width } = useWindowDimensions();
 
-  const fetchDashboardStats = async () => {
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
     try {
-      console.log('Fetching dashboard stats...');
       const today = new Date().toISOString().split('T')[0];
 
-      // Today's appointments
-      const { count: todayCount } = await supabase
+      // Fetch today's appointments
+      const { data: appointments, error: aptError } = await supabase
         .from('appointments')
-        .select('*', { count: 'exact', head: true })
+        .select('*')
         .eq('date', today)
-        .eq('status', 'booked');
+        .eq('status', 'booked')
+        .order('time', { ascending: true });
 
-      // Pending orders
-      const { count: pendingOrdersCount } = await supabase
+      if (aptError) {
+        console.error('Error fetching appointments:', aptError);
+      } else {
+        setTodayAppointments(appointments || []);
+      }
+
+      // Fetch pending orders
+      const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('payment_status', 'pending');
+        .select('*')
+        .eq('payment_status', 'pending')
+        .order('created_at', { ascending: false });
 
-      // Upcoming appointments
-      const { count: upcomingCount } = await supabase
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+      } else {
+        setPendingOrders(orders || []);
+      }
+
+      // Fetch services to get pricing information
+      const { data: services, error: servicesError } = await supabase
+        .from('services')
+        .select('name, price');
+
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
+      }
+
+      // Create a map of service names to prices
+      const servicePriceMap: { [key: string]: number } = {};
+      if (services) {
+        services.forEach(service => {
+          servicePriceMap[service.name] = parseFloat(service.price.toString()) || 0;
+        });
+      }
+
+      // Calculate today's earnings (completed appointments + paid orders)
+      const { data: completedAppointments, error: completedAptError } = await supabase
         .from('appointments')
-        .select('*', { count: 'exact', head: true })
-        .gte('date', today)
-        .eq('status', 'booked');
+        .select('*')
+        .eq('date', today)
+        .eq('status', 'completed');
 
-      // Total customers
-      const { count: customersCount } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'customer');
+      const { data: paidOrders, error: paidOrdersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', `${today}T00:00:00`)
+        .lte('created_at', `${today}T23:59:59`)
+        .eq('payment_status', 'paid');
 
-      // Total fidelity credits across all users
-      const { data: creditsData } = await supabase
-        .from('users')
-        .select('fidelity_credits')
-        .eq('role', 'customer');
+      let earnings = 0;
+      
+      if (!completedAptError && completedAppointments) {
+        earnings += completedAppointments.reduce((sum, apt) => {
+          const servicePrice = servicePriceMap[apt.service] || 0;
+          return sum + servicePrice;
+        }, 0);
+      }
 
-      const totalCredits = creditsData?.reduce((sum, user) => sum + (user.fidelity_credits || 0), 0) || 0;
+      if (!paidOrdersError && paidOrders) {
+        earnings += paidOrders.reduce((sum, order) => {
+          return sum + (parseFloat(order.total_price.toString()) || 0);
+        }, 0);
+      }
 
-      // Pending redemptions
-      const { count: pendingRedemptionsCount } = await supabase
-        .from('fidelity_redemptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-
-      setStats({
-        todayAppointments: todayCount || 0,
-        pendingOrders: pendingOrdersCount || 0,
-        upcomingAppointments: upcomingCount || 0,
-        totalCustomers: customersCount || 0,
-        totalFidelityCredits: totalCredits,
-        pendingRedemptions: pendingRedemptionsCount || 0,
-      });
+      setTodayEarnings(earnings);
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      Alert.alert('Errore', 'Impossibile caricare le statistiche');
+      console.error('Error in fetchDashboardData:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDashboardStats();
+    fetchDashboardData();
+  };
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Esci',
+      'Sei sicuro di voler uscire?',
+      [
+        {
+          text: 'Annulla',
+          style: 'cancel',
+        },
+        {
+          text: 'Esci',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Errore', 'Impossibile uscire');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -118,12 +156,72 @@ export default function AdminDashboard() {
     );
   }
 
+  const quickActions = [
+    {
+      id: 'appointments',
+      title: 'Appuntamenti',
+      icon: 'calendar',
+      color: colors.primary,
+      route: '/(admin)/appointments',
+      badge: todayAppointments.length,
+    },
+    {
+      id: 'orders',
+      title: 'Ordini',
+      icon: 'bag.fill',
+      color: colors.secondary,
+      route: '/(admin)/orders',
+      badge: pendingOrders.length,
+    },
+    {
+      id: 'products',
+      title: 'Prodotti',
+      icon: 'cube.fill',
+      color: colors.primary,
+      route: '/(admin)/products',
+    },
+    {
+      id: 'services',
+      title: 'Servizi',
+      icon: 'scissors',
+      color: colors.primary,
+      route: '/(admin)/services',
+    },
+    {
+      id: 'coupons',
+      title: 'Coupon',
+      icon: 'gift.fill',
+      color: colors.secondary,
+      route: '/(admin)/coupons',
+    },
+    {
+      id: 'birthdays',
+      title: 'Compleanni',
+      icon: 'birthday.cake.fill',
+      color: colors.primary,
+      route: '/(admin)/birthdays',
+    },
+    {
+      id: 'reports',
+      title: 'Report',
+      icon: 'chart.bar.fill',
+      color: colors.primary,
+      route: '/(admin)/reports',
+    },
+    {
+      id: 'notifications',
+      title: 'Notifiche',
+      icon: 'bell.fill',
+      color: colors.secondary,
+      route: '/(admin)/notifications',
+    },
+  ];
+
+  // Calculate card width based on screen size
+  const cardWidth = width < 400 ? '100%' : '50%';
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={commonStyles.header}>
-        <Text style={commonStyles.headerTitle}>Dashboard Admin</Text>
-      </View>
-
       <ScrollView
         style={commonStyles.content}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -131,315 +229,102 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={[commonStyles.text, { marginBottom: 16, fontSize: 18 }]}>
-          Benvenuto, {user?.name}!
-        </Text>
-
-        {/* Stats Grid */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6, marginBottom: 24 }}>
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.todayAppointments}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Appuntamenti Oggi
-              </Text>
-            </View>
+        <View style={{ marginBottom: 30, marginTop: 20 }}>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
+            <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), flex: 1 }]}>
+              Dashboard Admin
+            </Text>
+            <TouchableOpacity onPress={handleSignOut}>
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={28} color={colors.error} />
+            </TouchableOpacity>
           </View>
+          <Text style={commonStyles.textSecondary}>
+            Gestisci il tuo barbershop
+          </Text>
+        </View>
 
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.upcomingAppointments}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Prossimi Appuntamenti
-              </Text>
-            </View>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 30 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+            Oggi
+          </Text>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
+            <Text style={commonStyles.text}>Appuntamenti:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+              {todayAppointments.length}
+            </Text>
           </View>
-
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.pendingOrders}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Ordini in Attesa
-              </Text>
-            </View>
+          <View style={[commonStyles.row, { marginBottom: 8 }]}>
+            <Text style={commonStyles.text}>Ordini in Attesa:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+              {pendingOrders.length}
+            </Text>
           </View>
-
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.totalCustomers}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Clienti Totali
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.totalFidelityCredits}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Crediti Fedeltà Totali
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ width: '50%', padding: 6 }}>
-            <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 20, alignItems: 'center' }]}>
-              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
-                {stats.pendingRedemptions}
-              </Text>
-              <Text style={[commonStyles.textSecondary, { marginTop: 4, textAlign: 'center' }]}>
-                Riscatti in Attesa
-              </Text>
-            </View>
+          <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.black }]}>
+              €{todayEarnings.toFixed(2)}
+            </Text>
           </View>
         </View>
 
-        {/* Quick Actions */}
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Azioni Rapide
         </Text>
 
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/appointments')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="calendar" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Gestisci Appuntamenti
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Visualizza e gestisci gli appuntamenti
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/orders')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="bag.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Gestisci Ordini
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Visualizza e gestisci gli ordini
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/products')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="cube.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Gestisci Prodotti
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Aggiungi, modifica o elimina prodotti
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/fidelity-config')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="star.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Configurazione Fedeltà
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Gestisci ricompense fedeltà
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/fidelity-users')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="person.3.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Crediti Utenti
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Visualizza crediti e cronologia utenti
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/services')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="scissors" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Gestisci Servizi
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Configura servizi e prezzi
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/notifications')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="bell.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Invia Notifiche
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Invia notifiche personalizzate ai clienti
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-          onPress={() => router.push('/(admin)/birthdays')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={{
-              width: 50,
-              height: 50,
-              borderRadius: 25,
-              backgroundColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 16,
-            }}
-          >
-            <IconSymbol name="gift.fill" size={24} color={colors.text} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-              Compleanni
-            </Text>
-            <Text style={commonStyles.textSecondary}>
-              Visualizza compleanni dei clienti
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+          {quickActions.map((action, actionIndex) => (
+            <TouchableOpacity
+              key={`action-${action.id}-${actionIndex}`}
+              style={{
+                width: cardWidth,
+                padding: 6,
+              }}
+              onPress={() => {
+                console.log('Quick action pressed:', action.title);
+                router.push(action.route as any);
+              }}
+            >
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, position: 'relative' }]}>
+                {action.badge !== undefined && action.badge > 0 && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      backgroundColor: colors.error,
+                      borderRadius: 12,
+                      minWidth: 24,
+                      height: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      paddingHorizontal: 6,
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: 'bold' }]}>
+                      {action.badge}
+                    </Text>
+                  </View>
+                )}
+                <View
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    backgroundColor: action.color,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
+                </View>
+                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
+                  {action.title}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

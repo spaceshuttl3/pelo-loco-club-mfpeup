@@ -8,7 +8,6 @@ export interface User {
   phone: string;
   birthday?: string;
   role: UserRole;
-  fidelity_credits?: number;
   created_at?: string;
 }
 
@@ -23,15 +22,12 @@ export interface Appointment {
   payment_mode: 'pay_in_person' | 'online';
   payment_status: 'pending' | 'paid';
   cancellation_reason?: string;
-  credits_awarded?: boolean;
-  fidelity_redemption_id?: string;
   created_at?: string;
   user?: User;
   barber?: {
     id: string;
     name: string;
   };
-  fidelity_redemption?: FidelityRedemption;
 }
 
 export interface Product {
@@ -63,47 +59,16 @@ export interface OrderItem {
   price: number;
 }
 
-export interface FidelityReward {
-  id: string;
-  name: string;
-  description: string;
-  credits_required: number;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface FidelityRedemption {
+export interface Coupon {
   id: string;
   user_id: string;
-  reward_id: string;
-  appointment_id?: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  credits_deducted: number;
+  coupon_type: string;
+  discount_value: number;
+  expiration_date: string;
+  status: 'active' | 'used' | 'expired';
+  coupon_code?: string;
+  config_id?: string;
   created_at?: string;
-  confirmed_at?: string;
-  confirmed_by?: string;
-  reward?: FidelityReward;
-  user?: User;
-}
-
-export interface FidelityTransaction {
-  id: string;
-  user_id: string;
-  credits_change: number;
-  transaction_type: 'earned' | 'redeemed' | 'adjusted' | 'cancelled';
-  reference_type?: string;
-  reference_id?: string;
-  description?: string;
-  created_at?: string;
-}
-
-export interface Badge {
-  badge_id: string;
-  badge_name: string;
-  badge_description: string;
-  badge_icon: string;
-  earned_at: string;
 }
 
 export interface LoyaltyReward {
@@ -129,17 +94,6 @@ export interface BadgeRule {
   };
   is_active: boolean;
   created_at?: string;
-}
-
-export interface LoyaltyTransaction {
-  id: string;
-  user_id: string;
-  points_change: number;
-  transaction_type: 'earned' | 'redeemed' | 'adjusted';
-  reference_type?: string;
-  reference_id?: string;
-  description?: string;
-  created_at: string;
 }
 
 export const SERVICES = [
