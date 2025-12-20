@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,8 +30,24 @@ export default function FidelityScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
+  
+  // Use ref to prevent duplicate fetches
+  const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh: boolean = false) => {
+    // Prevent duplicate fetches within 2 seconds unless forced
+    const now = Date.now();
+    if (!forceRefresh && (isFetchingRef.current || (now - lastFetchTimeRef.current < 2000))) {
+      console.log('Skipping duplicate fetch request');
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
+
     try {
       console.log('Fetching fidelity data for user:', user?.id);
       
@@ -39,6 +55,7 @@ export default function FidelityScreen() {
         console.error('No user ID available');
         setLoading(false);
         setRefreshing(false);
+        isFetchingRef.current = false;
         return;
       }
 
@@ -89,28 +106,31 @@ export default function FidelityScreen() {
         setTransactions(transactionsData || []);
       }
 
-      // Refresh user data to get latest credits
-      await refreshUser();
+      // Only refresh user data if forced (manual refresh)
+      if (forceRefresh) {
+        await refreshUser();
+      }
     } catch (error) {
       console.error('Error in fetchData:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFetchingRef.current = false;
     }
   }, [user?.id, refreshUser]);
 
   useEffect(() => {
     if (user?.id) {
-      fetchData();
+      fetchData(false);
     } else {
       console.log('No user available, skipping fetch');
       setLoading(false);
     }
-  }, [user?.id, fetchData]);
+  }, [user?.id]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchData();
+    fetchData(true);
   };
 
   const handleRedeemReward = (reward: FidelityReward) => {

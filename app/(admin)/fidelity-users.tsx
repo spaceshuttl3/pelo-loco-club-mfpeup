@@ -10,6 +10,8 @@ import {
   Modal,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
@@ -31,6 +33,7 @@ export default function FidelityUsersScreen() {
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [adjusting, setAdjusting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -128,6 +131,7 @@ export default function FidelityUsersScreen() {
       return;
     }
 
+    setAdjusting(true);
     try {
       console.log('Updating user credits to:', newCredits);
       
@@ -160,17 +164,23 @@ export default function FidelityUsersScreen() {
       }
 
       console.log('Credits adjusted successfully');
-      Alert.alert('Successo', 'Crediti aggiornati');
+      Alert.alert('Successo', 'Crediti aggiornati con successo');
       setAdjustModalVisible(false);
       setAdjustAmount('');
       setAdjustReason('');
-      fetchUsers();
-      if (selectedUser) {
-        fetchUserHistory({ ...selectedUser, fidelity_credits: newCredits });
-      }
+      
+      // Refresh data
+      await fetchUsers();
+      
+      // Update selected user and refetch history
+      const updatedUser = { ...selectedUser, fidelity_credits: newCredits };
+      setSelectedUser(updatedUser);
+      await fetchUserHistory(updatedUser);
     } catch (error) {
       console.error('Error adjusting credits:', error);
-      Alert.alert('Errore', 'Impossibile aggiornare i crediti');
+      Alert.alert('Errore', 'Impossibile aggiornare i crediti. Riprova.');
+    } finally {
+      setAdjusting(false);
     }
   };
 
@@ -421,66 +431,88 @@ export default function FidelityUsersScreen() {
         visible={adjustModalVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setAdjustModalVisible(false)}
+        onRequestClose={() => {
+          if (!adjusting) {
+            setAdjustModalVisible(false);
+          }
+        }}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <View style={[commonStyles.card, { width: '90%', maxWidth: 400 }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Aggiusta Crediti
-            </Text>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={{ 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            padding: 20,
+          }}>
+            <View style={[commonStyles.card, { width: '100%', maxWidth: 400 }]}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+                Aggiusta Crediti
+              </Text>
 
-            {selectedUser && (
-              <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 16, marginBottom: 16 }]}>
-                <Text style={[commonStyles.text, { marginBottom: 4 }]}>
-                  Crediti attuali: {selectedUser.fidelity_credits || 0}
-                </Text>
+              {selectedUser && (
+                <View style={[commonStyles.card, { backgroundColor: colors.card, padding: 16, marginBottom: 16 }]}>
+                  <Text style={[commonStyles.text, { marginBottom: 4 }]}>
+                    Crediti attuali: {selectedUser.fidelity_credits || 0}
+                  </Text>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
+                    Usa + per aggiungere, - per sottrarre
+                  </Text>
+                </View>
+              )}
+
+              <TextInput
+                style={[commonStyles.input, { marginBottom: 12 }]}
+                placeholder="Quantità (es: +5 o -3)"
+                placeholderTextColor={colors.textSecondary}
+                value={adjustAmount}
+                onChangeText={setAdjustAmount}
+                keyboardType="numeric"
+                editable={!adjusting}
+              />
+
+              <TextInput
+                style={[commonStyles.input, { height: 100, marginBottom: 16, textAlignVertical: 'top' }]}
+                placeholder="Motivo dell'aggiustamento"
+                placeholderTextColor={colors.textSecondary}
+                value={adjustReason}
+                onChangeText={setAdjustReason}
+                multiline
+                editable={!adjusting}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { flex: 1 }]}
+                  onPress={handleAdjustCredits}
+                  disabled={adjusting}
+                  activeOpacity={0.7}
+                >
+                  <Text style={buttonStyles.text}>
+                    {adjusting ? 'Aggiornamento...' : 'Conferma'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                  onPress={() => {
+                    if (!adjusting) {
+                      setAdjustModalVisible(false);
+                      setAdjustAmount('');
+                      setAdjustReason('');
+                    }
+                  }}
+                  disabled={adjusting}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
+                </TouchableOpacity>
               </View>
-            )}
-
-            <TextInput
-              style={[commonStyles.input, { marginBottom: 12 }]}
-              placeholder="Quantità (+/- numero)"
-              placeholderTextColor={colors.textSecondary}
-              value={adjustAmount}
-              onChangeText={setAdjustAmount}
-              keyboardType="numeric"
-            />
-
-            <TextInput
-              style={[commonStyles.input, { height: 100, marginBottom: 16 }]}
-              placeholder="Motivo dell'aggiustamento"
-              placeholderTextColor={colors.textSecondary}
-              value={adjustReason}
-              onChangeText={setAdjustReason}
-              multiline
-              textAlignVertical="top"
-            />
-
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1 }]}
-                onPress={() => {
-                  console.log('Conferma button pressed in modal');
-                  handleAdjustCredits();
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={buttonStyles.text}>Conferma</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
-                onPress={() => {
-                  setAdjustModalVisible(false);
-                  setAdjustAmount('');
-                  setAdjustReason('');
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

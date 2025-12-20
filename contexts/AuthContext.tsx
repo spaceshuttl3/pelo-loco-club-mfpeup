@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, UserRole } from '../types';
@@ -24,8 +24,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+  
+  // Use ref to track if we're currently fetching to prevent duplicate calls
+  const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  const fetchUserProfile = useCallback(async (userId: string, forceRefresh: boolean = false) => {
+    // Prevent duplicate fetches within 2 seconds unless forced
+    const now = Date.now();
+    if (!forceRefresh && (isFetchingRef.current || (now - lastFetchTimeRef.current < 2000))) {
+      console.log('Skipping duplicate fetch request');
+      return;
+    }
+
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = now;
+
     try {
       console.log('Fetching user profile for:', userId);
       
@@ -37,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        isFetchingRef.current = false;
         setLoading(false);
         return;
       }
@@ -66,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (insertError) {
             console.error('Error creating user profile:', insertError);
+            isFetchingRef.current = false;
             setLoading(false);
             return;
           }
@@ -74,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(newUser);
         }
         
+        isFetchingRef.current = false;
         setLoading(false);
         return;
       }
@@ -84,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       setLoading(false);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, []);
 
@@ -102,12 +121,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for changes on auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.email);
-      setSupabaseUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
+      
+      // Only fetch profile on specific events, not on token refresh
+      if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED') {
+        setSupabaseUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      } else if (_event === 'SIGNED_OUT') {
+        setSupabaseUser(null);
         setUser(null);
         setLoading(false);
+      } else if (_event === 'TOKEN_REFRESHED') {
+        // Just update the supabase user, don't refetch profile
+        setSupabaseUser(session?.user ?? null);
       }
     });
 
@@ -135,15 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     if (supabaseUser) {
-      // Refresh the session to get updated JWT with role in app_metadata
-      const { data: { session }, error } = await supabase.auth.refreshSession();
-      if (error) {
-        console.error('Error refreshing session:', error);
-      } else if (session) {
-        console.log('Session refreshed successfully');
-      }
-      
-      await fetchUserProfile(supabaseUser.id);
+      // Force refresh to get latest data
+      await fetchUserProfile(supabaseUser.id, true);
     }
   }, [supabaseUser, fetchUserProfile]);
 
@@ -163,9 +186,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('Sign in successful:', data);
-    
-    // Refresh the session to ensure JWT has the latest role in app_metadata
-    await supabase.auth.refreshSession();
     
     // The auth state change listener will handle fetching the profile and navigation
   };
