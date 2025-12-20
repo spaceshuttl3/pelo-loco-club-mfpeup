@@ -1,5 +1,6 @@
 
 import * as ImagePicker from 'expo-image-picker';
+import { File, Paths } from 'expo-file-system';
 import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -17,7 +18,6 @@ import {
   Modal,
   Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,39 +105,54 @@ export default function ManageProductsScreen() {
     try {
       console.log('Starting image upload from URI:', uri);
       
+      // Create a File instance from the URI
+      const file = new File(uri);
+      
+      // Check if file exists and has content
+      if (!file.exists) {
+        throw new Error('File does not exist');
+      }
+      
+      console.log('File size:', file.size, 'bytes');
+      console.log('File type:', file.type);
+      
+      if (file.size === 0) {
+        throw new Error('File is empty');
+      }
+
+      // Read file as bytes
+      const fileBytes = await file.bytes();
+      console.log('File bytes length:', fileBytes.length);
+
+      if (fileBytes.length === 0) {
+        throw new Error('Could not read file content');
+      }
+
       // Generate a unique filename
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileExt = file.extension || 'jpg';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       console.log('Uploading to path:', filePath);
 
-      // Read the file as a blob using fetch
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
-      console.log('Blob created, size:', blob.size, 'type:', blob.type);
-
-      // Determine content type
-      let contentType = blob.type;
-      if (!contentType || contentType === 'application/octet-stream') {
-        // Fallback to determining type from file extension
-        const mimeTypes: { [key: string]: string } = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg',
-          'png': 'image/png',
-          'gif': 'image/gif',
-          'webp': 'image/webp',
-        };
-        contentType = mimeTypes[fileExt] || 'image/jpeg';
-      }
+      // Determine content type from file extension
+      const mimeTypes: { [key: string]: string } = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'heic': 'image/heic',
+        'heif': 'image/heif',
+      };
+      const contentType = file.type || mimeTypes[fileExt.toLowerCase()] || 'image/jpeg';
 
       console.log('Using content type:', contentType);
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(filePath, blob, {
+        .upload(filePath, fileBytes, {
           contentType: contentType,
           upsert: false,
         });
@@ -158,7 +173,7 @@ export default function ManageProductsScreen() {
       return urlData.publicUrl;
     } catch (error) {
       console.error('Error in uploadImage:', error);
-      Alert.alert('Errore', 'Impossibile caricare l\'immagine. Verifica la connessione internet e riprova.');
+      Alert.alert('Errore', `Impossibile caricare l'immagine: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
       return null;
     }
   };

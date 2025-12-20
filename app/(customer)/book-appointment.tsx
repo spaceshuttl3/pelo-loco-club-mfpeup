@@ -13,6 +13,7 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { IconSymbol } from '../../components/IconSymbol';
@@ -61,8 +62,9 @@ export default function BookAppointmentScreen() {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
 
-  // Escalating UI states
+  // Escalating UI states with animation
   const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>('service');
+  const [animatedHeight] = useState(new Animated.Value(1));
 
   const fetchServices = async () => {
     try {
@@ -309,22 +311,40 @@ export default function BookAppointmentScreen() {
     }
   };
 
+  const animateSection = (toValue: number) => {
+    Animated.spring(animatedHeight, {
+      toValue,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
   const handleServiceSelect = (serviceId: string) => {
     console.log('Service selected:', serviceId);
     setSelectedService(serviceId);
-    setExpandedSection(null);
-    // Auto-expand next section after a short delay
-    setTimeout(() => setExpandedSection('barber'), 300);
+    animateSection(0);
+    setTimeout(() => {
+      setExpandedSection(null);
+      setTimeout(() => {
+        setExpandedSection('barber');
+        animateSection(1);
+      }, 150);
+    }, 300);
   };
 
   const handleBarberSelect = (barberId: string) => {
     console.log('Barber selected:', barberId);
     setSelectedBarber(barberId);
-    setExpandedSection(null);
-    // Reset time selection when barber changes
     setTime(null);
-    // Auto-expand next section after a short delay
-    setTimeout(() => setExpandedSection('datetime'), 300);
+    animateSection(0);
+    setTimeout(() => {
+      setExpandedSection(null);
+      setTimeout(() => {
+        setExpandedSection('datetime');
+        animateSection(1);
+      }, 150);
+    }, 300);
   };
 
   const handleTimeSlotSelect = (slot: string) => {
@@ -335,7 +355,8 @@ export default function BookAppointmentScreen() {
     console.log('Time slot selected:', slot);
     setTime(slotTime);
     
-    // Auto-retract the datetime section after selecting time
+    // Auto-retract the datetime section with animation
+    animateSection(0);
     setTimeout(() => {
       setExpandedSection(null);
     }, 300);
@@ -390,7 +411,11 @@ export default function BookAppointmentScreen() {
             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
             expandedSection === 'service' && { borderColor: colors.primary, borderWidth: 2 },
           ]}
-          onPress={() => setExpandedSection(expandedSection === 'service' ? null : 'service')}
+          onPress={() => {
+            const newSection = expandedSection === 'service' ? null : 'service';
+            setExpandedSection(newSection);
+            animateSection(newSection ? 1 : 0);
+          }}
           activeOpacity={0.7}
         >
           <View style={{ flex: 1 }}>
@@ -411,7 +436,7 @@ export default function BookAppointmentScreen() {
         </TouchableOpacity>
 
         {expandedSection === 'service' && (
-          <View style={{ marginBottom: 16 }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {services.length === 0 ? (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>Nessun servizio disponibile</Text>
@@ -450,7 +475,7 @@ export default function BookAppointmentScreen() {
                 ))}
               </React.Fragment>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Barber Selection */}
@@ -463,7 +488,9 @@ export default function BookAppointmentScreen() {
           ]}
           onPress={() => {
             if (selectedService) {
-              setExpandedSection(expandedSection === 'barber' ? null : 'barber');
+              const newSection = expandedSection === 'barber' ? null : 'barber';
+              setExpandedSection(newSection);
+              animateSection(newSection ? 1 : 0);
             } else {
               Alert.alert('Attenzione', 'Seleziona prima un servizio');
             }
@@ -493,7 +520,7 @@ export default function BookAppointmentScreen() {
         </TouchableOpacity>
 
         {expandedSection === 'barber' && (
-          <View style={{ marginBottom: 16 }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {barbers.length === 0 ? (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>Nessun barbiere disponibile</Text>
@@ -530,7 +557,7 @@ export default function BookAppointmentScreen() {
                 ))}
               </React.Fragment>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Date & Time Selection */}
@@ -543,7 +570,9 @@ export default function BookAppointmentScreen() {
           ]}
           onPress={() => {
             if (selectedBarber) {
-              setExpandedSection(expandedSection === 'datetime' ? null : 'datetime');
+              const newSection = expandedSection === 'datetime' ? null : 'datetime';
+              setExpandedSection(newSection);
+              animateSection(newSection ? 1 : 0);
             } else {
               Alert.alert('Attenzione', 'Seleziona prima un barbiere');
             }
@@ -573,7 +602,7 @@ export default function BookAppointmentScreen() {
         </TouchableOpacity>
 
         {expandedSection === 'datetime' && (
-          <View style={{ marginBottom: 16 }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {isToday && (
               <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
                 <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
@@ -685,7 +714,7 @@ export default function BookAppointmentScreen() {
                 </Text>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Book Button */}
