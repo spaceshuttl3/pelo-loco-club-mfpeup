@@ -27,11 +27,11 @@ export default function CustomerHomeScreen() {
       route: '/(customer)/book-appointment',
     },
     {
-      id: 'redeem-coupon',
-      title: 'Coupon',
-      icon: 'gift.fill',
+      id: 'fidelity',
+      title: 'Fedeltà',
+      icon: 'star.fill',
       color: colors.primary,
-      route: '/(customer)/spin-wheel',
+      route: '/(customer)/fidelity',
     },
     {
       id: 'shop-products',
@@ -73,6 +73,50 @@ export default function CustomerHomeScreen() {
             Pronto/a per il tuo prossimo taglio?
           </Text>
         </View>
+
+        {/* Fidelity Credits Card */}
+        {user && user.fidelity_credits !== undefined && (
+          <TouchableOpacity
+            style={[
+              commonStyles.card,
+              {
+                backgroundColor: colors.primary,
+                padding: 20,
+                marginBottom: 30,
+                flexDirection: 'row',
+                alignItems: 'center',
+              },
+            ]}
+            onPress={() => router.push('/(customer)/fidelity')}
+            activeOpacity={0.7}
+          >
+            <View
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 16,
+              }}
+            >
+              <IconSymbol name="star.fill" size={32} color={colors.text} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[commonStyles.text, { fontSize: 32, fontWeight: 'bold' }]}>
+                {user.fidelity_credits || 0}
+              </Text>
+              <Text style={[commonStyles.text, { fontSize: 14 }]}>
+                Crediti Fedeltà
+              </Text>
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
+                Tocca per vedere le ricompense
+              </Text>
+            </View>
+            <IconSymbol name="chevron.right" size={24} color={colors.text} />
+          </TouchableOpacity>
+        )}
 
         <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Azioni Rapide

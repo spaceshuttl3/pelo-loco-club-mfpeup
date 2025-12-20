@@ -8,6 +8,7 @@ export interface User {
   phone: string;
   birthday?: string;
   role: UserRole;
+  fidelity_credits?: number;
   created_at?: string;
 }
 
@@ -22,12 +23,15 @@ export interface Appointment {
   payment_mode: 'pay_in_person' | 'online';
   payment_status: 'pending' | 'paid';
   cancellation_reason?: string;
+  fidelity_reward_id?: string;
+  fidelity_redemption_id?: string;
   created_at?: string;
   user?: User;
   barber?: {
     id: string;
     name: string;
   };
+  fidelity_redemption?: FidelityRedemption;
 }
 
 export interface Product {
@@ -59,40 +63,36 @@ export interface OrderItem {
   price: number;
 }
 
-export interface Coupon {
+export interface FidelityReward {
+  id: string;
+  name: string;
+  description: string;
+  credits_required: number;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface FidelityRedemption {
   id: string;
   user_id: string;
-  coupon_type: string;
-  discount_value: number;
-  expiration_date: string;
-  status: 'active' | 'used' | 'expired';
-  coupon_code?: string;
-  config_id?: string;
+  reward_id: string;
+  appointment_id?: string;
+  status: 'pending' | 'confirmed' | 'used' | 'cancelled';
+  credits_deducted: number;
   created_at?: string;
+  confirmed_at?: string;
+  used_at?: string;
+  reward?: FidelityReward;
 }
 
-export interface LoyaltyReward {
+export interface FidelityTransaction {
   id: string;
-  points_required: number;
-  reward_type: 'free_service' | 'discount_percentage' | 'discount_euros' | 'custom';
-  reward_value: number;
-  reward_description: string;
-  is_active: boolean;
-  created_at?: string;
-}
-
-export interface BadgeRule {
-  id: string;
-  badge_name: string;
-  badge_description: string;
-  badge_icon: string;
-  rule_type: 'visits_count' | 'visits_timeframe' | 'total_spent';
-  rule_config: {
-    required_visits?: number;
-    timeframe_days?: number;
-    required_amount?: number;
-  };
-  is_active: boolean;
+  user_id: string;
+  credits_change: number;
+  transaction_type: 'earned' | 'redeemed' | 'adjusted' | 'expired';
+  reference_type?: string;
+  reference_id?: string;
+  description: string;
   created_at?: string;
 }
 

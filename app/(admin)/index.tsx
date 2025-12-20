@@ -188,11 +188,18 @@ export default function AdminDashboardScreen() {
       route: '/(admin)/services',
     },
     {
-      id: 'coupons',
-      title: 'Coupon',
+      id: 'fidelity-config',
+      title: 'Ricompense',
       icon: 'gift.fill',
       color: colors.secondary,
-      route: '/(admin)/coupons',
+      route: '/(admin)/fidelity-config',
+    },
+    {
+      id: 'fidelity-users',
+      title: 'Crediti Utenti',
+      icon: 'star.fill',
+      color: colors.primary,
+      route: '/(admin)/fidelity-users',
     },
     {
       id: 'birthdays',
