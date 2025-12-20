@@ -92,22 +92,33 @@ export default function BookAppointmentScreen() {
 
       // If redeeming a reward, auto-select the service based on reward name
       if (rewardName && data) {
-        // More flexible matching - check if reward name contains service name or vice versa
-        const matchingService = data.find(s => {
+        console.log('Attempting to match reward:', rewardName);
+        
+        // Try exact match first
+        let matchingService = data.find(s => 
+          s.name.toLowerCase() === rewardName.toLowerCase()
+        );
+        
+        // If no exact match, try partial match
+        if (!matchingService) {
           const rewardLower = rewardName.toLowerCase();
-          const serviceLower = s.name.toLowerCase();
           
-          // Check for common keywords
-          const rewardWords = rewardLower.split(/\s+/);
-          const serviceWords = serviceLower.split(/\s+/);
+          // Check if reward name contains service name
+          matchingService = data.find(s => {
+            const serviceLower = s.name.toLowerCase();
+            return rewardLower.includes(serviceLower) || serviceLower.includes(rewardLower);
+          });
+        }
+        
+        // If still no match, try keyword matching
+        if (!matchingService) {
+          const rewardKeywords = rewardName.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 2);
           
-          // If any significant word matches, consider it a match
-          return rewardWords.some(rw => 
-            serviceWords.some(sw => 
-              (rw.length > 3 && sw.includes(rw)) || (sw.length > 3 && rw.includes(sw))
-            )
-          );
-        });
+          matchingService = data.find(s => {
+            const serviceKeywords = s.name.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 2);
+            return rewardKeywords.some(rk => serviceKeywords.some(sk => sk === rk || sk.includes(rk) || rk.includes(sk)));
+          });
+        }
         
         if (matchingService) {
           console.log('Auto-selecting service based on reward:', matchingService.name);
@@ -116,6 +127,7 @@ export default function BookAppointmentScreen() {
           setExpandedSection('barber');
         } else {
           console.log('No matching service found for reward:', rewardName);
+          console.log('Available services:', data.map(s => s.name));
           // Still allow manual selection but start with service
           setExpandedSection('service');
         }
