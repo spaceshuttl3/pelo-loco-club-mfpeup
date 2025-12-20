@@ -181,7 +181,13 @@ export default function FidelityUsersScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={[commonStyles.content, { paddingTop: 0 }]}>
+      <ScrollView
+        style={commonStyles.content}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
         <TextInput
           style={[commonStyles.input, { marginBottom: 16 }]}
           placeholder="Cerca utente..."
@@ -189,15 +195,7 @@ export default function FidelityUsersScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-      </View>
 
-      <ScrollView
-        style={commonStyles.content}
-        contentContainerStyle={{ paddingBottom: 120, paddingTop: 0 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-        }
-      >
         {filteredUsers.length === 0 ? (
           <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
             <IconSymbol name="person.3" size={48} color={colors.textSecondary} />
@@ -251,137 +249,152 @@ export default function FidelityUsersScreen() {
       <Modal
         visible={modalVisible}
         animationType="slide"
-        transparent={true}
+        transparent={false}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%', maxHeight: '80%' }]}>
-            {selectedUser && (
-              <>
-                <View style={[commonStyles.row, { marginBottom: 16 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
-                      {selectedUser.name}
-                    </Text>
-                    <Text style={commonStyles.textSecondary}>
-                      {selectedUser.email}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
-                    activeOpacity={0.7}
-                  >
-                    <IconSymbol name="xmark.circle.fill" size={28} color={colors.textSecondary} />
-                  </TouchableOpacity>
+        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.background }]} edges={['top']}>
+          {selectedUser && (
+            <>
+              <View style={commonStyles.header}>
+                <TouchableOpacity 
+                  onPress={() => setModalVisible(false)} 
+                  style={{ marginRight: 16 }} 
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="chevron.left" size={24} color={colors.text} />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={[commonStyles.headerTitle, { marginBottom: 2 }]}>
+                    {selectedUser.name}
+                  </Text>
+                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                    {selectedUser.email}
+                  </Text>
                 </View>
+                <View style={{ width: 24 }} />
+              </View>
 
-                <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16, alignItems: 'center' }]}>
-                  <Text style={[commonStyles.text, { fontSize: 40, fontWeight: 'bold' }]}>
+              <ScrollView 
+                style={commonStyles.content}
+                contentContainerStyle={{ paddingTop: 0, paddingBottom: 120 }}
+              >
+                <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 24, marginBottom: 16, alignItems: 'center' }]}>
+                  <Text style={[commonStyles.text, { fontSize: 48, fontWeight: 'bold' }]}>
                     {selectedUser.fidelity_credits || 0}
                   </Text>
-                  <Text style={[commonStyles.text, { fontSize: 16 }]}>
+                  <Text style={[commonStyles.text, { fontSize: 16, marginTop: 8 }]}>
                     Crediti Disponibili
                   </Text>
                 </View>
 
                 <TouchableOpacity
-                  style={[buttonStyles.primary, { marginBottom: 16 }]}
+                  style={[buttonStyles.primary, { marginBottom: 24 }]}
                   onPress={() => setAdjustModalVisible(true)}
                   activeOpacity={0.7}
                 >
                   <Text style={buttonStyles.text}>Aggiusta Crediti</Text>
                 </TouchableOpacity>
 
-                <ScrollView style={{ maxHeight: 400 }}>
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 12 }]}>
-                    Riscatti ({userRedemptions.length})
-                  </Text>
+                <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 18, marginBottom: 12 }]}>
+                  Riscatti ({userRedemptions.length})
+                </Text>
 
-                  {userRedemptions.length === 0 ? (
-                    <Text style={[commonStyles.textSecondary, { marginBottom: 16 }]}>
+                {userRedemptions.length === 0 ? (
+                  <View style={[commonStyles.card, { alignItems: 'center', padding: 32, marginBottom: 24 }]}>
+                    <Text style={commonStyles.textSecondary}>
                       Nessun riscatto
                     </Text>
-                  ) : (
-                    <React.Fragment>
-                      {userRedemptions.map((redemption, index) => (
-                        <View key={`redemption-${redemption.id}-${index}`} style={[commonStyles.card, { marginBottom: 8, backgroundColor: colors.card }]}>
-                          <View style={[commonStyles.row, { marginBottom: 4 }]}>
-                            <Text style={[commonStyles.text, { flex: 1, fontWeight: '600' }]}>
-                              {redemption.reward?.name}
+                  </View>
+                ) : (
+                  <React.Fragment>
+                    {userRedemptions.map((redemption, index) => (
+                      <View key={`redemption-${redemption.id}-${index}`} style={[commonStyles.card, { marginBottom: 12 }]}>
+                        <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                          <Text style={[commonStyles.text, { flex: 1, fontWeight: '600' }]}>
+                            {redemption.reward?.name}
+                          </Text>
+                          <View
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 4,
+                              borderRadius: 12,
+                              backgroundColor: 
+                                redemption.status === 'confirmed' ? colors.primary :
+                                redemption.status === 'pending' ? colors.card :
+                                colors.error,
+                            }}
+                          >
+                            <Text style={[commonStyles.text, { fontSize: 11, fontWeight: '600' }]}>
+                              {redemption.status.toUpperCase()}
                             </Text>
-                            <View
-                              style={{
-                                paddingHorizontal: 8,
-                                paddingVertical: 2,
-                                borderRadius: 8,
-                                backgroundColor: 
-                                  redemption.status === 'confirmed' ? colors.primary :
-                                  redemption.status === 'pending' ? colors.card :
-                                  colors.error,
-                              }}
-                            >
-                              <Text style={[commonStyles.text, { fontSize: 10 }]}>
-                                {redemption.status.toUpperCase()}
-                              </Text>
-                            </View>
                           </View>
-                          <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                            Crediti: {redemption.credits_deducted}
-                          </Text>
-                          <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                            {new Date(redemption.created_at || '').toLocaleDateString('it-IT')}
-                          </Text>
                         </View>
-                      ))}
-                    </React.Fragment>
-                  )}
+                        <Text style={[commonStyles.textSecondary, { fontSize: 13, marginBottom: 4 }]}>
+                          Crediti: {redemption.credits_deducted}
+                        </Text>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 13 }]}>
+                          {new Date(redemption.created_at || '').toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      </View>
+                    ))}
+                  </React.Fragment>
+                )}
 
-                  <Text style={[commonStyles.text, { fontWeight: '600', marginTop: 16, marginBottom: 12 }]}>
-                    Transazioni ({userTransactions.length})
-                  </Text>
+                <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 18, marginTop: 8, marginBottom: 12 }]}>
+                  Transazioni ({userTransactions.length})
+                </Text>
 
-                  {userTransactions.length === 0 ? (
+                {userTransactions.length === 0 ? (
+                  <View style={[commonStyles.card, { alignItems: 'center', padding: 32 }]}>
                     <Text style={commonStyles.textSecondary}>
                       Nessuna transazione
                     </Text>
-                  ) : (
-                    <React.Fragment>
-                      {userTransactions.map((transaction, index) => (
-                        <View key={`transaction-${transaction.id}-${index}`} style={[commonStyles.card, { marginBottom: 8, backgroundColor: colors.card }]}>
-                          <View style={[commonStyles.row, { marginBottom: 4 }]}>
-                            <Text style={[commonStyles.text, { flex: 1 }]}>
-                              {transaction.description}
-                            </Text>
-                            <Text
-                              style={[
-                                commonStyles.text,
-                                {
-                                  fontWeight: 'bold',
-                                  color: transaction.credits_change > 0 ? colors.primary : colors.error,
-                                },
-                              ]}
-                            >
-                              {transaction.credits_change > 0 ? '+' : ''}
-                              {transaction.credits_change}
-                            </Text>
-                          </View>
-                          <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                            {new Date(transaction.created_at || '').toLocaleDateString('it-IT', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                  </View>
+                ) : (
+                  <React.Fragment>
+                    {userTransactions.map((transaction, index) => (
+                      <View key={`transaction-${transaction.id}-${index}`} style={[commonStyles.card, { marginBottom: 12 }]}>
+                        <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                          <Text style={[commonStyles.text, { flex: 1 }]}>
+                            {transaction.description}
+                          </Text>
+                          <Text
+                            style={[
+                              commonStyles.text,
+                              {
+                                fontSize: 18,
+                                fontWeight: 'bold',
+                                color: transaction.credits_change > 0 ? colors.primary : colors.error,
+                              },
+                            ]}
+                          >
+                            {transaction.credits_change > 0 ? '+' : ''}
+                            {transaction.credits_change}
                           </Text>
                         </View>
-                      ))}
-                    </React.Fragment>
-                  )}
-                </ScrollView>
-              </>
-            )}
-          </View>
-        </View>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 13 }]}>
+                          {new Date(transaction.created_at || '').toLocaleDateString('it-IT', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      </View>
+                    ))}
+                  </React.Fragment>
+                )}
+              </ScrollView>
+            </>
+          )}
+        </SafeAreaView>
       </Modal>
 
       {/* Adjust Credits Modal */}
@@ -391,8 +404,8 @@ export default function FidelityUsersScreen() {
         transparent={true}
         onRequestClose={() => setAdjustModalVisible(false)}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={[commonStyles.card, { width: '90%', maxWidth: 400 }]}>
             <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
               Aggiusta Crediti
             </Text>
@@ -406,7 +419,7 @@ export default function FidelityUsersScreen() {
             )}
 
             <TextInput
-              style={commonStyles.input}
+              style={[commonStyles.input, { marginBottom: 12 }]}
               placeholder="Quantità (+/- numero)"
               placeholderTextColor={colors.textSecondary}
               value={adjustAmount}
@@ -415,15 +428,16 @@ export default function FidelityUsersScreen() {
             />
 
             <TextInput
-              style={[commonStyles.input, { height: 80 }]}
+              style={[commonStyles.input, { height: 100, marginBottom: 16 }]}
               placeholder="Motivo dell'aggiustamento"
               placeholderTextColor={colors.textSecondary}
               value={adjustReason}
               onChangeText={setAdjustReason}
               multiline
+              textAlignVertical="top"
             />
 
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
                 style={[buttonStyles.primary, { flex: 1 }]}
                 onPress={handleAdjustCredits}
