@@ -106,6 +106,11 @@ export default function FidelityUsersScreen() {
   };
 
   const handleAdjustCredits = async () => {
+    console.log('handleAdjustCredits called');
+    console.log('Selected user:', selectedUser);
+    console.log('Adjust amount:', adjustAmount);
+    console.log('Adjust reason:', adjustReason);
+
     if (!selectedUser || !adjustAmount || !adjustReason) {
       Alert.alert('Errore', 'Compila tutti i campi');
       return;
@@ -124,14 +129,21 @@ export default function FidelityUsersScreen() {
     }
 
     try {
+      console.log('Updating user credits to:', newCredits);
+      
       // Update user credits
       const { error: updateError } = await supabase
         .from('users')
         .update({ fidelity_credits: newCredits })
         .eq('id', selectedUser.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating credits:', updateError);
+        throw updateError;
+      }
 
+      console.log('Recording transaction...');
+      
       // Record transaction
       const { error: transactionError } = await supabase
         .from('fidelity_transactions')
@@ -142,8 +154,12 @@ export default function FidelityUsersScreen() {
           description: `Aggiustamento manuale: ${adjustReason}`,
         });
 
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error('Error recording transaction:', transactionError);
+        throw transactionError;
+      }
 
+      console.log('Credits adjusted successfully');
       Alert.alert('Successo', 'Crediti aggiornati');
       setAdjustModalVisible(false);
       setAdjustAmount('');
@@ -289,7 +305,10 @@ export default function FidelityUsersScreen() {
 
                 <TouchableOpacity
                   style={[buttonStyles.primary, { marginBottom: 24 }]}
-                  onPress={() => setAdjustModalVisible(true)}
+                  onPress={() => {
+                    console.log('Aggiusta Crediti button pressed');
+                    setAdjustModalVisible(true);
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={buttonStyles.text}>Aggiusta Crediti</Text>
@@ -440,7 +459,10 @@ export default function FidelityUsersScreen() {
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
                 style={[buttonStyles.primary, { flex: 1 }]}
-                onPress={handleAdjustCredits}
+                onPress={() => {
+                  console.log('Conferma button pressed in modal');
+                  handleAdjustCredits();
+                }}
                 activeOpacity={0.7}
               >
                 <Text style={buttonStyles.text}>Conferma</Text>

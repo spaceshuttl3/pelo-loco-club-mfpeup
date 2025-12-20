@@ -69,7 +69,7 @@ export default function BookAppointmentScreen() {
   const rewardCredits = params.rewardCredits ? parseInt(params.rewardCredits as string) : undefined;
 
   // Escalating UI states with animation
-  const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>('service');
+  const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>(null);
   const [animatedHeight] = useState(new Animated.Value(1));
 
   const fetchServices = async () => {
@@ -88,6 +88,26 @@ export default function BookAppointmentScreen() {
 
       console.log('Services fetched:', data?.length || 0);
       setServices(data || []);
+
+      // If redeeming a reward, auto-select the service based on reward name
+      if (rewardName && data) {
+        const matchingService = data.find(s => 
+          rewardName.toLowerCase().includes(s.name.toLowerCase()) ||
+          s.name.toLowerCase().includes(rewardName.toLowerCase())
+        );
+        
+        if (matchingService) {
+          console.log('Auto-selecting service based on reward:', matchingService.name);
+          setSelectedService(matchingService.id);
+          // Skip to barber selection
+          setExpandedSection('barber');
+        } else {
+          // If no match, start with service selection
+          setExpandedSection('service');
+        }
+      } else {
+        setExpandedSection('service');
+      }
     } catch (error) {
       console.error('Error in fetchServices:', error);
     }
@@ -525,7 +545,7 @@ export default function BookAppointmentScreen() {
               Costo: {rewardCredits} crediti
             </Text>
             <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 8 }]}>
-              Prenota un appuntamento per utilizzare questa ricompensa
+              Il servizio è stato pre-selezionato in base alla tua ricompensa
             </Text>
           </View>
         )}
@@ -536,13 +556,17 @@ export default function BookAppointmentScreen() {
             commonStyles.card,
             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
             expandedSection === 'service' && { borderColor: colors.primary, borderWidth: 2 },
+            rewardId && { opacity: 0.6 },
           ]}
           onPress={() => {
-            const newSection = expandedSection === 'service' ? null : 'service';
-            setExpandedSection(newSection);
-            animateSection(newSection ? 1 : 0);
+            if (!rewardId) {
+              const newSection = expandedSection === 'service' ? null : 'service';
+              setExpandedSection(newSection);
+              animateSection(newSection ? 1 : 0);
+            }
           }}
           activeOpacity={0.7}
+          disabled={!!rewardId}
         >
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
@@ -553,6 +577,11 @@ export default function BookAppointmentScreen() {
                 {services.find(s => s.id === selectedService)?.name}
               </Text>
             )}
+            {rewardId && (
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic', marginTop: 4 }]}>
+                Pre-selezionato dalla ricompensa
+              </Text>
+            )}
           </View>
           <IconSymbol
             name={expandedSection === 'service' ? 'chevron.up' : 'chevron.down'}
@@ -561,7 +590,7 @@ export default function BookAppointmentScreen() {
           />
         </TouchableOpacity>
 
-        {expandedSection === 'service' && (
+        {expandedSection === 'service' && !rewardId && (
           <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {services.length === 0 ? (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>

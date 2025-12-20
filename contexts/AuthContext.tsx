@@ -33,14 +33,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        console.error('User profile not found. The database trigger may have failed.');
+        console.log('Attempting to create user profile...');
         
-        // If profile doesn't exist, it means the trigger failed
-        if (error.code === 'PGRST116') {
-          console.error('User profile not found. The database trigger may have failed.');
+        // Try to get user metadata from auth
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          // Create user profile manually
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email: authUser.email || '',
+              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+              phone: authUser.user_metadata?.phone || '',
+              birthday: authUser.user_metadata?.birthday || null,
+              role: authUser.user_metadata?.role || 'customer',
+              fidelity_credits: 0,
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError);
+            setLoading(false);
+            return;
+          }
+
+          console.log('User profile created successfully:', newUser);
+          setUser(newUser);
         }
         
         setLoading(false);
