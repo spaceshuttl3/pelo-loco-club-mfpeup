@@ -5,7 +5,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  useWindowDimensions,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,7 +16,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CustomerHomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { width } = useWindowDimensions();
 
   const quickActions = [
     {
@@ -56,20 +55,17 @@ export default function CustomerHomeScreen() {
     },
   ];
 
-  // Calculate card width based on screen size
-  const cardWidth = width < 400 ? '100%' : '50%';
-
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingBottom: 100 }}>
-        <View style={{ marginBottom: 30, marginTop: 20 }}>
-          <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.07, 28) }]}>
+        <View style={{ marginBottom: 30, marginTop: Platform.OS === 'android' ? 20 : 10 }}>
+          <Text style={[commonStyles.title, { fontSize: 24 }]}>
             Bentornato/a da Pelo Loco,
           </Text>
-          <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), color: colors.primary }]}>
+          <Text style={[commonStyles.title, { fontSize: 28, color: colors.primary }]}>
             {user?.name?.split(' ')[0] || 'Ospite'}!
           </Text>
-          <Text style={[commonStyles.textSecondary, { marginTop: 8 }]}>
+          <Text style={[commonStyles.textSecondary, { marginTop: 8, fontSize: 14 }]}>
             Pronto/a per il tuo prossimo taglio?
           </Text>
         </View>
@@ -118,7 +114,7 @@ export default function CustomerHomeScreen() {
           </TouchableOpacity>
         )}
 
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+        <Text style={[commonStyles.subtitle, { marginBottom: 16, fontSize: 18 }]}>
           Azioni Rapide
         </Text>
 
@@ -127,7 +123,7 @@ export default function CustomerHomeScreen() {
             <TouchableOpacity
               key={`action-${action.id}-${actionIndex}`}
               style={{
-                width: cardWidth,
+                width: '50%',
                 padding: 6,
               }}
               onPress={() => {
@@ -135,7 +131,7 @@ export default function CustomerHomeScreen() {
                 router.push(action.route as any);
               }}
             >
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, minHeight: 140 }]}>
                 <View
                   style={{
                     width: 60,
@@ -149,7 +145,11 @@ export default function CustomerHomeScreen() {
                 >
                   <IconSymbol name={action.icon as any} size={28} color={colors.text} />
                 </View>
-                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
+                <Text 
+                  style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit={false}
+                >
                   {action.title}
                 </Text>
               </View>

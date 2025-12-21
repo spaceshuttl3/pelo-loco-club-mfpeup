@@ -12,6 +12,8 @@ import 'react-native-reanimated';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
+
   useEffect(() => {
     SplashScreen.hideAsync();
 
@@ -24,9 +26,13 @@ export default function RootLayout() {
         const url = Linking.parse(event.url);
         console.log('Parsed URL:', JSON.stringify(url, null, 2));
 
+        // Extract path from the URL - handle both path and hostname
+        const path = url.path || url.hostname || '';
+        console.log('Extracted path:', path);
+
         // Check if this is a password reset or confirmation link
-        const isResetPassword = url.path === 'reset-password' || url.hostname === 'reset-password';
-        const isConfirm = url.path === 'confirm' || url.hostname === 'confirm';
+        const isResetPassword = path.includes('reset-password') || path === 'reset-password';
+        const isConfirm = path.includes('confirm') || path === 'confirm';
         
         if (isResetPassword || isConfirm) {
           console.log('Auth link detected:', isResetPassword ? 'reset-password' : 'confirm');
@@ -63,15 +69,12 @@ export default function RootLayout() {
                 console.log('Navigating to reset password screen');
                 // Small delay to ensure session is fully set
                 setTimeout(() => {
-                  // Use replace to avoid back navigation issues
-                  const router = require('expo-router').router;
                   router.replace('/auth/reset-password');
                 }, 100);
               } else if (type === 'signup' || isConfirm) {
                 console.log('Email confirmed successfully');
                 // Navigate to login with success message
                 setTimeout(() => {
-                  const router = require('expo-router').router;
                   router.replace('/auth/login');
                 }, 100);
               }
@@ -101,7 +104,7 @@ export default function RootLayout() {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [router]);
 
   return (
     <AuthProvider>

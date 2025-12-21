@@ -38,8 +38,7 @@ pelolocobarbershop://
 
 **Redirect URLs (add both):**
 ```
-pelolocobarbershop://reset-password
-pelolocobarbershop://confirm
+pelolocobarbershop://reset-passwordclocobarbershop://confirm
 ```
 
 ⚠️ **IMPORTANT**: Remove the old incorrect URLs:
