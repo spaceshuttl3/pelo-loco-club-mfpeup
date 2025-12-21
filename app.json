@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Pelo Loco Club",
@@ -19,13 +18,11 @@
       "deploymentTarget": "15.1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      },
-      "googleServicesFile": "./GoogleService-Info.plist"
+      }
     },
     "android": {
       "package": "com.pelolocobarbershop.app",
       "versionCode": 5,
-      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -49,9 +46,7 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser",
-      "@react-native-firebase/app",
-      "@react-native-firebase/messaging"
+      "expo-web-browser"
     ],
     "scheme": "pelolocobarbershop",
     "experiments": {

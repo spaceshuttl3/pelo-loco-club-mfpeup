@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, UserRole } from '../types';
 import { useRouter, useSegments } from 'expo-router';
-import { initializeFCM } from '../services/firebaseNotificationService';
 
 interface AuthContextType {
   user: User | null;
@@ -89,9 +88,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           console.log('User profile created successfully:', newUser);
           setUser(newUser);
-          
-          // Initialize Firebase notifications for new user
-          initializeFCM(newUser.id);
         }
         
         isFetchingRef.current = false;
@@ -101,10 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('User profile fetched successfully:', data);
       setUser(data);
-      
-      // Initialize Firebase notifications
-      initializeFCM(data.id);
-      
       setLoading(false);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
