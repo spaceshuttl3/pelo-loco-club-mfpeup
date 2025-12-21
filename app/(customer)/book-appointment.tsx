@@ -841,7 +841,12 @@ export default function BookAppointmentScreen() {
             </Text>
             
             {availableTimeSlots.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: 16 }}
+                style={{ marginHorizontal: -16, paddingLeft: 16 }}
+              >
                 {availableTimeSlots.map((slot, slotIndex) => {
                   const [hours, minutes] = slot.split(':');
                   const slotTime = new Date();
@@ -854,10 +859,11 @@ export default function BookAppointmentScreen() {
                       key={`timeslot-${slot}-${slotIndex}`}
                       style={[
                         {
-                          width: (width - 56) / 4,
-                          margin: 4,
-                          paddingVertical: 16,
-                          borderRadius: 12,
+                          minWidth: 90,
+                          marginRight: 12,
+                          paddingVertical: 20,
+                          paddingHorizontal: 16,
+                          borderRadius: 16,
                           backgroundColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.card),
                           borderWidth: 2,
                           borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
@@ -876,18 +882,18 @@ export default function BookAppointmentScreen() {
                       disabled={!isAvailable}
                       activeOpacity={0.7}
                     >
-                      <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
+                      <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
                         {slot}
                       </Text>
                       {!isAvailable && (
-                        <Text style={[commonStyles.textSecondary, { fontSize: 9, marginTop: 2 }]}>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 10, marginTop: 4 }]}>
                           Occupato
                         </Text>
                       )}
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
             ) : (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>

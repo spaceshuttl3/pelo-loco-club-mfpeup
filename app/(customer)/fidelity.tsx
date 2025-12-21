@@ -204,7 +204,7 @@ export default function FidelityScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={commonStyles.header}>
+      <View style={[commonStyles.header, { paddingTop: 16 }]}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }} activeOpacity={0.7}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>

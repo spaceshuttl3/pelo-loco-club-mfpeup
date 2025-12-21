@@ -15,7 +15,7 @@ export default function RootLayout() {
   useEffect(() => {
     SplashScreen.hideAsync();
 
-    // Handle deep links for password reset
+    // Handle deep links for password reset and email confirmation
     const handleDeepLink = async (event: { url: string }) => {
       console.log('Deep link received:', event.url);
       
@@ -23,15 +23,19 @@ export default function RootLayout() {
       const url = Linking.parse(event.url);
       console.log('Parsed URL:', url);
 
-      // Check if this is a password reset link
-      if (url.path === 'reset-password' || url.hostname === 'reset-password') {
-        console.log('Password reset link detected');
+      // Check if this is a password reset or confirmation link
+      if (url.path === 'reset-password' || url.hostname === 'reset-password' || 
+          url.path === 'confirm' || url.hostname === 'confirm') {
+        console.log('Auth link detected:', url.path || url.hostname);
         
         // Extract the access_token and refresh_token from the URL
         const params = url.queryParams;
         if (params && typeof params === 'object') {
           const accessToken = params.access_token as string;
           const refreshToken = params.refresh_token as string;
+          const type = params.type as string;
+          
+          console.log('Token type:', type);
           
           if (accessToken && refreshToken) {
             console.log('Setting session from deep link');
@@ -45,6 +49,15 @@ export default function RootLayout() {
               console.error('Error setting session:', error);
             } else {
               console.log('Session set successfully');
+              
+              // Handle different types of auth events
+              if (type === 'recovery' || url.path === 'reset-password' || url.hostname === 'reset-password') {
+                console.log('Redirecting to reset password screen');
+                // The reset-password screen will handle the password update
+              } else if (type === 'signup' || url.path === 'confirm' || url.hostname === 'confirm') {
+                console.log('Email confirmed successfully');
+                // User can now log in
+              }
             }
           }
         }

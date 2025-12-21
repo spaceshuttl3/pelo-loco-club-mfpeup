@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Pelo Loco Club",
@@ -22,7 +23,23 @@
     },
     "android": {
       "package": "com.pelolocobarbershop.app",
-      "versionCode": 5
+      "versionCode": 5,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "*.pelolocobarbershop.app"
+            },
+            {
+              "scheme": "pelolocobarbershop"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "plugins": [
       "expo-font",
@@ -41,6 +58,5 @@
         "projectId": "f58c39ed-204a-46e2-bc3d-9a4c486a3a4a"
       }
     }
-  },
-  "scheme": "Pelo Loco Club"
+  }
 }

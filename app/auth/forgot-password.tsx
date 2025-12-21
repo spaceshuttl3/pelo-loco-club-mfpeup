@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen() {
     try {
       // Use the app's custom scheme for deep linking
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'pelolococlub://reset-password',
+        redirectTo: 'pelolocobarbershop://reset-password',
       });
 
       if (error) {
