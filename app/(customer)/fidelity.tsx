@@ -126,7 +126,7 @@ export default function FidelityScreen() {
       console.log('No user available, skipping fetch');
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);

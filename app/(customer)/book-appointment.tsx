@@ -73,7 +73,7 @@ export default function BookAppointmentScreen() {
   const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>(null);
   const [animatedHeight] = useState(new Animated.Value(1));
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     try {
       console.log('Fetching services from database...');
       const { data, error } = await supabase
@@ -137,9 +137,9 @@ export default function BookAppointmentScreen() {
     } catch (error) {
       console.error('Error in fetchServices:', error);
     }
-  };
+  }, [rewardName]);
 
-  const fetchBarbers = async () => {
+  const fetchBarbers = useCallback(async () => {
     try {
       console.log('Fetching barbers...');
       const { data, error } = await supabase
@@ -159,7 +159,7 @@ export default function BookAppointmentScreen() {
     } finally {
       setLoadingData(false);
     }
-  };
+  }, []);
 
   const fetchExistingAppointments = useCallback(async () => {
     try {
@@ -231,7 +231,7 @@ export default function BookAppointmentScreen() {
   useEffect(() => {
     fetchServices();
     fetchBarbers();
-  }, []);
+  }, [fetchServices, fetchBarbers]);
 
   useEffect(() => {
     if (selectedBarber && date) {
