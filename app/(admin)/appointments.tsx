@@ -190,13 +190,20 @@ export default function ManageAppointmentsScreen() {
 
   const updateAppointmentStatus = async (appointment: Appointment, status: string) => {
     try {
+      console.log('Updating appointment status to:', status);
+      
       // Update appointment status
       const { error: updateError } = await supabase
         .from('appointments')
         .update({ status })
         .eq('id', appointment.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating appointment status:', updateError);
+        throw updateError;
+      }
+
+      console.log('Appointment status updated successfully');
 
       // If completing an appointment
       if (status === 'completed') {
@@ -206,8 +213,13 @@ export default function ManageAppointmentsScreen() {
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false; // Default to true if not set
         
+        console.log('Service:', service?.name, 'Earns reward:', shouldEarnReward);
+        console.log('Payment status:', appointment.payment_status);
+        
         // Award fidelity credit if payment is completed and service earns rewards
         if (appointment.payment_status === 'paid' && shouldEarnReward) {
+          console.log('Awarding fidelity credit...');
+          
           // Get current user credits
           const { data: userData, error: userError } = await supabase
             .from('users')
@@ -221,6 +233,8 @@ export default function ManageAppointmentsScreen() {
             const currentCredits = userData?.fidelity_credits || 0;
             const newCredits = currentCredits + 1;
 
+            console.log('Current credits:', currentCredits, 'New credits:', newCredits);
+
             // Update user credits
             const { error: creditError } = await supabase
               .from('users')
@@ -230,6 +244,8 @@ export default function ManageAppointmentsScreen() {
             if (creditError) {
               console.error('Error updating credits:', creditError);
             } else {
+              console.log('Credits updated successfully');
+              
               // Record transaction
               const { error: transactionError } = await supabase
                 .from('fidelity_transactions')
@@ -244,24 +260,30 @@ export default function ManageAppointmentsScreen() {
 
               if (transactionError) {
                 console.error('Error recording transaction:', transactionError);
+              } else {
+                console.log('Transaction recorded successfully');
               }
             }
           }
         }
 
-        // If there's a fidelity redemption, mark it as confirmed/used
+        // If there's a fidelity redemption, mark it as confirmed
         if (appointment.fidelity_redemption_id) {
+          console.log('Updating redemption status to confirmed...');
+          
           const { error: redemptionError } = await supabase
             .from('fidelity_redemptions')
             .update({ 
               status: 'confirmed',
               confirmed_at: new Date().toISOString(),
-              used_at: new Date().toISOString(),
             })
             .eq('id', appointment.fidelity_redemption_id);
 
           if (redemptionError) {
             console.error('Error updating redemption:', redemptionError);
+            Alert.alert('Attenzione', 'Appuntamento completato ma errore nell\'aggiornamento della ricompensa');
+          } else {
+            console.log('Redemption updated successfully');
           }
         }
       }
@@ -501,8 +523,12 @@ export default function ManageAppointmentsScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={commonStyles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
+      <View style={[commonStyles.header, { paddingTop: Platform.OS === 'android' ? 16 : 0 }]}>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={{ marginRight: 16, padding: 8 }}
+          activeOpacity={0.7}
+        >
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={commonStyles.headerTitle}>Appuntamenti</Text>
