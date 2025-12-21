@@ -41,28 +41,12 @@
             "DEFAULT"
           ]
         }
-      ],
-      "googleServicesFile": "./google-services.json",
-      "useNextNotificationsApi": true
-    },
-    "notification": {
-      "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
-      "color": "#D4AF37",
-      "androidMode": "default",
-      "androidCollapsedTitle": "Pelo Loco Club"
+      ]
     },
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/02b10c40-cfdb-4f40-9909-b11442c57fab.jpeg",
-          "color": "#D4AF37",
-          "sounds": []
-        }
-      ]
+      "expo-web-browser"
     ],
     "scheme": "pelolocobarbershop",
     "experiments": {

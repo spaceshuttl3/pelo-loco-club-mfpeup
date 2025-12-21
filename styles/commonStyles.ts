@@ -1,30 +1,12 @@
 
-import { StyleSheet, Dimensions, Platform } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
-// Responsive scaling - more aggressive for smaller screens
-const scale = (size: number) => {
-  const baseWidth = 375; // iPhone X base width
-  const ratio = width / baseWidth;
-  // Cap the scaling to prevent too large sizes on tablets
-  return size * Math.min(ratio, 1.2);
-};
-
-const verticalScale = (size: number) => {
-  const baseHeight = 812; // iPhone X base height
-  const ratio = height / baseHeight;
-  return size * Math.min(ratio, 1.2);
-};
-
-const moderateScale = (size: number, factor = 0.5) => {
-  return size + (scale(size) - size) * factor;
-};
-
-// Helper to determine if screen is small
-export const isSmallScreen = width < 375;
-export const isMediumScreen = width >= 375 && width < 414;
-export const isLargeScreen = width >= 414;
+// Responsive scaling
+const scale = (size: number) => (width / 375) * size;
+const verticalScale = (size: number) => (height / 812) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 export const colors = {
   background: '#0a0a0a',
@@ -47,7 +29,7 @@ export const commonStyles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: moderateScale(16),
+    padding: moderateScale(20),
   },
   centerContent: {
     justifyContent: 'center',
@@ -57,43 +39,43 @@ export const commonStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: moderateScale(16),
-    paddingTop: Platform.OS === 'android' ? moderateScale(12) : moderateScale(8),
+    padding: moderateScale(20),
+    paddingTop: moderateScale(10),
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     color: colors.text,
     flex: 1,
   },
   title: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(28),
     fontWeight: 'bold',
     color: colors.text,
     marginBottom: verticalScale(8),
   },
   subtitle: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(20),
     fontWeight: '600',
     color: colors.text,
     marginBottom: verticalScale(8),
   },
   text: {
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(16),
     color: colors.text,
   },
   textSecondary: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(14),
     color: colors.textSecondary,
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: moderateScale(14),
-    padding: moderateScale(14),
-    marginBottom: verticalScale(10),
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(12),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -105,10 +87,10 @@ export const commonStyles = StyleSheet.create({
   input: {
     backgroundColor: colors.card,
     borderRadius: moderateScale(12),
-    padding: moderateScale(14),
-    marginBottom: verticalScale(14),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(16),
     color: colors.text,
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(16),
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -118,20 +100,20 @@ export const buttonStyles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
     borderRadius: moderateScale(12),
-    padding: moderateScale(14),
+    padding: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondary: {
     backgroundColor: colors.secondary,
     borderRadius: moderateScale(12),
-    padding: moderateScale(14),
+    padding: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
     color: colors.text,
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
 });

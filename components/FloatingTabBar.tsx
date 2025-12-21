@@ -37,9 +37,9 @@ interface FloatingTabBarProps {
 
 export default function FloatingTabBar({
   tabs,
-  containerWidth = Math.min(Dimensions.get('window').width - 24, 400),
-  borderRadius = 20,
-  bottomMargin = 10,
+  containerWidth = Dimensions.get('window').width - 32,
+  borderRadius = 24,
+  bottomMargin = 12,
 }: FloatingTabBarProps) {
   const theme = useTheme();
   const router = useRouter();
@@ -104,7 +104,7 @@ export default function FloatingTabBar({
   }, [activeTabIndex, animatedValue, pathname, tabs]);
 
   const indicatorStyle = useAnimatedStyle(() => {
-    const horizontalPadding = 5;
+    const horizontalPadding = 6;
     const tabWidth = (containerWidth - horizontalPadding * 2) / tabs.length;
     
     return {
@@ -148,7 +148,7 @@ export default function FloatingTabBar({
       style={[
         styles.container,
         {
-          bottom: Math.max(insets.bottom + 6, bottomMargin),
+          bottom: Math.max(insets.bottom + 8, bottomMargin),
           paddingBottom: 0,
         },
       ]}
@@ -177,7 +177,7 @@ export default function FloatingTabBar({
               indicatorStyle,
               {
                 backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: borderRadius - 5,
+                borderRadius: borderRadius - 6,
               },
             ]}
             pointerEvents="none"
@@ -193,7 +193,7 @@ export default function FloatingTabBar({
               >
                 <IconSymbol
                   name={tab.icon as any}
-                  size={20}
+                  size={22}
                   color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)'}
                 />
                 <Text
@@ -230,7 +230,7 @@ export default function FloatingTabBar({
               indicatorStyle,
               {
                 backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: borderRadius - 5,
+                borderRadius: borderRadius - 6,
               },
             ]}
             pointerEvents="none"
@@ -246,7 +246,7 @@ export default function FloatingTabBar({
               >
                 <IconSymbol
                   name={tab.icon as any}
-                  size={20}
+                  size={22}
                   color={isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.55)'}
                 />
                 <Text
@@ -280,20 +280,20 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 8,
     },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
   indicator: {
     position: 'absolute',
-    height: '115%',
+    height: '120%',
     top: 2,
     left: 0,
   },
@@ -301,11 +301,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 5,
+    paddingVertical: 6,
     zIndex: 2,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     marginTop: 2,
   },
 });

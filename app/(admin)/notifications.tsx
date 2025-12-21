@@ -14,7 +14,6 @@ import { commonStyles, colors, buttonStyles } from '../../styles/commonStyles';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { sendBulkPushNotifications } from '../../services/notificationService';
 
 interface SpinWheelPrize {
   id: string;
@@ -64,55 +63,29 @@ export default function NotificationsScreen() {
 
     setSending(true);
     try {
-      // Get all users with push tokens
+      // Get all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, push_token')
-        .eq('role', 'customer')
-        .not('push_token', 'is', null);
+        .select('id')
+        .eq('role', 'customer');
 
       if (usersError) throw usersError;
 
-      if (!users || users.length === 0) {
-        Alert.alert('Attenzione', 'Nessun utente con notifiche abilitate trovato');
-        setSending(false);
-        return;
-      }
+      // Create notifications for all users
+      const notifications = users.map(user => ({
+        user_id: user.id,
+        title: notificationTitle,
+        message: notificationMessage,
+        notification_type: 'custom',
+      }));
 
-      // Try to create notifications in database (may fail if table doesn't exist)
-      try {
-        const notifications = users.map(user => ({
-          user_id: user.id,
-          title: notificationTitle,
-          message: notificationMessage,
-          notification_type: 'custom',
-        }));
+      const { error: notifError } = await supabase
+        .from('custom_notifications')
+        .insert(notifications);
 
-        await supabase
-          .from('custom_notifications')
-          .insert(notifications);
-      } catch (dbError) {
-        console.log('Database insert failed (table may not exist):', dbError);
-        // Continue anyway - we can still send push notifications
-      }
+      if (notifError) throw notifError;
 
-      // Send push notifications to users with tokens
-      const pushTokens = users
-        .filter(user => user.push_token)
-        .map(user => user.push_token as string);
-
-      if (pushTokens.length > 0) {
-        await sendBulkPushNotifications(pushTokens, {
-          title: notificationTitle,
-          body: notificationMessage,
-          data: { type: 'custom' },
-        });
-      }
-
-      Alert.alert(
-        'Successo',
-        `Notifica inviata a ${users.length} utenti!\n${pushTokens.length} notifiche push inviate.`
-      );
+      Alert.alert('Successo', 'Notifica inviata a tutti gli utenti!');
       setNotificationTitle('');
       setNotificationMessage('');
     } catch (error) {
@@ -142,55 +115,29 @@ export default function NotificationsScreen() {
           onPress: async () => {
             setSending(true);
             try {
-              // Get all users with push tokens
+              // Get all users
               const { data: users, error: usersError } = await supabase
                 .from('users')
-                .select('id, push_token')
-                .eq('role', 'customer')
-                .not('push_token', 'is', null);
+                .select('id')
+                .eq('role', 'customer');
 
               if (usersError) throw usersError;
 
-              if (!users || users.length === 0) {
-                Alert.alert('Attenzione', 'Nessun utente con notifiche abilitate trovato');
-                setSending(false);
-                return;
-              }
+              // Create notifications for all users with spin_wheel action
+              const notifications = users.map(user => ({
+                user_id: user.id,
+                title: '🎰 Gira la Ruota della Fortuna!',
+                message: 'Hai una possibilità di vincere un coupon esclusivo! Clicca qui per girare la ruota.',
+                notification_type: 'spin_wheel',
+              }));
 
-              // Try to create notifications in database
-              try {
-                const notifications = users.map(user => ({
-                  user_id: user.id,
-                  title: '🎰 Gira la Ruota della Fortuna!',
-                  message: 'Hai una possibilità di vincere un coupon esclusivo! Clicca qui per girare la ruota.',
-                  notification_type: 'spin_wheel',
-                }));
+              const { error: notifError } = await supabase
+                .from('custom_notifications')
+                .insert(notifications);
 
-                await supabase
-                  .from('custom_notifications')
-                  .insert(notifications);
-              } catch (dbError) {
-                console.log('Database insert failed (table may not exist):', dbError);
-                // Continue anyway
-              }
+              if (notifError) throw notifError;
 
-              // Send push notifications
-              const pushTokens = users
-                .filter(user => user.push_token)
-                .map(user => user.push_token as string);
-
-              if (pushTokens.length > 0) {
-                await sendBulkPushNotifications(pushTokens, {
-                  title: '🎰 Gira la Ruota della Fortuna!',
-                  body: 'Hai una possibilità di vincere un coupon esclusivo! Clicca qui per girare la ruota.',
-                  data: { type: 'spin_wheel' },
-                });
-              }
-
-              Alert.alert(
-                'Successo',
-                `Notifica ruota inviata a ${users.length} utenti!\n${pushTokens.length} notifiche push inviate.`
-              );
+              Alert.alert('Successo', 'Notifica ruota inviata a tutti gli utenti!');
             } catch (error) {
               console.error('Error sending spin wheel notification:', error);
               Alert.alert('Errore', 'Impossibile inviare la notifica');
@@ -233,7 +180,7 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Notifiche Push</Text>
+        <Text style={commonStyles.headerTitle}>Notifiche</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -247,7 +194,7 @@ export default function NotificationsScreen() {
             </Text>
           </View>
           <Text style={[commonStyles.textSecondary, { marginBottom: 16 }]}>
-            Invia una notifica push a tutti gli utenti per girare la ruota e vincere un coupon
+            Invia una notifica a tutti gli utenti per girare la ruota e vincere un coupon
           </Text>
           {loadingPrizes ? (
             <ActivityIndicator size="small" color={colors.text} />
@@ -345,16 +292,11 @@ export default function NotificationsScreen() {
 
         <View style={{ marginTop: 30, padding: 16, backgroundColor: colors.card, borderRadius: 8 }}>
           <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
-            📱 Sistema Notifiche Push
-          </Text>
-          <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
-            Le notifiche push vengono inviate tramite Expo Push Notification Service a tutti gli utenti che hanno abilitato le notifiche.
-          </Text>
-          <Text style={[commonStyles.textSecondary, { fontSize: 12, marginBottom: 8 }]}>
-            Gli utenti devono avere l&apos;app installata su un dispositivo fisico e aver accettato le notifiche push.
+            📱 Sistema Notifiche
           </Text>
           <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-            Le notifiche vengono anche salvate nel database (se la tabella custom_notifications esiste) e possono essere visualizzate dagli utenti nell&apos;app.
+            Le notifiche vengono salvate nel database e possono essere visualizzate dagli utenti nell&apos;app.
+            Per abilitare le notifiche push, è necessario configurare Firebase Cloud Messaging.
           </Text>
         </View>
       </ScrollView>

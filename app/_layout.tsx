@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { View, ActivityIndicator } from 'react-native';
 import { colors } from '../styles/commonStyles';
-import { NotificationListener } from '../components/NotificationListener';
 import 'react-native-reanimated';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -149,7 +148,6 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <CartProvider>
-        <NotificationListener />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="auth/login" />

@@ -73,7 +73,7 @@ export default function BookAppointmentScreen() {
   const [expandedSection, setExpandedSection] = useState<'service' | 'barber' | 'datetime' | null>(null);
   const [animatedHeight] = useState(new Animated.Value(1));
 
-  const fetchServices = useCallback(async () => {
+  const fetchServices = async () => {
     try {
       console.log('Fetching services from database...');
       const { data, error } = await supabase
@@ -137,9 +137,9 @@ export default function BookAppointmentScreen() {
     } catch (error) {
       console.error('Error in fetchServices:', error);
     }
-  }, [rewardName]);
+  };
 
-  const fetchBarbers = useCallback(async () => {
+  const fetchBarbers = async () => {
     try {
       console.log('Fetching barbers...');
       const { data, error } = await supabase
@@ -159,7 +159,7 @@ export default function BookAppointmentScreen() {
     } finally {
       setLoadingData(false);
     }
-  }, []);
+  };
 
   const fetchExistingAppointments = useCallback(async () => {
     try {
@@ -231,7 +231,7 @@ export default function BookAppointmentScreen() {
   useEffect(() => {
     fetchServices();
     fetchBarbers();
-  }, [fetchServices, fetchBarbers]);
+  }, []);
 
   useEffect(() => {
     if (selectedBarber && date) {
@@ -554,23 +554,23 @@ export default function BookAppointmentScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}>
+      <ScrollView style={commonStyles.content} contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}>
         {/* Reward Info Banner */}
         {rewardId && rewardName && (
-          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 14, marginBottom: 14 }]}>
-            <View style={[commonStyles.row, { marginBottom: 6 }]}>
-              <IconSymbol name="star.fill" size={22} color={colors.text} />
-              <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, flex: 1, fontSize: 14 }]}>
+          <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 16, marginBottom: 16 }]}>
+            <View style={[commonStyles.row, { marginBottom: 8 }]}>
+              <IconSymbol name="star.fill" size={24} color={colors.text} />
+              <Text style={[commonStyles.text, { fontWeight: '600', marginLeft: 8, flex: 1 }]}>
                 Riscatto Ricompensa
               </Text>
             </View>
-            <Text style={[commonStyles.text, { fontSize: 15, fontWeight: 'bold' }]}>
+            <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
               {rewardName}
             </Text>
-            <Text style={[commonStyles.textSecondary, { fontSize: 13, marginTop: 3 }]}>
+            <Text style={[commonStyles.textSecondary, { fontSize: 14, marginTop: 4 }]}>
               Costo: {rewardCredits} crediti
             </Text>
-            <Text style={[commonStyles.textSecondary, { fontSize: 11, marginTop: 6 }]}>
+            <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 8 }]}>
               Seleziona barbiere, data e orario per completare la prenotazione
             </Text>
           </View>
@@ -580,7 +580,7 @@ export default function BookAppointmentScreen() {
         <TouchableOpacity
           style={[
             commonStyles.card,
-            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
             expandedSection === 'service' && { borderColor: colors.primary, borderWidth: 2 },
             rewardId && { opacity: 0.6 },
           ]}
@@ -595,31 +595,31 @@ export default function BookAppointmentScreen() {
           disabled={!!rewardId}
         >
           <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 3, fontSize: 14 }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               1. Seleziona Servizio
             </Text>
             {selectedService && (
-              <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+              <Text style={commonStyles.textSecondary}>
                 {services.find(s => s.id === selectedService)?.name}
               </Text>
             )}
             {rewardId && (
-              <Text style={[commonStyles.textSecondary, { fontSize: 11, fontStyle: 'italic', marginTop: 3 }]}>
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic', marginTop: 4 }]}>
                 Pre-selezionato dalla ricompensa
               </Text>
             )}
           </View>
           <IconSymbol
             name={expandedSection === 'service' ? 'chevron.up' : 'chevron.down'}
-            size={22}
+            size={24}
             color={colors.text}
           />
         </TouchableOpacity>
 
         {expandedSection === 'service' && !rewardId && (
-          <Animated.View style={{ marginBottom: 14, opacity: animatedHeight }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {services.length === 0 ? (
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 18 }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>Nessun servizio disponibile</Text>
               </View>
             ) : (
@@ -637,20 +637,20 @@ export default function BookAppointmentScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 14 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600' }]}>
                         {service.name}
                       </Text>
-                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      <Text style={commonStyles.textSecondary}>
                         {service.duration} min • €{service.price}
                       </Text>
                       {service.description && (
-                        <Text style={[commonStyles.textSecondary, { fontSize: 11, marginTop: 3 }]}>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 12, marginTop: 4 }]}>
                           {service.description}
                         </Text>
                       )}
                     </View>
                     {selectedService === service.id && (
-                      <IconSymbol name="checkmark.circle.fill" size={22} color={colors.primary} />
+                      <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -663,7 +663,7 @@ export default function BookAppointmentScreen() {
         <TouchableOpacity
           style={[
             commonStyles.card,
-            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
             expandedSection === 'barber' && { borderColor: colors.primary, borderWidth: 2 },
             !selectedService && { opacity: 0.5 },
           ]}
@@ -680,30 +680,30 @@ export default function BookAppointmentScreen() {
           disabled={!selectedService}
         >
           <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 3, fontSize: 14 }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               2. Seleziona Barbiere
             </Text>
             {selectedBarber ? (
-              <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+              <Text style={commonStyles.textSecondary}>
                 {barbers.find(b => b.id === selectedBarber)?.name}
               </Text>
             ) : (
-              <Text style={[commonStyles.textSecondary, { fontSize: 11, fontStyle: 'italic' }]}>
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
                 {!selectedService ? 'Seleziona prima un servizio' : 'Tocca per selezionare'}
               </Text>
             )}
           </View>
           <IconSymbol
             name={expandedSection === 'barber' ? 'chevron.up' : 'chevron.down'}
-            size={22}
+            size={24}
             color={colors.text}
           />
         </TouchableOpacity>
 
         {expandedSection === 'barber' && (
-          <Animated.View style={{ marginBottom: 14, opacity: animatedHeight }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {barbers.length === 0 ? (
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 18 }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>Nessun barbiere disponibile</Text>
               </View>
             ) : (
@@ -721,18 +721,18 @@ export default function BookAppointmentScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 14 }]}>
+                      <Text style={[commonStyles.text, { fontWeight: '600' }]}>
                         {barber.name}
                       </Text>
-                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      <Text style={commonStyles.textSecondary}>
                         Disponibile: Martedì - Sabato
                       </Text>
-                      <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                      <Text style={commonStyles.textSecondary}>
                         Orari: {barber.available_hours.start} - {barber.available_hours.end}
                       </Text>
                     </View>
                     {selectedBarber === barber.id && (
-                      <IconSymbol name="checkmark.circle.fill" size={22} color={colors.primary} />
+                      <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -745,7 +745,7 @@ export default function BookAppointmentScreen() {
         <TouchableOpacity
           style={[
             commonStyles.card,
-            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
             expandedSection === 'datetime' && { borderColor: colors.primary, borderWidth: 2 },
             !selectedBarber && { opacity: 0.5 },
           ]}
@@ -762,58 +762,58 @@ export default function BookAppointmentScreen() {
           disabled={!selectedBarber}
         >
           <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 3, fontSize: 14 }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
               3. Seleziona Data e Orario
             </Text>
             {time ? (
-              <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+              <Text style={commonStyles.textSecondary}>
                 {date.toLocaleDateString('it-IT')} alle {time.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             ) : (
-              <Text style={[commonStyles.textSecondary, { fontSize: 11, fontStyle: 'italic' }]}>
+              <Text style={[commonStyles.textSecondary, { fontSize: 12, fontStyle: 'italic' }]}>
                 {!selectedBarber ? 'Seleziona prima un barbiere' : 'Tocca per selezionare'}
               </Text>
             )}
           </View>
           <IconSymbol
             name={expandedSection === 'datetime' ? 'chevron.up' : 'chevron.down'}
-            size={22}
+            size={24}
             color={colors.text}
           />
         </TouchableOpacity>
 
         {expandedSection === 'datetime' && (
-          <Animated.View style={{ marginBottom: 14, opacity: animatedHeight }}>
+          <Animated.View style={{ marginBottom: 16, opacity: animatedHeight }}>
             {isToday && (
-              <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 10, marginBottom: 10 }]}>
-                <Text style={[commonStyles.text, { fontSize: 13, fontWeight: '600' }]}>
+              <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                   ⭐ Prenotazioni per oggi disponibili!
                 </Text>
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
               <TouchableOpacity
-                style={[commonStyles.card, { flex: 1, alignItems: 'center', padding: 16 }]}
+                style={[commonStyles.card, { flex: 1, alignItems: 'center', padding: 20 }]}
                 onPress={() => {
                   console.log('Date picker opened');
                   setShowDatePicker(true);
                 }}
                 activeOpacity={0.7}
               >
-                <IconSymbol name="calendar" size={36} color={colors.primary} />
-                <Text style={[commonStyles.text, { marginTop: 10, textAlign: 'center', fontWeight: '600', fontSize: 14 }]}>
+                <IconSymbol name="calendar" size={40} color={colors.primary} />
+                <Text style={[commonStyles.text, { marginTop: 12, textAlign: 'center', fontWeight: '600', fontSize: 16 }]}>
                   {date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </Text>
-                <Text style={[commonStyles.textSecondary, { marginTop: 3, fontSize: 11 }]}>
+                <Text style={[commonStyles.textSecondary, { marginTop: 4, fontSize: 12 }]}>
                   {date.toLocaleDateString('it-IT', { weekday: 'long' })}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {showDatePicker && (
-              <View style={[commonStyles.card, { marginBottom: 16, padding: 14 }]}>
-                <Text style={[commonStyles.subtitle, { marginBottom: 14, textAlign: 'center', fontSize: 16 }]}>
+              <View style={[commonStyles.card, { marginBottom: 20, padding: 16 }]}>
+                <Text style={[commonStyles.subtitle, { marginBottom: 16, textAlign: 'center' }]}>
                   Seleziona Data
                 </Text>
                 <DateTimePicker
@@ -823,11 +823,11 @@ export default function BookAppointmentScreen() {
                   onChange={handleDateChange}
                   minimumDate={new Date()}
                   textColor={colors.text}
-                  style={{ height: 180 }}
+                  style={{ height: 200 }}
                 />
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity
-                    style={[buttonStyles.primary, { marginTop: 14 }]}
+                    style={[buttonStyles.primary, { marginTop: 16 }]}
                     onPress={() => setShowDatePicker(false)}
                   >
                     <Text style={buttonStyles.text}>Conferma</Text>
@@ -836,7 +836,7 @@ export default function BookAppointmentScreen() {
               </View>
             )}
 
-            <Text style={[commonStyles.text, { marginBottom: 10, fontWeight: '600', fontSize: 14 }]}>
+            <Text style={[commonStyles.text, { marginBottom: 12, fontWeight: '600', fontSize: 16 }]}>
               Orari Disponibili
             </Text>
             
@@ -844,8 +844,8 @@ export default function BookAppointmentScreen() {
               <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingRight: 14 }}
-                style={{ marginHorizontal: -14, paddingLeft: 14 }}
+                contentContainerStyle={{ paddingRight: 16 }}
+                style={{ marginHorizontal: -16, paddingLeft: 16 }}
               >
                 {availableTimeSlots.map((slot, slotIndex) => {
                   const [hours, minutes] = slot.split(':');
@@ -859,11 +859,11 @@ export default function BookAppointmentScreen() {
                       key={`timeslot-${slot}-${slotIndex}`}
                       style={[
                         {
-                          minWidth: 70,
-                          marginRight: 10,
-                          paddingVertical: 14,
-                          paddingHorizontal: 12,
-                          borderRadius: 12,
+                          minWidth: 90,
+                          marginRight: 12,
+                          paddingVertical: 20,
+                          paddingHorizontal: 16,
+                          borderRadius: 16,
                           backgroundColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.card),
                           borderWidth: 2,
                           borderColor: !isAvailable ? colors.border : (isSelected ? colors.primary : colors.border),
@@ -882,11 +882,11 @@ export default function BookAppointmentScreen() {
                       disabled={!isAvailable}
                       activeOpacity={0.7}
                     >
-                      <Text style={[commonStyles.text, { fontSize: 16, fontWeight: 'bold' }]}>
+                      <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
                         {slot}
                       </Text>
                       {!isAvailable && (
-                        <Text style={[commonStyles.textSecondary, { fontSize: 9, marginTop: 3 }]}>
+                        <Text style={[commonStyles.textSecondary, { fontSize: 10, marginTop: 4 }]}>
                           Occupato
                         </Text>
                       )}
@@ -895,7 +895,7 @@ export default function BookAppointmentScreen() {
                 })}
               </ScrollView>
             ) : (
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 18 }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>
                   {selectedBarber ? 'Nessun orario disponibile per questa data' : 'Seleziona prima un barbiere'}
                 </Text>
@@ -907,7 +907,7 @@ export default function BookAppointmentScreen() {
         {/* Book Button */}
         {selectedService && selectedBarber && time && (
           <TouchableOpacity
-            style={[buttonStyles.primary, { marginTop: 20 }]}
+            style={[buttonStyles.primary, { marginTop: 24 }]}
             onPress={handleBookAppointment}
             disabled={loading}
             activeOpacity={0.7}

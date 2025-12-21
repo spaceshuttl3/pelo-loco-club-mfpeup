@@ -224,14 +224,8 @@ export default function AdminDashboardScreen() {
     },
   ];
 
-  // Calculate responsive sizing - 2 buttons per row
-  const cardGap = 12;
-  const horizontalPadding = 16;
-  const cardWidth = (width - (horizontalPadding * 2) - cardGap) / 2;
-  const titleFontSize = Math.min(width * 0.065, 26);
-  const cardHeight = Math.min(cardWidth * 0.85, 120); // Responsive height based on width
-  const iconSize = Math.min(cardWidth * 0.18, 24);
-  const cardTitleSize = Math.min(cardWidth * 0.11, 14);
+  // Calculate card width based on screen size
+  const cardWidth = width < 400 ? '100%' : '50%';
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -242,13 +236,13 @@ export default function AdminDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <View style={{ marginBottom: 24, marginTop: 16 }}>
+        <View style={{ marginBottom: 30, marginTop: 20 }}>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.title, { fontSize: titleFontSize, flex: 1 }]}>
+            <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), flex: 1 }]}>
               Dashboard Admin
             </Text>
             <TouchableOpacity onPress={handleSignOut}>
-              <IconSymbol name="rectangle.portrait.and.arrow.right" size={26} color={colors.error} />
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={28} color={colors.error} />
             </TouchableOpacity>
           </View>
           <Text style={commonStyles.textSecondary}>
@@ -256,82 +250,82 @@ export default function AdminDashboardScreen() {
           </Text>
         </View>
 
-        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 18, marginBottom: 24 }]}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 14, fontSize: 18 }]}>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 30 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
             Oggi
           </Text>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.text, { fontSize: 15 }]}>Appuntamenti:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 17 }]}>
+            <Text style={commonStyles.text}>Appuntamenti:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
               {todayAppointments.length}
             </Text>
           </View>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.text, { fontSize: 15 }]}>Ordini in Attesa:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 17 }]}>
+            <Text style={commonStyles.text}>Ordini in Attesa:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
               {pendingOrders.length}
             </Text>
           </View>
           <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 15 }]}>Ricavi Giornalieri:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18, color: colors.black }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.black }]}>
               €{todayEarnings.toFixed(2)}
             </Text>
           </View>
         </View>
 
-        <Text style={[commonStyles.subtitle, { marginBottom: 14, fontSize: 18 }]}>
+        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
           Azioni Rapide
         </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: cardGap }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
           {quickActions.map((action, actionIndex) => (
             <TouchableOpacity
               key={`action-${action.id}-${actionIndex}`}
+              style={{
+                width: cardWidth,
+                padding: 6,
+              }}
               onPress={() => {
                 console.log('Quick action pressed:', action.title);
                 router.push(action.route as any);
               }}
-              style={{ width: cardWidth }}
             >
-              <View style={[commonStyles.card, { padding: 12, height: cardHeight, position: 'relative' }]}>
+              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, position: 'relative' }]}>
                 {action.badge !== undefined && action.badge > 0 && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: 8,
-                      right: 8,
+                      top: 12,
+                      right: 12,
                       backgroundColor: colors.error,
-                      borderRadius: 10,
-                      minWidth: 20,
-                      height: 20,
+                      borderRadius: 12,
+                      minWidth: 24,
+                      height: 24,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      paddingHorizontal: 5,
+                      paddingHorizontal: 6,
                     }}
                   >
-                    <Text style={[commonStyles.text, { fontSize: 11, fontWeight: 'bold' }]}>
+                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: 'bold' }]}>
                       {action.badge}
                     </Text>
                   </View>
                 )}
                 <View
                   style={{
-                    width: iconSize * 2,
-                    height: iconSize * 2,
-                    borderRadius: iconSize,
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
                     backgroundColor: action.color,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 10,
+                    marginBottom: 12,
                   }}
                 >
-                  <IconSymbol name={action.icon as any} size={iconSize} color={colors.text} />
+                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
                 </View>
-                <Text 
-                  style={[commonStyles.text, { fontSize: cardTitleSize, fontWeight: '600' }]}
-                  numberOfLines={2}
-                >
+                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
                   {action.title}
                 </Text>
               </View>
