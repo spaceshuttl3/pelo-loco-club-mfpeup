@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Pelo Loco Club",
@@ -61,5 +60,6 @@
         "projectId": "f58c39ed-204a-46e2-bc3d-9a4c486a3a4a"
       }
     }
-  }
+  },
+  "scheme": "Pelo Loco Club"
 }

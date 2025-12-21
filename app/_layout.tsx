@@ -42,56 +42,75 @@ export default function RootLayout() {
           console.log('Auth link detected:', isResetPassword ? 'reset-password' : 'confirm');
           setIsProcessingDeepLink(true);
           
-          // Extract the access_token and refresh_token from the URL
-          const params = url.queryParams;
-          if (params && typeof params === 'object') {
-            const accessToken = params.access_token as string;
-            const refreshToken = params.refresh_token as string;
-            const type = params.type as string;
+          // Supabase sends tokens in the URL fragment (after #), not as query params
+          // We need to extract them from the raw URL
+          const rawUrl = event.url;
+          
+          // Check if there's a hash fragment
+          let accessToken: string | null = null;
+          let refreshToken: string | null = null;
+          let type: string | null = null;
+          
+          if (rawUrl.includes('#')) {
+            // Extract the fragment part (everything after #)
+            const fragmentPart = rawUrl.split('#')[1];
+            console.log('Fragment part:', fragmentPart);
             
-            console.log('Token type:', type);
-            console.log('Has access token:', !!accessToken);
-            console.log('Has refresh token:', !!refreshToken);
+            // Parse the fragment as query parameters
+            const fragmentParams = new URLSearchParams(fragmentPart);
+            accessToken = fragmentParams.get('access_token');
+            refreshToken = fragmentParams.get('refresh_token');
+            type = fragmentParams.get('type');
+          } else {
+            // Fallback: try to get from query params (older format)
+            const params = url.queryParams;
+            if (params && typeof params === 'object') {
+              accessToken = params.access_token as string;
+              refreshToken = params.refresh_token as string;
+              type = params.type as string;
+            }
+          }
+          
+          console.log('Token type:', type);
+          console.log('Has access token:', !!accessToken);
+          console.log('Has refresh token:', !!refreshToken);
+          
+          if (accessToken && refreshToken) {
+            console.log('Setting session from deep link');
             
-            if (accessToken && refreshToken) {
-              console.log('Setting session from deep link');
-              
-              // Set the session using the tokens
-              const { data, error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken,
-              });
-              
-              if (error) {
-                console.error('Error setting session:', error);
-                setIsProcessingDeepLink(false);
-                return;
-              }
-              
-              console.log('Session set successfully');
-              
-              // Handle different types of auth events
-              if (type === 'recovery' || isResetPassword) {
-                console.log('Navigating to reset password screen');
-                // Small delay to ensure session is fully set
-                setTimeout(() => {
-                  setIsProcessingDeepLink(false);
-                  router.replace('/auth/reset-password');
-                }, 100);
-              } else if (type === 'signup' || isConfirm) {
-                console.log('Email confirmed successfully');
-                // Navigate to login with success message
-                setTimeout(() => {
-                  setIsProcessingDeepLink(false);
-                  router.replace('/auth/login');
-                }, 100);
-              }
-            } else {
-              console.error('Missing tokens in URL');
+            // Set the session using the tokens
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (error) {
+              console.error('Error setting session:', error);
               setIsProcessingDeepLink(false);
+              return;
+            }
+            
+            console.log('Session set successfully');
+            
+            // Handle different types of auth events
+            if (type === 'recovery' || isResetPassword) {
+              console.log('Navigating to reset password screen');
+              // Small delay to ensure session is fully set
+              setTimeout(() => {
+                setIsProcessingDeepLink(false);
+                router.replace('/auth/reset-password');
+              }, 100);
+            } else if (type === 'signup' || isConfirm) {
+              console.log('Email confirmed successfully');
+              // Navigate to login with success message
+              setTimeout(() => {
+                setIsProcessingDeepLink(false);
+                router.replace('/auth/login');
+              }, 100);
             }
           } else {
-            console.error('No query params found in URL');
+            console.error('Missing tokens in URL');
+            console.log('Full URL for debugging:', rawUrl);
             setIsProcessingDeepLink(false);
           }
         }
