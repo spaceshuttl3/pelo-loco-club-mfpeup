@@ -224,8 +224,9 @@ export default function AdminDashboardScreen() {
     },
   ];
 
-  // Calculate card width based on screen size
-  const cardWidth = width < 400 ? '100%' : '50%';
+  // Calculate responsive card width - always 1 per row for consistency
+  const cardWidth = '100%';
+  const titleFontSize = Math.min(width * 0.065, 26);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -236,13 +237,13 @@ export default function AdminDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <View style={{ marginBottom: 30, marginTop: 20 }}>
+        <View style={{ marginBottom: 24, marginTop: 16 }}>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), flex: 1 }]}>
+            <Text style={[commonStyles.title, { fontSize: titleFontSize, flex: 1 }]}>
               Dashboard Admin
             </Text>
             <TouchableOpacity onPress={handleSignOut}>
-              <IconSymbol name="rectangle.portrait.and.arrow.right" size={28} color={colors.error} />
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={26} color={colors.error} />
             </TouchableOpacity>
           </View>
           <Text style={commonStyles.textSecondary}>
@@ -250,84 +251,81 @@ export default function AdminDashboardScreen() {
           </Text>
         </View>
 
-        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 30 }]}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 18, marginBottom: 24 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 14, fontSize: 18 }]}>
             Oggi
           </Text>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={commonStyles.text}>Appuntamenti:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+            <Text style={[commonStyles.text, { fontSize: 15 }]}>Appuntamenti:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 17 }]}>
               {todayAppointments.length}
             </Text>
           </View>
           <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={commonStyles.text}>Ordini in Attesa:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+            <Text style={[commonStyles.text, { fontSize: 15 }]}>Ordini in Attesa:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 17 }]}>
               {pendingOrders.length}
             </Text>
           </View>
           <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.black }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 15 }]}>Ricavi Giornalieri:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18, color: colors.black }]}>
               €{todayEarnings.toFixed(2)}
             </Text>
           </View>
         </View>
 
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+        <Text style={[commonStyles.subtitle, { marginBottom: 14, fontSize: 18 }]}>
           Azioni Rapide
         </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+        <View style={{ gap: 10 }}>
           {quickActions.map((action, actionIndex) => (
             <TouchableOpacity
               key={`action-${action.id}-${actionIndex}`}
-              style={{
-                width: cardWidth,
-                padding: 6,
-              }}
               onPress={() => {
                 console.log('Quick action pressed:', action.title);
                 router.push(action.route as any);
               }}
             >
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, position: 'relative' }]}>
+              <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', padding: 16, position: 'relative' }]}>
                 {action.badge !== undefined && action.badge > 0 && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: 12,
-                      right: 12,
+                      top: 10,
+                      right: 10,
                       backgroundColor: colors.error,
-                      borderRadius: 12,
-                      minWidth: 24,
-                      height: 24,
+                      borderRadius: 10,
+                      minWidth: 20,
+                      height: 20,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      paddingHorizontal: 6,
+                      paddingHorizontal: 5,
                     }}
                   >
-                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: 'bold' }]}>
+                    <Text style={[commonStyles.text, { fontSize: 11, fontWeight: 'bold' }]}>
                       {action.badge}
                     </Text>
                   </View>
                 )}
                 <View
                   style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
                     backgroundColor: action.color,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 12,
+                    marginRight: 14,
                   }}
                 >
-                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
+                  <IconSymbol name={action.icon as any} size={24} color={colors.text} />
                 </View>
-                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
+                <Text style={[commonStyles.text, { fontSize: 15, fontWeight: '600', flex: 1 }]}>
                   {action.title}
                 </Text>
+                <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
           ))}
