@@ -305,7 +305,7 @@ export default function FidelityUsersScreen() {
         <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.background }]} edges={['top']}>
           {selectedUser && (
             <>
-              <View style={commonStyles.header}>
+              <View style={[commonStyles.header, { paddingTop: 8 }]}>
                 <TouchableOpacity 
                   onPress={() => setModalVisible(false)} 
                   style={{ marginRight: 16 }} 

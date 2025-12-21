@@ -91,7 +91,7 @@ export default function ManageAppointmentsScreen() {
         console.error('Error fetching services:', error);
         // If the column doesn't exist, fetch without it
         if (error.code === '42703') {
-          console.log('earns_fidelity_reward column does not exist yet. Please run the migration.');
+          console.log('earns_fidelity_reward column does not exist yet. Fetching without it...');
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('services')
             .select('id, name');
@@ -225,10 +225,11 @@ export default function ManageAppointmentsScreen() {
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false; // Default to true if not set
         
-        console.log(`Service: ${appointment.service}, Earns reward: ${shouldEarnReward}, Payment status: ${appointment.payment_status}`);
+        console.log(`Service: ${appointment.service}, Earns reward: ${shouldEarnReward}`);
         
-        // Award fidelity credit if payment is completed and service earns rewards
-        if (appointment.payment_status === 'paid' && shouldEarnReward) {
+        // Award fidelity credit when appointment is completed (regardless of payment status)
+        // Since payment is in person, we award points on completion
+        if (shouldEarnReward) {
           console.log('Awarding fidelity credit...');
           
           // Get current user credits
@@ -277,12 +278,7 @@ export default function ManageAppointmentsScreen() {
             }
           }
         } else {
-          if (!shouldEarnReward) {
-            console.log('Service does not earn fidelity rewards');
-          }
-          if (appointment.payment_status !== 'paid') {
-            console.log('Payment not completed, no credits awarded');
-          }
+          console.log('Service does not earn fidelity rewards');
         }
 
         // If there's a fidelity redemption, mark it as confirmed/used
@@ -314,11 +310,9 @@ export default function ManageAppointmentsScreen() {
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false;
         
-        if (appointment.payment_status === 'paid' && shouldEarnReward) {
+        if (shouldEarnReward) {
           successMessage += '. 1 credito fedeltà assegnato!';
-        } else if (appointment.payment_status !== 'paid') {
-          successMessage += '. Nessun credito assegnato (pagamento non completato).';
-        } else if (!shouldEarnReward) {
+        } else {
           successMessage += '. Questo servizio non guadagna crediti fedeltà.';
         }
         
