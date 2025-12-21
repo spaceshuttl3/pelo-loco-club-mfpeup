@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState } from 'react';
@@ -26,7 +25,6 @@ export default function AdminDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { signOut } = useAuth();
-  const { width } = useWindowDimensions();
 
   useEffect(() => {
     fetchDashboardData();
@@ -196,7 +194,7 @@ export default function AdminDashboardScreen() {
     },
     {
       id: 'fidelity-users',
-      title: 'Crediti Utenti',
+      title: 'Crediti',
       icon: 'star.fill',
       color: colors.primary,
       route: '/(admin)/fidelity-users',
@@ -216,16 +214,13 @@ export default function AdminDashboardScreen() {
       route: '/(admin)/reports',
     },
     {
-      id: 'notifications',
-      title: 'Notifiche',
-      icon: 'bell.fill',
-      color: colors.secondary,
-      route: '/(admin)/notifications',
+      id: 'blocked-dates',
+      title: 'Blocca Date',
+      icon: 'calendar.badge.minus',
+      color: colors.error,
+      route: '/(admin)/blocked-dates',
     },
   ];
-
-  // Calculate card width based on screen size
-  const cardWidth = width < 400 ? '100%' : '50%';
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -236,100 +231,103 @@ export default function AdminDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <View style={{ marginBottom: 30, marginTop: 20 }}>
-          <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={[commonStyles.title, { fontSize: Math.min(width * 0.08, 32), flex: 1 }]}>
+        <View style={{ marginBottom: 16, marginTop: 8 }}>
+          <View style={[commonStyles.row, { marginBottom: 4 }]}>
+            <Text style={[commonStyles.title, { fontSize: 22, flex: 1 }]}>
               Dashboard Admin
             </Text>
             <TouchableOpacity onPress={handleSignOut}>
-              <IconSymbol name="rectangle.portrait.and.arrow.right" size={28} color={colors.error} />
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color={colors.error} />
             </TouchableOpacity>
           </View>
-          <Text style={commonStyles.textSecondary}>
+          <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
             Gestisci il tuo barbershop
           </Text>
         </View>
 
-        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 20, marginBottom: 30 }]}>
-          <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+        <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 14, marginBottom: 16 }]}>
+          <Text style={[commonStyles.subtitle, { marginBottom: 10, fontSize: 14 }]}>
             Oggi
           </Text>
-          <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={commonStyles.text}>Appuntamenti:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+          <View style={[commonStyles.row, { marginBottom: 4 }]}>
+            <Text style={[commonStyles.text, { fontSize: 13 }]}>Appuntamenti:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 14 }]}>
               {todayAppointments.length}
             </Text>
           </View>
-          <View style={[commonStyles.row, { marginBottom: 8 }]}>
-            <Text style={commonStyles.text}>Ordini in Attesa:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 18 }]}>
+          <View style={[commonStyles.row, { marginBottom: 4 }]}>
+            <Text style={[commonStyles.text, { fontSize: 13 }]}>Ordini in Attesa:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 14 }]}>
               {pendingOrders.length}
             </Text>
           </View>
-          <View style={[commonStyles.row, { paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
-            <Text style={[commonStyles.text, { fontWeight: '600' }]}>Ricavi Giornalieri:</Text>
-            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 20, color: colors.black }]}>
+          <View style={[commonStyles.row, { paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)' }]}>
+            <Text style={[commonStyles.text, { fontWeight: '600', fontSize: 13 }]}>Ricavi Giornalieri:</Text>
+            <Text style={[commonStyles.text, { fontWeight: 'bold', fontSize: 16, color: colors.black }]}>
               €{todayEarnings.toFixed(2)}
             </Text>
           </View>
         </View>
 
-        <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+        <Text style={[commonStyles.subtitle, { marginBottom: 10, fontSize: 16 }]}>
           Azioni Rapide
         </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
           {quickActions.map((action, actionIndex) => (
-            <TouchableOpacity
+            <View
               key={`action-${action.id}-${actionIndex}`}
               style={{
-                width: cardWidth,
-                padding: 6,
-              }}
-              onPress={() => {
-                console.log('Quick action pressed:', action.title);
-                router.push(action.route as any);
+                width: '50%',
+                padding: 4,
               }}
             >
-              <View style={[commonStyles.card, { alignItems: 'center', padding: 20, position: 'relative' }]}>
+              <TouchableOpacity
+                style={[commonStyles.card, { alignItems: 'center', padding: 12, position: 'relative', marginBottom: 0 }]}
+                onPress={() => {
+                  console.log('Quick action pressed:', action.title);
+                  router.push(action.route as any);
+                }}
+                activeOpacity={0.7}
+              >
                 {action.badge !== undefined && action.badge > 0 && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: 12,
-                      right: 12,
+                      top: 6,
+                      right: 6,
                       backgroundColor: colors.error,
-                      borderRadius: 12,
-                      minWidth: 24,
-                      height: 24,
+                      borderRadius: 10,
+                      minWidth: 18,
+                      height: 18,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      paddingHorizontal: 6,
+                      paddingHorizontal: 4,
                     }}
                   >
-                    <Text style={[commonStyles.text, { fontSize: 12, fontWeight: 'bold' }]}>
+                    <Text style={[commonStyles.text, { fontSize: 10, fontWeight: 'bold' }]}>
                       {action.badge}
                     </Text>
                   </View>
                 )}
                 <View
                   style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
                     backgroundColor: action.color,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 12,
+                    marginBottom: 6,
                   }}
                 >
-                  <IconSymbol name={action.icon as any} size={28} color={colors.text} />
+                  <IconSymbol name={action.icon as any} size={22} color={colors.text} />
                 </View>
-                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 14 }]}>
+                <Text style={[commonStyles.text, { textAlign: 'center', fontSize: 12 }]}>
                   {action.title}
                 </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       </ScrollView>

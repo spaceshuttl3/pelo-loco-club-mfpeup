@@ -12,14 +12,11 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { IconSymbol } from '../../components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
 
 interface Barber {
   id: string;
@@ -48,6 +45,12 @@ interface ExistingAppointment {
   service: string;
 }
 
+interface BlockedDate {
+  id: string;
+  barber_id: string;
+  blocked_date: string;
+}
+
 export default function BookAppointmentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -63,6 +66,7 @@ export default function BookAppointmentScreen() {
   const [loadingData, setLoadingData] = useState(true);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
 
   // Reward redemption params
   const rewardId = params.rewardId as string | undefined;
@@ -161,6 +165,27 @@ export default function BookAppointmentScreen() {
     }
   };
 
+  const fetchBlockedDates = useCallback(async () => {
+    if (!selectedBarber) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('barber_blocked_dates')
+        .select('*')
+        .eq('barber_id', selectedBarber);
+
+      if (error) {
+        console.error('Error fetching blocked dates:', error);
+        return;
+      }
+
+      console.log('Blocked dates fetched:', data?.length || 0);
+      setBlockedDates(data || []);
+    } catch (error) {
+      console.error('Error in fetchBlockedDates:', error);
+    }
+  }, [selectedBarber]);
+
   const fetchExistingAppointments = useCallback(async () => {
     try {
       const selectedDate = date.toISOString().split('T')[0];
@@ -184,10 +209,37 @@ export default function BookAppointmentScreen() {
     }
   }, [selectedBarber, date]);
 
+  const isDateBlocked = useCallback((checkDate: Date): boolean => {
+    const dateString = checkDate.toISOString().split('T')[0];
+    return blockedDates.some(bd => bd.blocked_date === dateString);
+  }, [blockedDates]);
+
+  const isBarberAvailableOnDay = useCallback((checkDate: Date): boolean => {
+    const selectedBarberData = barbers.find(b => b.id === selectedBarber);
+    if (!selectedBarberData) return false;
+
+    const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
+    return selectedBarberData.available_days.includes(dayName);
+  }, [selectedBarber, barbers]);
+
   const generateTimeSlots = useCallback(() => {
     const selectedBarberData = barbers.find(b => b.id === selectedBarber);
     if (!selectedBarberData) {
       console.log('No barber selected or barber not found');
+      return;
+    }
+
+    // Check if date is blocked
+    if (isDateBlocked(date)) {
+      console.log('Date is blocked');
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    // Check if barber is available on this day
+    if (!isBarberAvailableOnDay(date)) {
+      console.log('Barber not available on this day');
+      setAvailableTimeSlots([]);
       return;
     }
 
@@ -226,12 +278,18 @@ export default function BookAppointmentScreen() {
 
     console.log('Generated', slots.length, 'time slots');
     setAvailableTimeSlots(slots);
-  }, [selectedBarber, date, barbers]);
+  }, [selectedBarber, date, barbers, isDateBlocked, isBarberAvailableOnDay]);
 
   useEffect(() => {
     fetchServices();
     fetchBarbers();
   }, []);
+
+  useEffect(() => {
+    if (selectedBarber) {
+      fetchBlockedDates();
+    }
+  }, [selectedBarber, fetchBlockedDates]);
 
   useEffect(() => {
     if (selectedBarber && date) {
@@ -308,10 +366,15 @@ export default function BookAppointmentScreen() {
       return;
     }
 
-    const selectedBarberData = barbers.find(b => b.id === selectedBarber);
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    if (selectedBarberData && !selectedBarberData.available_days.includes(dayName)) {
+    // Check if date is blocked
+    if (isDateBlocked(date)) {
+      Alert.alert('Errore', 'Questa data non è disponibile per prenotazioni');
+      return;
+    }
+
+    // Check if barber is available on this day
+    if (!isBarberAvailableOnDay(date)) {
+      const dayName = date.toLocaleDateString('it-IT', { weekday: 'long' });
       Alert.alert('Errore', `Il barbiere selezionato non è disponibile di ${dayName}`);
       return;
     }
@@ -536,6 +599,8 @@ export default function BookAppointmentScreen() {
 
   // Check if the selected date is today
   const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+  const dateIsBlocked = isDateBlocked(date);
+  const barberAvailableOnDay = isBarberAvailableOnDay(date);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -725,7 +790,7 @@ export default function BookAppointmentScreen() {
                         {barber.name}
                       </Text>
                       <Text style={commonStyles.textSecondary}>
-                        Disponibile: Martedì - Sabato
+                        Disponibile: {barber.available_days.join(', ')}
                       </Text>
                       <Text style={commonStyles.textSecondary}>
                         Orari: {barber.available_hours.start} - {barber.available_hours.end}
@@ -788,6 +853,22 @@ export default function BookAppointmentScreen() {
               <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 12, marginBottom: 12 }]}>
                 <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
                   ⭐ Prenotazioni per oggi disponibili!
+                </Text>
+              </View>
+            )}
+
+            {dateIsBlocked && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  ⚠️ Questa data non è disponibile per prenotazioni
+                </Text>
+              </View>
+            )}
+
+            {!barberAvailableOnDay && selectedBarber && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  ⚠️ Il barbiere non è disponibile in questo giorno
                 </Text>
               </View>
             )}
@@ -897,7 +978,13 @@ export default function BookAppointmentScreen() {
             ) : (
               <View style={[commonStyles.card, { alignItems: 'center', padding: 20 }]}>
                 <Text style={commonStyles.textSecondary}>
-                  {selectedBarber ? 'Nessun orario disponibile per questa data' : 'Seleziona prima un barbiere'}
+                  {dateIsBlocked 
+                    ? 'Questa data è bloccata' 
+                    : !barberAvailableOnDay 
+                    ? 'Il barbiere non è disponibile in questo giorno' 
+                    : selectedBarber 
+                    ? 'Nessun orario disponibile per questa data' 
+                    : 'Seleziona prima un barbiere'}
                 </Text>
               </View>
             )}

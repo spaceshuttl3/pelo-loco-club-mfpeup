@@ -34,12 +34,21 @@ interface Barber {
   email: string;
   phone: string;
   is_active: boolean;
+  available_days: string[];
+  available_hours: { start: string; end: string };
 }
 
 interface Service {
   id: string;
   name: string;
   earns_fidelity_reward?: boolean;
+  duration: number;
+}
+
+interface BlockedDate {
+  id: string;
+  barber_id: string;
+  blocked_date: string;
 }
 
 export default function ManageAppointmentsScreen() {
@@ -59,6 +68,7 @@ export default function ManageAppointmentsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [showPastAppointments, setShowPastAppointments] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'booked' | 'completed' | 'cancelled'>('all');
@@ -92,7 +102,7 @@ export default function ManageAppointmentsScreen() {
       // Try to fetch with earns_fidelity_reward column
       const { data, error } = await supabase
         .from('services')
-        .select('id, name, earns_fidelity_reward');
+        .select('id, name, earns_fidelity_reward, duration');
 
       if (error) {
         console.error('Error fetching services:', error);
@@ -101,7 +111,7 @@ export default function ManageAppointmentsScreen() {
           console.log('earns_fidelity_reward column does not exist yet. Fetching without it...');
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('services')
-            .select('id, name');
+            .select('id, name, duration');
           
           if (fallbackError) {
             console.error('Error fetching services (fallback):', fallbackError);
@@ -119,6 +129,27 @@ export default function ManageAppointmentsScreen() {
       console.error('Error in fetchServices:', error);
     }
   };
+
+  const fetchBlockedDates = useCallback(async () => {
+    if (!selectedAppointment?.barber_id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('barber_blocked_dates')
+        .select('*')
+        .eq('barber_id', selectedAppointment.barber_id);
+
+      if (error) {
+        console.error('Error fetching blocked dates:', error);
+        return;
+      }
+
+      console.log('Blocked dates fetched:', data?.length || 0);
+      setBlockedDates(data || []);
+    } catch (error) {
+      console.error('Error in fetchBlockedDates:', error);
+    }
+  }, [selectedAppointment?.barber_id]);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -198,12 +229,47 @@ export default function ManageAppointmentsScreen() {
   useEffect(() => {
     if (selectedAppointment && editDate) {
       fetchExistingAppointmentsForDate(selectedAppointment.barber_id || '', editDate);
+      fetchBlockedDates();
     }
-  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate]);
+  }, [editDate, selectedAppointment, fetchExistingAppointmentsForDate, fetchBlockedDates]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchAppointments();
+  };
+
+  const sendAppointmentEmail = async (
+    userEmail: string,
+    userName: string,
+    appointmentDetails: {
+      service: string;
+      date: string;
+      time: string;
+      barberName: string;
+      status: 'updated' | 'cancelled';
+      reason?: string;
+    }
+  ) => {
+    try {
+      console.log('Sending appointment email notification...');
+      
+      // Call Supabase Edge Function to send email
+      const { data, error } = await supabase.functions.invoke('send-appointment-notification', {
+        body: {
+          to: userEmail,
+          userName,
+          ...appointmentDetails,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending email:', error);
+      } else {
+        console.log('Email sent successfully:', data);
+      }
+    } catch (error) {
+      console.error('Error in sendAppointmentEmail:', error);
+    }
   };
 
   const updateAppointmentStatus = async (appointment: Appointment, status: string) => {
@@ -360,6 +426,22 @@ export default function ManageAppointmentsScreen() {
 
       if (error) throw error;
 
+      // Send email notification
+      if (selectedAppointment.user?.email) {
+        await sendAppointmentEmail(
+          selectedAppointment.user.email,
+          selectedAppointment.user.name || 'Cliente',
+          {
+            service: selectedAppointment.service,
+            date: new Date(selectedAppointment.date).toLocaleDateString('it-IT'),
+            time: selectedAppointment.time,
+            barberName: selectedAppointment.barber?.name || 'Barbiere',
+            status: 'cancelled',
+            reason: cancellationReason.trim(),
+          }
+        );
+      }
+
       // If there's a pending fidelity redemption, cancel it and refund credits
       if (selectedAppointment.fidelity_redemption_id) {
         const { data: redemptionData, error: redemptionFetchError } = await supabase
@@ -405,7 +487,7 @@ export default function ManageAppointmentsScreen() {
         }
       }
 
-      Alert.alert('Successo', 'Appuntamento annullato. Il cliente è stato notificato.');
+      Alert.alert('Successo', 'Appuntamento annullato. Il cliente è stato notificato via email.');
       setCancelModalVisible(false);
       setSelectedAppointment(null);
       setCancellationReason('');
@@ -421,18 +503,53 @@ export default function ManageAppointmentsScreen() {
     setEditDate(new Date(appointment.date));
     setEditTime(appointment.time);
     setExistingAppointments([]);
+    setBlockedDates([]);
     setEditModalVisible(true);
   };
+
+  const isDateBlocked = useCallback((checkDate: Date): boolean => {
+    const dateString = checkDate.toISOString().split('T')[0];
+    return blockedDates.some(bd => bd.blocked_date === dateString);
+  }, [blockedDates]);
+
+  const isBarberAvailableOnDay = useCallback((checkDate: Date): boolean => {
+    if (!selectedAppointment?.barber_id) return false;
+    
+    const barber = barbers.find(b => b.id === selectedAppointment.barber_id);
+    if (!barber) return false;
+
+    const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
+    return barber.available_days.includes(dayName);
+  }, [selectedAppointment?.barber_id, barbers]);
 
   const isTimeSlotAvailable = (timeSlot: string): boolean => {
     if (!selectedAppointment) return true;
 
+    // Check if time is within barber's working hours
+    const barber = barbers.find(b => b.id === selectedAppointment.barber_id);
+    if (barber) {
+      const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
+      const slotTimeInMinutes = slotHour * 60 + slotMinute;
+      
+      const [startHour, startMinute] = barber.available_hours.start.split(':').map(Number);
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      
+      const [endHour, endMinute] = barber.available_hours.end.split(':').map(Number);
+      const endTimeInMinutes = endHour * 60 + endMinute;
+      
+      if (slotTimeInMinutes < startTimeInMinutes || slotTimeInMinutes >= endTimeInMinutes) {
+        return false;
+      }
+    }
+
     const serviceName = selectedAppointment.service;
-    const serviceDuration = getServiceDuration(serviceName);
+    const service = services.find(s => s.name === serviceName);
+    const serviceDuration = service?.duration || 30;
 
     for (const appointment of existingAppointments) {
       const appointmentTime = appointment.time;
-      const appointmentDuration = getServiceDuration(appointment.service);
+      const appointmentService = services.find(s => s.name === appointment.service);
+      const appointmentDuration = appointmentService?.duration || 30;
 
       const [slotHour, slotMinute] = timeSlot.split(':').map(Number);
       const slotTimeInMinutes = slotHour * 60 + slotMinute;
@@ -455,24 +572,26 @@ export default function ManageAppointmentsScreen() {
     return true;
   };
 
-  const getServiceDuration = (serviceName: string): number => {
-    const serviceDurations: { [key: string]: number } = {
-      'Haircut': 30,
-      'Beard Trim': 15,
-      'Haircut + Beard': 45,
-      'Hair Coloring': 60,
-      'Kids Haircut': 20,
-    };
-    return serviceDurations[serviceName] || 30;
-  };
-
   const handleUpdateAppointment = async () => {
     if (!selectedAppointment) return;
+
+    // Check if date is blocked
+    if (isDateBlocked(editDate)) {
+      Alert.alert('Errore', 'Questa data non è disponibile per prenotazioni');
+      return;
+    }
+
+    // Check if barber is available on this day
+    if (!isBarberAvailableOnDay(editDate)) {
+      const dayName = editDate.toLocaleDateString('it-IT', { weekday: 'long' });
+      Alert.alert('Errore', `Il barbiere non è disponibile di ${dayName}`);
+      return;
+    }
 
     if (!isTimeSlotAvailable(editTime)) {
       Alert.alert(
         'Orario Non Disponibile',
-        'Questo orario è in conflitto con un altro appuntamento. Seleziona un orario diverso.',
+        'Questo orario è in conflitto con un altro appuntamento o è fuori dall\'orario di lavoro del barbiere. Seleziona un orario diverso.',
         [{ text: 'OK' }]
       );
       return;
@@ -480,6 +599,11 @@ export default function ManageAppointmentsScreen() {
 
     setUpdating(true);
     try {
+      const oldDate = new Date(selectedAppointment.date).toLocaleDateString('it-IT');
+      const oldTime = selectedAppointment.time;
+      const newDate = editDate.toLocaleDateString('it-IT');
+      const newTime = editTime;
+
       const { error } = await supabase
         .from('appointments')
         .update({
@@ -490,10 +614,28 @@ export default function ManageAppointmentsScreen() {
 
       if (error) throw error;
 
-      Alert.alert('Successo', 'Appuntamento aggiornato con successo');
+      // Send email notification if date or time changed
+      if (oldDate !== newDate || oldTime !== newTime) {
+        if (selectedAppointment.user?.email) {
+          await sendAppointmentEmail(
+            selectedAppointment.user.email,
+            selectedAppointment.user.name || 'Cliente',
+            {
+              service: selectedAppointment.service,
+              date: newDate,
+              time: newTime,
+              barberName: selectedAppointment.barber?.name || 'Barbiere',
+              status: 'updated',
+            }
+          );
+        }
+      }
+
+      Alert.alert('Successo', 'Appuntamento aggiornato con successo. Il cliente è stato notificato via email.');
       setEditModalVisible(false);
       setSelectedAppointment(null);
       setExistingAppointments([]);
+      setBlockedDates([]);
       fetchAppointments();
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -504,11 +646,20 @@ export default function ManageAppointmentsScreen() {
   };
 
   const generateTimeSlots = () => {
+    if (!selectedAppointment?.barber_id) return [];
+    
+    const barber = barbers.find(b => b.id === selectedAppointment.barber_id);
+    if (!barber) return [];
+
     const slots: string[] = [];
-    for (let hour = 9; hour < 18; hour++) {
+    const startHour = parseInt(barber.available_hours.start.split(':')[0]);
+    const endHour = parseInt(barber.available_hours.end.split(':')[0]);
+
+    for (let hour = startHour; hour < endHour; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       slots.push(`${hour.toString().padStart(2, '0')}:30`);
     }
+    
     return slots;
   };
 
@@ -959,6 +1110,22 @@ export default function ManageAppointmentsScreen() {
               </View>
             )}
 
+            {isDateBlocked(editDate) && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  ⚠️ Questa data è bloccata
+                </Text>
+              </View>
+            )}
+
+            {!isBarberAvailableOnDay(editDate) && selectedAppointment && (
+              <View style={[commonStyles.card, { backgroundColor: colors.error, padding: 12, marginBottom: 12 }]}>
+                <Text style={[commonStyles.text, { fontSize: 14, fontWeight: '600' }]}>
+                  ⚠️ Il barbiere non è disponibile in questo giorno
+                </Text>
+              </View>
+            )}
+
             <Text style={[commonStyles.text, { marginBottom: 8, fontWeight: '600' }]}>
               Seleziona Nuova Data
             </Text>
@@ -1014,7 +1181,7 @@ export default function ManageAppointmentsScreen() {
                         if (isAvailable) {
                           setEditTime(slot);
                         } else {
-                          Alert.alert('Non disponibile', 'Questo orario è in conflitto con un altro appuntamento');
+                          Alert.alert('Non disponibile', 'Questo orario è in conflitto con un altro appuntamento o è fuori dall\'orario di lavoro');
                         }
                       }}
                       disabled={!isAvailable}
@@ -1046,6 +1213,7 @@ export default function ManageAppointmentsScreen() {
                   setEditModalVisible(false);
                   setSelectedAppointment(null);
                   setExistingAppointments([]);
+                  setBlockedDates([]);
                 }}
                 disabled={updating}
                 activeOpacity={0.7}
