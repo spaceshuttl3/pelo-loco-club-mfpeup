@@ -184,6 +184,29 @@ export default function FidelityUsersScreen() {
     }
   };
 
+  const openAdjustModal = () => {
+    console.log('Opening adjust modal');
+    // Close the user details modal first
+    setModalVisible(false);
+    // Small delay to ensure smooth transition
+    setTimeout(() => {
+      setAdjustModalVisible(true);
+    }, 300);
+  };
+
+  const closeAdjustModal = () => {
+    console.log('Closing adjust modal');
+    setAdjustModalVisible(false);
+    setAdjustAmount('');
+    setAdjustReason('');
+    // Reopen the user details modal
+    setTimeout(() => {
+      if (selectedUser) {
+        setModalVisible(true);
+      }
+    }, 300);
+  };
+
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -316,10 +339,7 @@ export default function FidelityUsersScreen() {
 
                 <TouchableOpacity
                   style={[buttonStyles.primary, { marginBottom: 24 }]}
-                  onPress={() => {
-                    console.log('Aggiusta Crediti button pressed');
-                    setAdjustModalVisible(true);
-                  }}
+                  onPress={openAdjustModal}
                   activeOpacity={0.7}
                 >
                   <Text style={buttonStyles.text}>Aggiusta Crediti</Text>
@@ -427,14 +447,14 @@ export default function FidelityUsersScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* Adjust Credits Modal */}
+      {/* Adjust Credits Modal - Separate from User History Modal */}
       <Modal
         visible={adjustModalVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => {
           if (!adjusting) {
-            setAdjustModalVisible(false);
+            closeAdjustModal();
           }
         }}
       >
@@ -442,14 +462,26 @@ export default function FidelityUsersScreen() {
           style={{ flex: 1 }} 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <View style={{ 
-            flex: 1, 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            padding: 20,
-          }}>
-            <View style={[commonStyles.card, { width: '100%', maxWidth: 400, padding: 24 }]}>
+          <TouchableOpacity 
+            style={{ 
+              flex: 1, 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              padding: 20,
+            }}
+            activeOpacity={1}
+            onPress={() => {
+              if (!adjusting) {
+                closeAdjustModal();
+              }
+            }}
+          >
+            <TouchableOpacity 
+              activeOpacity={1} 
+              style={[commonStyles.card, { width: '100%', maxWidth: 400, padding: 24 }]}
+              onPress={(e) => e.stopPropagation()}
+            >
               <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
                 Aggiusta Crediti
               </Text>
@@ -498,21 +530,15 @@ export default function FidelityUsersScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
-                  onPress={() => {
-                    if (!adjusting) {
-                      setAdjustModalVisible(false);
-                      setAdjustAmount('');
-                      setAdjustReason('');
-                    }
-                  }}
+                  onPress={closeAdjustModal}
                   disabled={adjusting}
                   activeOpacity={0.7}
                 >
                   <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
