@@ -82,12 +82,28 @@ export default function ManageAppointmentsScreen() {
 
   const fetchServices = async () => {
     try {
+      // Try to fetch with earns_fidelity_reward column
       const { data, error } = await supabase
         .from('services')
         .select('id, name, earns_fidelity_reward');
 
       if (error) {
         console.error('Error fetching services:', error);
+        // If the column doesn't exist, fetch without it
+        if (error.code === '42703') {
+          console.log('earns_fidelity_reward column does not exist yet. Please run the migration.');
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('services')
+            .select('id, name');
+          
+          if (fallbackError) {
+            console.error('Error fetching services (fallback):', fallbackError);
+            return;
+          }
+          
+          // Set all services to earn rewards by default
+          setServices((fallbackData || []).map(s => ({ ...s, earns_fidelity_reward: true })));
+        }
         return;
       }
 
@@ -190,6 +206,8 @@ export default function ManageAppointmentsScreen() {
 
   const updateAppointmentStatus = async (appointment: Appointment, status: string) => {
     try {
+      console.log(`Updating appointment ${appointment.id} to status: ${status}`);
+      
       // Update appointment status
       const { error: updateError } = await supabase
         .from('appointments')
@@ -201,13 +219,18 @@ export default function ManageAppointmentsScreen() {
       // If completing an appointment
       if (status === 'completed') {
         const userId = appointment.user_id;
+        console.log(`Processing completion for user: ${userId}`);
         
         // Check if this service earns fidelity rewards
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false; // Default to true if not set
         
+        console.log(`Service: ${appointment.service}, Earns reward: ${shouldEarnReward}, Payment status: ${appointment.payment_status}`);
+        
         // Award fidelity credit if payment is completed and service earns rewards
         if (appointment.payment_status === 'paid' && shouldEarnReward) {
+          console.log('Awarding fidelity credit...');
+          
           // Get current user credits
           const { data: userData, error: userError } = await supabase
             .from('users')
@@ -221,6 +244,8 @@ export default function ManageAppointmentsScreen() {
             const currentCredits = userData?.fidelity_credits || 0;
             const newCredits = currentCredits + 1;
 
+            console.log(`Current credits: ${currentCredits}, New credits: ${newCredits}`);
+
             // Update user credits
             const { error: creditError } = await supabase
               .from('users')
@@ -230,6 +255,8 @@ export default function ManageAppointmentsScreen() {
             if (creditError) {
               console.error('Error updating credits:', creditError);
             } else {
+              console.log('Credits updated successfully');
+              
               // Record transaction
               const { error: transactionError } = await supabase
                 .from('fidelity_transactions')
@@ -244,13 +271,24 @@ export default function ManageAppointmentsScreen() {
 
               if (transactionError) {
                 console.error('Error recording transaction:', transactionError);
+              } else {
+                console.log('Transaction recorded successfully');
               }
             }
+          }
+        } else {
+          if (!shouldEarnReward) {
+            console.log('Service does not earn fidelity rewards');
+          }
+          if (appointment.payment_status !== 'paid') {
+            console.log('Payment not completed, no credits awarded');
           }
         }
 
         // If there's a fidelity redemption, mark it as confirmed/used
         if (appointment.fidelity_redemption_id) {
+          console.log(`Confirming fidelity redemption: ${appointment.fidelity_redemption_id}`);
+          
           const { error: redemptionError } = await supabase
             .from('fidelity_redemptions')
             .update({ 
@@ -262,6 +300,8 @@ export default function ManageAppointmentsScreen() {
 
           if (redemptionError) {
             console.error('Error updating redemption:', redemptionError);
+          } else {
+            console.log('Redemption confirmed successfully');
           }
         }
       }
@@ -276,6 +316,10 @@ export default function ManageAppointmentsScreen() {
         
         if (appointment.payment_status === 'paid' && shouldEarnReward) {
           successMessage += '. 1 credito fedeltà assegnato!';
+        } else if (appointment.payment_status !== 'paid') {
+          successMessage += '. Nessun credito assegnato (pagamento non completato).';
+        } else if (!shouldEarnReward) {
+          successMessage += '. Questo servizio non guadagna crediti fedeltà.';
         }
         
         if (appointment.fidelity_redemption_id) {
