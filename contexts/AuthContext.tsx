@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { User, UserRole } from '../types';
 import { useRouter, useSegments } from 'expo-router';
+import { registerForPushNotificationsAsync, savePushToken } from '../services/notificationService';
 
 interface AuthContextType {
   user: User | null;
@@ -97,6 +98,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('User profile fetched successfully:', data);
       setUser(data);
+      
+      // Register for push notifications after successful login
+      if (data.role === 'customer') {
+        registerForPushNotificationsAsync().then(token => {
+          if (token) {
+            savePushToken(userId, token);
+          }
+        }).catch(error => {
+          console.error('Error registering for push notifications:', error);
+        });
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);

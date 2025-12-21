@@ -224,9 +224,14 @@ export default function AdminDashboardScreen() {
     },
   ];
 
-  // Calculate responsive card width - always 1 per row for consistency
-  const cardWidth = '100%';
+  // Calculate responsive sizing - 2 buttons per row
+  const cardGap = 12;
+  const horizontalPadding = 16;
+  const cardWidth = (width - (horizontalPadding * 2) - cardGap) / 2;
   const titleFontSize = Math.min(width * 0.065, 26);
+  const cardHeight = Math.min(cardWidth * 0.85, 120); // Responsive height based on width
+  const iconSize = Math.min(cardWidth * 0.18, 24);
+  const cardTitleSize = Math.min(cardWidth * 0.11, 14);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -279,7 +284,7 @@ export default function AdminDashboardScreen() {
           Azioni Rapide
         </Text>
 
-        <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: cardGap }}>
           {quickActions.map((action, actionIndex) => (
             <TouchableOpacity
               key={`action-${action.id}-${actionIndex}`}
@@ -287,14 +292,15 @@ export default function AdminDashboardScreen() {
                 console.log('Quick action pressed:', action.title);
                 router.push(action.route as any);
               }}
+              style={{ width: cardWidth }}
             >
-              <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', padding: 16, position: 'relative' }]}>
+              <View style={[commonStyles.card, { padding: 12, height: cardHeight, position: 'relative' }]}>
                 {action.badge !== undefined && action.badge > 0 && (
                   <View
                     style={{
                       position: 'absolute',
-                      top: 10,
-                      right: 10,
+                      top: 8,
+                      right: 8,
                       backgroundColor: colors.error,
                       borderRadius: 10,
                       minWidth: 20,
@@ -311,21 +317,23 @@ export default function AdminDashboardScreen() {
                 )}
                 <View
                   style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 25,
+                    width: iconSize * 2,
+                    height: iconSize * 2,
+                    borderRadius: iconSize,
                     backgroundColor: action.color,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginRight: 14,
+                    marginBottom: 10,
                   }}
                 >
-                  <IconSymbol name={action.icon as any} size={24} color={colors.text} />
+                  <IconSymbol name={action.icon as any} size={iconSize} color={colors.text} />
                 </View>
-                <Text style={[commonStyles.text, { fontSize: 15, fontWeight: '600', flex: 1 }]}>
+                <Text 
+                  style={[commonStyles.text, { fontSize: cardTitleSize, fontWeight: '600' }]}
+                  numberOfLines={2}
+                >
                   {action.title}
                 </Text>
-                <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
           ))}
