@@ -199,12 +199,8 @@ export default function FidelityUsersScreen() {
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <View style={[commonStyles.header, { paddingTop: Platform.OS === 'android' ? 16 : 0 }]}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={{ marginRight: 16, padding: 8 }} 
-          activeOpacity={0.7}
-        >
+      <View style={commonStyles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }} activeOpacity={0.7}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Crediti Utenti</Text>
@@ -286,10 +282,10 @@ export default function FidelityUsersScreen() {
         <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.background }]} edges={['top']}>
           {selectedUser && (
             <>
-              <View style={[commonStyles.header, { paddingTop: Platform.OS === 'android' ? 16 : 0 }]}>
+              <View style={commonStyles.header}>
                 <TouchableOpacity 
                   onPress={() => setModalVisible(false)} 
-                  style={{ marginRight: 16, padding: 8 }} 
+                  style={{ marginRight: 16 }} 
                   activeOpacity={0.7}
                 >
                   <IconSymbol name="chevron.left" size={24} color={colors.text} />
