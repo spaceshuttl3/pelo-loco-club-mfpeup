@@ -306,156 +306,162 @@ export default function ReportsScreen() {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Seleziona Periodo
-            </Text>
+          <ScrollView 
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              padding: 20,
+            }}
+          >
+            <View style={[commonStyles.card, { width: '100%', maxWidth: 400 }]}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+                Seleziona Periodo
+              </Text>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterType === 'today' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterType('today');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Oggi</Text>
-              {filterType === 'today' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterType === 'today' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  setFilterType('today');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Oggi</Text>
+                {filterType === 'today' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterType === 'week' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterType('week');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Ultimi 7 Giorni</Text>
-              {filterType === 'week' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterType === 'week' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  setFilterType('week');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Ultimi 7 Giorni</Text>
+                {filterType === 'week' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterType === 'month' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterType('month');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Ultimo Mese</Text>
-              {filterType === 'month' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterType === 'month' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  setFilterType('month');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Ultimo Mese</Text>
+                {filterType === 'month' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 16 },
-                filterType === 'custom' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => setFilterType('custom')}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Periodo Personalizzato</Text>
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 16 },
+                  filterType === 'custom' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterType('custom')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Periodo Personalizzato</Text>
+                {filterType === 'custom' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
               {filterType === 'custom' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                <>
+                  <TouchableOpacity
+                    style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
+                    onPress={() => setShowStartDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.text}>Data Inizio</Text>
+                    <Text style={[commonStyles.text, { color: colors.primary }]}>
+                      {startDate.toLocaleDateString('it-IT')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showStartDatePicker && (
+                    <DateTimePicker
+                      value={startDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowStartDatePicker(false);
+                        if (selectedDate) {
+                          setStartDate(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+
+                  <TouchableOpacity
+                    style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+                    onPress={() => setShowEndDatePicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.text}>Data Fine</Text>
+                    <Text style={[commonStyles.text, { color: colors.primary }]}>
+                      {endDate.toLocaleDateString('it-IT')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showEndDatePicker && (
+                    <DateTimePicker
+                      value={endDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowEndDatePicker(false);
+                        if (selectedDate) {
+                          setEndDate(selectedDate);
+                        }
+                      }}
+                      minimumDate={startDate}
+                    />
+                  )}
+                </>
               )}
-            </TouchableOpacity>
 
-            {filterType === 'custom' && (
-              <>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
                 <TouchableOpacity
-                  style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
-                  onPress={() => setShowStartDatePicker(true)}
+                  style={[buttonStyles.primary, { flex: 1 }]}
+                  onPress={() => setShowFilterModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Text style={commonStyles.text}>Data Inizio</Text>
-                  <Text style={[commonStyles.text, { color: colors.primary }]}>
-                    {startDate.toLocaleDateString('it-IT')}
-                  </Text>
+                  <Text style={buttonStyles.text}>Applica</Text>
                 </TouchableOpacity>
-
-                {showStartDatePicker && (
-                  <DateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowStartDatePicker(false);
-                      if (selectedDate) {
-                        setStartDate(selectedDate);
-                      }
-                    }}
-                  />
-                )}
-
                 <TouchableOpacity
-                  style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
-                  onPress={() => setShowEndDatePicker(true)}
+                  style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
+                  onPress={() => setShowFilterModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Text style={commonStyles.text}>Data Fine</Text>
-                  <Text style={[commonStyles.text, { color: colors.primary }]}>
-                    {endDate.toLocaleDateString('it-IT')}
-                  </Text>
+                  <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
                 </TouchableOpacity>
-
-                {showEndDatePicker && (
-                  <DateTimePicker
-                    value={endDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEndDatePicker(false);
-                      if (selectedDate) {
-                        setEndDate(selectedDate);
-                      }
-                    }}
-                    minimumDate={startDate}
-                  />
-                )}
-              </>
-            )}
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1 }]}
-                onPress={() => setShowFilterModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={buttonStyles.text}>Applica</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[buttonStyles.primary, { flex: 1, backgroundColor: colors.card }]}
-                onPress={() => setShowFilterModal(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={[buttonStyles.text, { color: colors.text }]}>Annulla</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>

@@ -62,6 +62,11 @@ export default function ManageAppointmentsScreen() {
   const [showPastAppointments, setShowPastAppointments] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'booked' | 'completed' | 'cancelled'>('all');
+  const [filterTimeframe, setFilterTimeframe] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [customStartDate, setCustomStartDate] = useState(new Date());
+  const [customEndDate, setCustomEndDate] = useState(new Date());
+  const [showCustomStartPicker, setShowCustomStartPicker] = useState(false);
+  const [showCustomEndPicker, setShowCustomEndPicker] = useState(false);
 
   const fetchBarbers = async () => {
     try {
@@ -119,10 +124,6 @@ export default function ManageAppointmentsScreen() {
     try {
       console.log('Fetching appointments...');
       
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayString = today.toISOString().split('T')[0];
-      
       let query = supabase
         .from('appointments')
         .select(`
@@ -135,16 +136,15 @@ export default function ManageAppointmentsScreen() {
             credits_deducted,
             reward:fidelity_rewards(name, description)
           )
-        `)
-        .gte('date', todayString);
+        `);
 
       if (selectedBarberId) {
         query = query.eq('barber_id', selectedBarberId);
       }
 
       const { data, error } = await query
-        .order('date', { ascending: true })
-        .order('time', { ascending: true });
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
 
       if (error) {
         console.error('Error fetching appointments:', error);
@@ -524,27 +524,61 @@ export default function ManageAppointmentsScreen() {
   const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
   const todayString = now.toISOString().split('T')[0];
 
+  // Apply filters
   let filteredAppointments = appointments;
+
+  // Filter by status
   if (filterStatus !== 'all') {
-    filteredAppointments = appointments.filter(apt => apt.status === filterStatus);
+    filteredAppointments = filteredAppointments.filter(apt => apt.status === filterStatus);
   }
 
+  // Filter by timeframe
+  if (filterTimeframe !== 'all') {
+    if (filterTimeframe === 'today') {
+      filteredAppointments = filteredAppointments.filter(apt => apt.date === todayString);
+    } else if (filterTimeframe === 'week') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoString = weekAgo.toISOString().split('T')[0];
+      filteredAppointments = filteredAppointments.filter(apt => apt.date >= weekAgoString);
+    } else if (filterTimeframe === 'month') {
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      const monthAgoString = monthAgo.toISOString().split('T')[0];
+      filteredAppointments = filteredAppointments.filter(apt => apt.date >= monthAgoString);
+    } else if (filterTimeframe === 'custom') {
+      const startDateString = customStartDate.toISOString().split('T')[0];
+      const endDateString = customEndDate.toISOString().split('T')[0];
+      filteredAppointments = filteredAppointments.filter(
+        apt => apt.date >= startDateString && apt.date <= endDateString
+      );
+    }
+  }
+
+  // SMART LOGIC: Upcoming = booked appointments that are in the future (date > today OR date = today AND time > now)
+  // Past = everything else (completed, cancelled, or booked but in the past)
   const upcomingAppointments = filteredAppointments.filter((apt) => {
+    // Only booked appointments can be upcoming
     if (apt.status !== 'booked') return false;
     
     const aptDate = apt.date;
     
+    // Future dates are upcoming
     if (aptDate > todayString) return true;
     
+    // Today's appointments: check if time hasn't passed yet
     if (aptDate === todayString) {
       const [aptHour, aptMinute] = apt.time.split(':').map(Number);
       const aptTimeInMinutes = aptHour * 60 + aptMinute;
       return aptTimeInMinutes > currentTimeInMinutes;
     }
     
+    // Past dates are not upcoming
     return false;
   });
 
+  // Past appointments = all appointments that are NOT upcoming
+  // This includes: completed, cancelled, and booked appointments that are in the past
   const pastAppointments = filteredAppointments.filter(
     (apt) => !upcomingAppointments.includes(apt)
   );
@@ -820,9 +854,14 @@ export default function ManageAppointmentsScreen() {
               onPress={() => setShowPastAppointments(!showPastAppointments)}
               activeOpacity={0.7}
             >
-              <Text style={[commonStyles.subtitle, { marginBottom: 0 }]}>
-                Appuntamenti Passati ({pastAppointments.length})
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[commonStyles.subtitle, { marginBottom: 4 }]}>
+                  Appuntamenti Passati ({pastAppointments.length})
+                </Text>
+                <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                  Include: completati, annullati e scaduti
+                </Text>
+              </View>
               <IconSymbol
                 name={showPastAppointments ? 'chevron.up' : 'chevron.down'}
                 size={24}
@@ -840,14 +879,19 @@ export default function ManageAppointmentsScreen() {
                       </Text>
                       <View
                         style={{
-                          backgroundColor: appointment.status === 'completed' ? colors.primary : colors.error,
+                          backgroundColor: 
+                            appointment.status === 'completed' ? colors.primary : 
+                            appointment.status === 'cancelled' ? colors.error : 
+                            colors.accent,
                           paddingHorizontal: 12,
                           paddingVertical: 4,
                           borderRadius: 12,
                         }}
                       >
                         <Text style={[commonStyles.text, { fontSize: 12 }]}>
-                          {appointment.status === 'completed' ? 'COMPLETATO' : 'ANNULLATO'}
+                          {appointment.status === 'completed' ? 'COMPLETATO' : 
+                           appointment.status === 'cancelled' ? 'ANNULLATO' : 
+                           'SCADUTO'}
                         </Text>
                       </View>
                     </View>
@@ -1085,95 +1129,235 @@ export default function ManageAppointmentsScreen() {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[commonStyles.card, { width: '90%' }]}>
-            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
-              Filtra Appuntamenti
-            </Text>
+          <ScrollView 
+            contentContainerStyle={{ 
+              flexGrow: 1, 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              padding: 20,
+            }}
+          >
+            <View style={[commonStyles.card, { width: '100%', maxWidth: 400 }]}>
+              <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+                Filtra Appuntamenti
+              </Text>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterStatus === 'all' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterStatus('all');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Tutti gli Appuntamenti</Text>
-              {filterStatus === 'all' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 8 }]}>
+                Stato
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterStatus === 'all' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterStatus('all')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Tutti gli Appuntamenti</Text>
+                {filterStatus === 'all' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterStatus === 'booked' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterStatus('booked')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Prenotati</Text>
+                {filterStatus === 'booked' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterStatus === 'completed' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterStatus('completed')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Completati</Text>
+                {filterStatus === 'completed' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 16 },
+                  filterStatus === 'cancelled' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterStatus('cancelled')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Annullati</Text>
+                {filterStatus === 'cancelled' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <Text style={[commonStyles.text, { fontWeight: '600', marginTop: 8, marginBottom: 8 }]}>
+                Periodo
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterTimeframe === 'all' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterTimeframe('all')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Tutti i Periodi</Text>
+                {filterTimeframe === 'all' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterTimeframe === 'today' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterTimeframe('today')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Oggi</Text>
+                {filterTimeframe === 'today' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterTimeframe === 'week' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterTimeframe('week')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Ultimi 7 Giorni</Text>
+                {filterTimeframe === 'week' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 12 },
+                  filterTimeframe === 'month' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterTimeframe('month')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Ultimo Mese</Text>
+                {filterTimeframe === 'month' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  commonStyles.card,
+                  commonStyles.row,
+                  { marginBottom: 16 },
+                  filterTimeframe === 'custom' && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => setFilterTimeframe('custom')}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.text}>Periodo Personalizzato</Text>
+                {filterTimeframe === 'custom' && (
+                  <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+
+              {filterTimeframe === 'custom' && (
+                <>
+                  <TouchableOpacity
+                    style={[commonStyles.card, commonStyles.row, { marginBottom: 12 }]}
+                    onPress={() => setShowCustomStartPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.text}>Data Inizio</Text>
+                    <Text style={[commonStyles.text, { color: colors.primary }]}>
+                      {customStartDate.toLocaleDateString('it-IT')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showCustomStartPicker && (
+                    <DateTimePicker
+                      value={customStartDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowCustomStartPicker(false);
+                        if (selectedDate) {
+                          setCustomStartDate(selectedDate);
+                        }
+                      }}
+                    />
+                  )}
+
+                  <TouchableOpacity
+                    style={[commonStyles.card, commonStyles.row, { marginBottom: 16 }]}
+                    onPress={() => setShowCustomEndPicker(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.text}>Data Fine</Text>
+                    <Text style={[commonStyles.text, { color: colors.primary }]}>
+                      {customEndDate.toLocaleDateString('it-IT')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showCustomEndPicker && (
+                    <DateTimePicker
+                      value={customEndDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowCustomEndPicker(false);
+                        if (selectedDate) {
+                          setCustomEndDate(selectedDate);
+                        }
+                      }}
+                      minimumDate={customStartDate}
+                    />
+                  )}
+                </>
               )}
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterStatus === 'booked' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterStatus('booked');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Prenotati</Text>
-              {filterStatus === 'booked' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 12 },
-                filterStatus === 'completed' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterStatus('completed');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Completati</Text>
-              {filterStatus === 'completed' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                commonStyles.card,
-                commonStyles.row,
-                { marginBottom: 16 },
-                filterStatus === 'cancelled' && { borderColor: colors.primary, borderWidth: 2 },
-              ]}
-              onPress={() => {
-                setFilterStatus('cancelled');
-                setShowFilterModal(false);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.text}>Annullati</Text>
-              {filterStatus === 'cancelled' && (
-                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[buttonStyles.primary, { backgroundColor: colors.card }]}
-              onPress={() => setShowFilterModal(false)}
-              activeOpacity={0.7}
-            >
-              <Text style={[buttonStyles.text, { color: colors.text }]}>Chiudi</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[buttonStyles.primary, { backgroundColor: colors.card }]}
+                onPress={() => setShowFilterModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[buttonStyles.text, { color: colors.text }]}>Chiudi</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>

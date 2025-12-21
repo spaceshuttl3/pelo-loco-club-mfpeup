@@ -230,70 +230,69 @@ export default function FidelityUsersScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={commonStyles.content}>
-        <ScrollView
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-        >
-          <TextInput
-            style={[commonStyles.input, { marginBottom: 16 }]}
-            placeholder="Cerca utente..."
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+      <ScrollView
+        style={commonStyles.content}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <TextInput
+          style={[commonStyles.input, { marginBottom: 16 }]}
+          placeholder="Cerca utente..."
+          placeholderTextColor={colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
 
-          {filteredUsers.length === 0 ? (
-            <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
-              <IconSymbol name="person.3" size={48} color={colors.textSecondary} />
-              <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
-                Nessun utente trovato
-              </Text>
-            </View>
-          ) : (
-            <React.Fragment>
-              {filteredUsers.map((user, index) => (
-                <TouchableOpacity
-                  key={`user-${user.id}-${index}`}
-                  style={[commonStyles.card, { marginBottom: 12 }]}
-                  onPress={() => fetchUserHistory(user)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[commonStyles.row, { marginBottom: 8 }]}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
-                        {user.name}
-                      </Text>
-                      <Text style={commonStyles.textSecondary}>
-                        {user.email}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        width: 60,
-                        height: 60,
-                        borderRadius: 30,
-                        backgroundColor: colors.primary,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
-                        {user.fidelity_credits || 0}
-                      </Text>
-                    </View>
+        {filteredUsers.length === 0 ? (
+          <View style={[commonStyles.card, { alignItems: 'center', padding: 40 }]}>
+            <IconSymbol name="person.3" size={48} color={colors.textSecondary} />
+            <Text style={[commonStyles.textSecondary, { marginTop: 16 }]}>
+              Nessun utente trovato
+            </Text>
+          </View>
+        ) : (
+          <React.Fragment>
+            {filteredUsers.map((user, index) => (
+              <TouchableOpacity
+                key={`user-${user.id}-${index}`}
+                style={[commonStyles.card, { marginBottom: 12 }]}
+                onPress={() => fetchUserHistory(user)}
+                activeOpacity={0.7}
+              >
+                <View style={[commonStyles.row, { marginBottom: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[commonStyles.text, { fontWeight: '600', marginBottom: 4 }]}>
+                      {user.name}
+                    </Text>
+                    <Text style={commonStyles.textSecondary}>
+                      {user.email}
+                    </Text>
                   </View>
-                  <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
-                    Tocca per vedere la cronologia
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </React.Fragment>
-          )}
-        </ScrollView>
-      </View>
+                  <View
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: colors.primary,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={[commonStyles.text, { fontSize: 20, fontWeight: 'bold' }]}>
+                      {user.fidelity_credits || 0}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[commonStyles.textSecondary, { fontSize: 12 }]}>
+                  Tocca per vedere la cronologia
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </React.Fragment>
+        )}
+      </ScrollView>
 
       {/* User History Modal */}
       <Modal
@@ -326,7 +325,7 @@ export default function FidelityUsersScreen() {
 
               <ScrollView 
                 style={commonStyles.content}
-                contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+                contentContainerStyle={{ paddingBottom: 120 }}
               >
                 <View style={[commonStyles.card, { backgroundColor: colors.primary, padding: 24, marginBottom: 16, alignItems: 'center' }]}>
                   <Text style={[commonStyles.text, { fontSize: 48, fontWeight: 'bold' }]}>
