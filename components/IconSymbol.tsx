@@ -18,9 +18,11 @@ const MAPPING = {
   'chevron.up': 'keyboard-arrow-up',
   'chevron.down': 'keyboard-arrow-down',
   'person.fill': 'person',
+  'person.3': 'people',
   'calendar': 'event',
   'calendar.badge.plus': 'event-available',
   'bag.fill': 'shopping-bag',
+  'bag': 'shopping-bag',
   'gift.fill': 'card-giftcard',
   'list.bullet': 'list',
   'clock': 'access-time',
@@ -32,6 +34,7 @@ const MAPPING = {
   'minus': 'remove',
   'plus': 'add',
   'photo': 'photo-camera',
+  'camera.fill': 'photo-camera',
   'pencil': 'edit',
   'ticket': 'confirmation-number',
   'shippingbox.fill': 'local-shipping',
@@ -52,6 +55,8 @@ const MAPPING = {
   'checkmark': 'check',
   'arrow.right': 'arrow-forward',
   'arrow.left': 'arrow-back',
+  'line.3.horizontal.decrease.circle': 'filter-list',
+  'phone.fill': 'phone',
 } as Partial<
   Record<
     import('expo-symbols').SymbolViewProps['name'],

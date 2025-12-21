@@ -60,6 +60,8 @@ export default function ManageAppointmentsScreen() {
   const [updating, setUpdating] = useState(false);
   const [existingAppointments, setExistingAppointments] = useState<ExistingAppointment[]>([]);
   const [showPastAppointments, setShowPastAppointments] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'booked' | 'completed' | 'cancelled'>('all');
 
   const fetchBarbers = async () => {
     try {
@@ -225,11 +227,15 @@ export default function ManageAppointmentsScreen() {
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false; // Default to true if not set
         
-        console.log(`Service: ${appointment.service}, Earns reward: ${shouldEarnReward}`);
+        // Check if this appointment was redeemed with fidelity points
+        const wasRedeemedWithFidelity = !!appointment.fidelity_redemption_id;
+        
+        console.log(`Service: ${appointment.service}, Earns reward: ${shouldEarnReward}, Was redeemed with fidelity: ${wasRedeemedWithFidelity}`);
         
         // Award fidelity credit when appointment is completed (regardless of payment status)
         // Since payment is in person, we award points on completion
-        if (shouldEarnReward) {
+        // BUT do NOT award points if the appointment was redeemed with fidelity points
+        if (shouldEarnReward && !wasRedeemedWithFidelity) {
           console.log('Awarding fidelity credit...');
           
           // Get current user credits
@@ -277,6 +283,8 @@ export default function ManageAppointmentsScreen() {
               }
             }
           }
+        } else if (wasRedeemedWithFidelity) {
+          console.log('Appointment was redeemed with fidelity points - no points awarded');
         } else {
           console.log('Service does not earn fidelity rewards');
         }
@@ -309,15 +317,14 @@ export default function ManageAppointmentsScreen() {
       if (status === 'completed') {
         const service = services.find(s => s.name === appointment.service);
         const shouldEarnReward = service?.earns_fidelity_reward !== false;
+        const wasRedeemedWithFidelity = !!appointment.fidelity_redemption_id;
         
-        if (shouldEarnReward) {
+        if (wasRedeemedWithFidelity) {
+          successMessage += '. Ricompensa confermata! (Nessun punto assegnato per appuntamenti riscattati con fedeltà)';
+        } else if (shouldEarnReward) {
           successMessage += '. 1 credito fedeltà assegnato!';
         } else {
           successMessage += '. Questo servizio non guadagna crediti fedeltà.';
-        }
-        
-        if (appointment.fidelity_redemption_id) {
-          successMessage += ' Ricompensa confermata!';
         }
       }
       
@@ -517,7 +524,12 @@ export default function ManageAppointmentsScreen() {
   const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
   const todayString = now.toISOString().split('T')[0];
 
-  const upcomingAppointments = appointments.filter((apt) => {
+  let filteredAppointments = appointments;
+  if (filterStatus !== 'all') {
+    filteredAppointments = appointments.filter(apt => apt.status === filterStatus);
+  }
+
+  const upcomingAppointments = filteredAppointments.filter((apt) => {
     if (apt.status !== 'booked') return false;
     
     const aptDate = apt.date;
@@ -533,7 +545,7 @@ export default function ManageAppointmentsScreen() {
     return false;
   });
 
-  const pastAppointments = appointments.filter(
+  const pastAppointments = filteredAppointments.filter(
     (apt) => !upcomingAppointments.includes(apt)
   );
 
@@ -543,8 +555,10 @@ export default function ManageAppointmentsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Appuntamenti</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Appuntamenti</Text>
+        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+          <IconSymbol name="line.3.horizontal.decrease.circle" size={28} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {Platform.OS === 'ios' ? (
@@ -1059,6 +1073,106 @@ export default function ManageAppointmentsScreen() {
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Filtra Appuntamenti
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'all' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('all');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Tutti gli Appuntamenti</Text>
+              {filterStatus === 'all' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'booked' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('booked');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Prenotati</Text>
+              {filterStatus === 'booked' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'completed' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('completed');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Completati</Text>
+              {filterStatus === 'completed' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 16 },
+                filterStatus === 'cancelled' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('cancelled');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Annullati</Text>
+              {filterStatus === 'cancelled' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[buttonStyles.primary, { backgroundColor: colors.card }]}
+              onPress={() => setShowFilterModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[buttonStyles.text, { color: colors.text }]}>Chiudi</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

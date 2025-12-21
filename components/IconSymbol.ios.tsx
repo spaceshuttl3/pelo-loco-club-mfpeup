@@ -13,9 +13,11 @@ const IOS_SYMBOL_MAPPING = {
   'chevron.up': 'chevron.up',
   'chevron.down': 'chevron.down',
   'person.fill': 'person.fill',
+  'person.3': 'person.3',
   'calendar': 'calendar',
   'calendar.badge.plus': 'calendar.badge.plus',
   'bag.fill': 'bag.fill',
+  'bag': 'bag',
   'gift.fill': 'gift.fill',
   'list.bullet': 'list.bullet',
   'clock': 'clock',
@@ -27,6 +29,7 @@ const IOS_SYMBOL_MAPPING = {
   'minus': 'minus',
   'plus': 'plus',
   'photo': 'photo',
+  'camera.fill': 'camera.fill',
   'pencil': 'pencil',
   'ticket': 'ticket',
   'shippingbox.fill': 'shippingbox.fill',
@@ -47,6 +50,8 @@ const IOS_SYMBOL_MAPPING = {
   'checkmark': 'checkmark',
   'arrow.right': 'arrow.right',
   'arrow.left': 'arrow.left',
+  'line.3.horizontal.decrease.circle': 'line.3.horizontal.decrease.circle',
+  'phone.fill': 'phone.fill',
 } as const;
 
 // Fallback to Material Icons if SF Symbol is not available
@@ -59,9 +64,11 @@ const MATERIAL_FALLBACK = {
   'chevron.up': 'keyboard-arrow-up',
   'chevron.down': 'keyboard-arrow-down',
   'person.fill': 'person',
+  'person.3': 'people',
   'calendar': 'event',
   'calendar.badge.plus': 'event-available',
   'bag.fill': 'shopping-bag',
+  'bag': 'shopping-bag',
   'gift.fill': 'card-giftcard',
   'list.bullet': 'list',
   'clock': 'access-time',
@@ -73,6 +80,7 @@ const MATERIAL_FALLBACK = {
   'minus': 'remove',
   'plus': 'add',
   'photo': 'photo-camera',
+  'camera.fill': 'photo-camera',
   'pencil': 'edit',
   'ticket': 'confirmation-number',
   'shippingbox.fill': 'local-shipping',
@@ -93,6 +101,8 @@ const MATERIAL_FALLBACK = {
   'checkmark': 'check',
   'arrow.right': 'arrow-forward',
   'arrow.left': 'arrow-back',
+  'line.3.horizontal.decrease.circle': 'filter-list',
+  'phone.fill': 'phone',
 } as const;
 
 export type IconSymbolName = keyof typeof IOS_SYMBOL_MAPPING;

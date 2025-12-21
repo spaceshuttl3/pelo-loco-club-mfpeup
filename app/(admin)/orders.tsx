@@ -28,6 +28,8 @@ export default function OrdersScreen() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [showCompletedOrders, setShowCompletedOrders] = useState(false);
   const [showCancelledOrders, setShowCancelledOrders] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid' | 'cancelled'>('all');
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -195,9 +197,14 @@ export default function OrdersScreen() {
     );
   }
 
-  const pendingOrders = orders.filter(o => o.payment_status === 'pending');
-  const completedOrders = orders.filter(o => o.payment_status === 'paid');
-  const cancelledOrders = orders.filter(o => o.payment_status === 'cancelled');
+  let filteredOrders = orders;
+  if (filterStatus !== 'all') {
+    filteredOrders = orders.filter(o => o.payment_status === filterStatus);
+  }
+
+  const pendingOrders = filteredOrders.filter(o => o.payment_status === 'pending');
+  const completedOrders = filteredOrders.filter(o => o.payment_status === 'paid');
+  const cancelledOrders = filteredOrders.filter(o => o.payment_status === 'cancelled');
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -205,8 +212,10 @@ export default function OrdersScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 16 }}>
           <IconSymbol name="chevron.left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={commonStyles.headerTitle}>Ordini</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[commonStyles.headerTitle, { flex: 1 }]}>Ordini</Text>
+        <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+          <IconSymbol name="line.3.horizontal.decrease.circle" size={28} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -584,6 +593,106 @@ export default function OrdersScreen() {
                 <Text style={[buttonStyles.text, { color: colors.text }]}>Indietro</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={[commonStyles.card, { width: '90%' }]}>
+            <Text style={[commonStyles.subtitle, { marginBottom: 16 }]}>
+              Filtra Ordini
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'all' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('all');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Tutti gli Ordini</Text>
+              {filterStatus === 'all' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'pending' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('pending');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>In Attesa</Text>
+              {filterStatus === 'pending' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 12 },
+                filterStatus === 'paid' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('paid');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Pagati</Text>
+              {filterStatus === 'paid' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                commonStyles.card,
+                commonStyles.row,
+                { marginBottom: 16 },
+                filterStatus === 'cancelled' && { borderColor: colors.primary, borderWidth: 2 },
+              ]}
+              onPress={() => {
+                setFilterStatus('cancelled');
+                setShowFilterModal(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.text}>Annullati</Text>
+              {filterStatus === 'cancelled' && (
+                <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[buttonStyles.primary, { backgroundColor: colors.card }]}
+              onPress={() => setShowFilterModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[buttonStyles.text, { color: colors.text }]}>Chiudi</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
