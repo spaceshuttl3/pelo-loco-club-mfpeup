@@ -35,7 +35,10 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
+      console.log('Sending password reset email to:', email);
+      
       // Use the app's custom scheme for deep linking
+      // Supabase will automatically append the tokens as query parameters
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'pelolocobarbershop://reset-password',
       });
@@ -46,9 +49,10 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
+      console.log('Password reset email sent successfully');
       Alert.alert(
         'Email Inviata!',
-        'Controlla la tua email per il link di reset della password.\n\nSe non vedi l\'email, controlla la cartella spam.',
+        'Controlla la tua email per il link di reset della password.\n\nSe non vedi l\'email, controlla la cartella spam.\n\nIl link scadrà tra 1 ora.',
         [
           {
             text: 'OK',

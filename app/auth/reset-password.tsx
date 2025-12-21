@@ -83,10 +83,10 @@ export default function ResetPasswordScreen() {
 
   useEffect(() => {
     // Check if user has a valid session from the reset link
-    // Add a small delay to ensure session is set from deep link
+    // Add a delay to ensure session is set from deep link
     const timer = setTimeout(() => {
       checkSession();
-    }, 500);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [checkSession]);

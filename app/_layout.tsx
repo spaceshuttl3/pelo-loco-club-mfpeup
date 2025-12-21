@@ -1,11 +1,13 @@
 
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { View, ActivityIndicator } from 'react-native';
+import { colors } from '../styles/commonStyles';
 import 'react-native-reanimated';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -13,6 +15,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const segments = useSegments();
+  const [isProcessingDeepLink, setIsProcessingDeepLink] = useState(false);
 
   useEffect(() => {
     SplashScreen.hideAsync();
@@ -36,6 +40,7 @@ export default function RootLayout() {
         
         if (isResetPassword || isConfirm) {
           console.log('Auth link detected:', isResetPassword ? 'reset-password' : 'confirm');
+          setIsProcessingDeepLink(true);
           
           // Extract the access_token and refresh_token from the URL
           const params = url.queryParams;
@@ -59,6 +64,7 @@ export default function RootLayout() {
               
               if (error) {
                 console.error('Error setting session:', error);
+                setIsProcessingDeepLink(false);
                 return;
               }
               
@@ -69,24 +75,29 @@ export default function RootLayout() {
                 console.log('Navigating to reset password screen');
                 // Small delay to ensure session is fully set
                 setTimeout(() => {
+                  setIsProcessingDeepLink(false);
                   router.replace('/auth/reset-password');
                 }, 100);
               } else if (type === 'signup' || isConfirm) {
                 console.log('Email confirmed successfully');
                 // Navigate to login with success message
                 setTimeout(() => {
+                  setIsProcessingDeepLink(false);
                   router.replace('/auth/login');
                 }, 100);
               }
             } else {
               console.error('Missing tokens in URL');
+              setIsProcessingDeepLink(false);
             }
           } else {
             console.error('No query params found in URL');
+            setIsProcessingDeepLink(false);
           }
         }
       } catch (error) {
         console.error('Error handling deep link:', error);
+        setIsProcessingDeepLink(false);
       }
     };
 
@@ -105,6 +116,15 @@ export default function RootLayout() {
       subscription.remove();
     };
   }, [router]);
+
+  // Show loading screen while processing deep link
+  if (isProcessingDeepLink) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <AuthProvider>
